@@ -30,8 +30,8 @@ config RTCONFIG_HTTPS
 	default y
 
 config RTCONFIG_BCMARM
-        bool "Bcm Arm"
-        default n
+	bool "Bcm Arm"
+	default n
 
 config RTCONFIG_BCMSMP
 	bool "BCM SMP"
@@ -56,6 +56,10 @@ config RTCONFIG_CIFS
 config RTCONFIG_JFFS2
 	bool "JFFS Support"
 	default y
+
+config RTCONFIG_DISKTEST
+	bool "Disk test tools"
+	default n
 
 config RTCONFIG_JFFSV1
 	bool "Use JFFSv1 (if not selected, JFFS2 is used)"
@@ -109,6 +113,11 @@ config RTCONFIG_BCMWL6
 	bool "BCM WL 6"
 	default n
 
+config RTCONFIG_BCMWL6A
+	bool "BCM WL 6.30.143"
+	depends on RTCONFIG_BCMARM && RTCONFIG_BCMWL6
+	default n
+
 config RTCONFIG_WIRELESSWAN
 	bool "Wireless WAN Function"
 	default n
@@ -155,6 +164,14 @@ config RTCONFIG_DSL_ANNEX_B
 
 config RTCONFIG_DUALWAN
 	bool "Dual WAN Support"
+	default n
+
+config RTCONFIG_USER_LOW_RSSI
+	bool "User specified accepted min rssi"
+	default n
+
+config RTCONFIG_EMAIL
+	bool "Push Mail Service Support"
 	default n
 
 config RTCONFIG_USB
@@ -305,6 +322,10 @@ config RTCONFIG_LED_ALL
 	bool "LED All GPIO"
 	default n
 
+config RTCONFIG_COMA
+	bool "COMA"
+	default n
+
 config CONFIG_LIBBCM
 	bool "Broadcom shared library functions"
 	default n
@@ -356,6 +377,14 @@ config RTCONFIG_SWMODE_SWITCH
 	bool "HW Switch for SWMODE"
 	default n
 
+config RTCONFIG_WL_AUTO_CHANNEL
+	bool "New auto_channel selection"
+	default n
+
+config RTCONFIG_SMALL_FW_UPDATE
+	bool "used for memory limited model"
+	default n
+
 config RTCONFIG_WIRELESS_SWITCH
 	bool "HW Switch for WiFi"
 	default n
@@ -375,6 +404,10 @@ config RTCONFIG_LED_BTN
 config RTCONFIG_LED_BTN_MODE
 	bool "HW LED Button Mode"
 	depends on RTCONFIG_LED_BTN
+	default n
+
+config RTCONFIG_USBEJECT
+	bool "HW LED Button usage"
 	default n
 
 config RTCONFIG_AUTODICT
@@ -451,4 +484,28 @@ config RTCONFIG_LAN4WAN_LED
 
 config RTCONFIG_EXT4FS
 	bool "ext4 filesystem"
+	default n
+
+config RTCONFIG_VALGRIND
+	bool "valgrind"
+	default n
+
+config RTCONFIG_DMALLOC
+	bool "dmalloc"
+	default n
+
+config RTCONFIG_TEMPROOTFS
+	bool "temp rootfilesystem"
+	default n
+
+config RTCONFIG_JFFS2LOG
+        bool "Backup syslog to jffs2"
+        default n
+
+config RTCONFIG_WPSMULTIBAND
+	bool "Multi-band WPS"
+	default n
+
+config RTCONFIG_EMAIL
+	bool "notify by E-Mail"
 	default n

@@ -92,18 +92,18 @@ function detect_firmware(){
       					else{
 
 	      					var Latest_firmver = webs_state_info.split("_");
-	      					var Latest_firm = Latest_firmver[0];
-	      					var Latest_buildno = Latest_firmver[1];
+	      					var Latest_firm = parseInt(Latest_firmver[0]);
+	      					var Latest_buildno = parseInt(Latest_firmver[1]);
 	      					var Latest_extendno = Latest_firmver[2];
 	      					var Latest_extendno_split = Latest_extendno.split("-g");
-	      					var Latest_extendno_comp = Latest_extendno_split[0];
+	      					var Latest_extendno_comp = parseInt(Latest_extendno_split[0]);
 	      					
 	      					if(Latest_firm && Latest_buildno && Latest_extendno ){	//match model FW
       								current_firm = parseInt(exist_firmver.replace(/[.]/gi,""));
       								current_buildno = parseInt("<% nvram_get("buildno"); %>");
       								current_extendno = "<% nvram_get("extendno"); %>";
       								current_extendno_split = current_extendno.split("-g");
-      								current_extendno_comp = current_extendno_split[0];
+      								current_extendno_comp = parseInt(current_extendno_split[0]);
       								
       								if((current_buildno < Latest_buildno) || 
       									 (current_firm < Latest_firm && current_buildno == Latest_buildno) ||
@@ -278,7 +278,7 @@ function startDownloading(){
 function check_zip(obj){
 	var reg = new RegExp("^.*.(zip|ZIP|rar|RAR|7z|7Z)$", "gi");
 	if(reg.test(obj.value)){
-			alert("Please decompress the compressed file first.");
+			alert("<#FW_note_unzip#>");
 			obj.focus();
 			obj.select();
 			return false;
@@ -321,7 +321,7 @@ function submitForm(){
 	<table cellpadding="5" cellspacing="0" id="dr_sweet_advise" class="dr_sweet_advise" align="center" style="height:100px;">
 		<tr>
 		<td>
-			<div class="drword" id="drword" style="">&nbsp;&nbsp;&nbsp;&nbsp;<#Main_alert_proceeding_desc1#>...</div>
+			<div class="drword" id="drword" style="">&nbsp;&nbsp;&nbsp;&nbsp;<#Main_alert_proceeding_desc4#> <#Main_alert_proceeding_desc1#>...</div>
 		</td>
 		</tr>
 	</table>
@@ -371,7 +371,7 @@ function submitForm(){
 				</ol>
 			</div>
 		  <br>
-		  <div class="formfontdesc"><#FW_desc1#></div>
+		  <div class="formfontdesc"><#FW_desc0#></div>
 
 		<table width="100%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3"  class="FormTable">
 			<tr>

@@ -30,7 +30,7 @@ LINUX_VERSION=2_6_36
 LINUX_KERNEL=2.6.36
 export PLATFORM LIBDIR USRLIBDIR LINUX_VERSION
 
-WLAN_ComponentsInUse := bcmwifi clm ppr
+WLAN_ComponentsInUse := bcmwifi clm ppr olpc
 include ../../src-rt-6.x.4708/makefiles/WLAN_Common.mk
 export BASEDIR := $(WLAN_TreeBaseA)
 export EXTRALDFLAGS = -lgcc_s
@@ -76,6 +76,8 @@ SEP=echo "\033[41;1m   $@   \033[0m"
 #
 # standard packages
 #
+obj-$(RTCONFIG_DMALLOC) += dmalloc
+
 ifeq ($(RTN14U)$(RTAC52U),y)
 obj-y += reg
 endif
@@ -173,7 +175,7 @@ obj-$(RTCONFIG_USB_PRINTER) += LPRng
 obj-$(RTCONFIG_USB_MODEM) += sdparm-1.02
 obj-$(RTCONFIG_USB_MODEM) += comgt-0.32
 
-ifneq ($(or $(findstring linux-2.6.36.x,$(LINUXDIR)),$(findstring linux-3.x,$(LINUXDIR))),)
+ifneq ($(or $(findstring linux-2.6.36.x,$(LINUXDIR)),$(findstring linux-2.6.36,$(LINUXDIR)),$(findstring linux-3.x,$(LINUXDIR))),)
 obj-$(RTCONFIG_USB_MODEM) += usbmodeswitch-1.2.3
 else
 obj-$(RTCONFIG_USB_MODEM) += usbmodeswitch
@@ -187,6 +189,10 @@ obj-$(RTCONFIG_USB_BECEEM) += zlib # for GCT WiMAX
 obj-$(RTCONFIG_USB_BECEEM) += gctwimax-0.0.3rc4 # for GCT WiMAX
 
 obj-y += libdisk
+obj-$(RTCONFIG_EMAIL) += push_log
+ifeq ($(RTCONFIG_EMAIL),y)
+PUSH_LOG=push_log
+endif
 
 obj-y += dosfstools
 #obj-$(RTCONFIG_NTFS) += linux-ntfs-2.0.0
@@ -222,7 +228,11 @@ endif
 # install before samba3 for not overwriting some binaries
 obj-$(RTCONFIG_WEBDAV) += samba-3.5.8
 obj-$(NEED_SAMBA2) += samba
+ifeq ($(RTCONFIG_BCMARM),y)
+obj-$(NEED_SAMBA3) += samba-3.0.25b
+else
 obj-$(NEED_SAMBA3) += samba3
+endif
 ifeq ($(RTCONFIG_NTFS3G),y)
 obj-$(RTCONFIG_NTFS) += ntfs-3g
 else
@@ -321,13 +331,20 @@ obj-$(RTCONFIG_GDB) += gdb
 obj-n += lsof
 obj-$(RTCONFIG_IPERF) += iperf
 
+ifeq ($(EMAIL), y)
+obj-y += openssl
+obj-y += email-3.1.3
+endif
+
 #obj-y += lighttpd-1.4.28
 #obj-$(RTCONFIG_USB_WEBDAV) += lighttpd-1.4.29
 
 obj-$(UBI) += mtd-utils
 obj-$(UBIFS) += mtd-utils
 obj-$(UBIFS) += util-linux lzo zlib
+ifeq ($(RTCONFIG_RALINK),y)
 obj-$(RA_SKU) += ra_SingleSKU
+endif
 
 #obj-y += bonnie
 
@@ -592,11 +609,7 @@ ifneq ($(RTCONFIG_OPTIMIZE_SHARED_LIBS),y)
 	$(STRIP) $(TARGETDIR)/lib/*.so.0
 endif
 
-ifneq ($(RTCONFIG_BCMARM),y)
-	cd $(TARGETDIR) && $(TOP)/others/rootprep.sh
-else
-	@cd $(TARGETDIR) && $(TOP)/others/rootprep.sh
-endif
+	@cd $(TARGETDIR) && $(TOP)/others/rootprep${BCMEX}.sh
 	@echo ---
 
 ifeq ($(RTCONFIG_OPTIMIZE_SHARED_LIBS),y)
@@ -809,9 +822,12 @@ rmconf: config/mconf
 
 roldconf: config/conf
 	config/conf -o $(CONFIG_IN)
-	$(MAKE) shared-clean rc$(BCMEX)-clean nvram$(BCMEX)-clean httpd-clean prebuilt-clean libbcmcrypto-clean
+	$(MAKE) shared-clean rc-clean nvram$(BCMEX)-clean httpd-clean prebuilt-clean libbcmcrypto-clean
 #	@$(MAKE) iptables-clean ebtables-clean pppd-clean zebra-clean openssl-clean mssl-clean mdu-clean ppp-clean
 	$(MAKE) dnsmasq-clean iproute2-clean
+ifeq ($(RTCONFIG_BCMARM),y)
+	$(MAKE) compressed-clean
+endif
 
 kconf:
 	$(MAKE) -C $(LINUXDIR) config
@@ -851,6 +867,8 @@ busybox-clean:
 
 busybox-config:
 	$(MAKE) -C busybox menuconfig
+
+infosvr: shared nvram${BCMEX}
 
 httpd: shared nvram$(BCMEX) libdisk $(if $(RTCONFIG_HTTPS),mssl)
 	@$(SEP)
@@ -984,7 +1002,7 @@ mssl:	openssl
 mdu:	shared mssl
 
 
-rc: nvram$(BCMEX) shared libbcmcrypto libdisk
+rc: nvram$(BCMEX) shared libbcmcrypto libdisk $(PUSH_LOG)
 
 bridge/stamp-h1:
 	cd bridge && CFLAGS="-Os -g $(EXTRACFLAGS)" \
@@ -1003,12 +1021,41 @@ bridge-install:
 	install -D bridge/brctl/brctl $(INSTALLDIR)/bridge/usr/sbin/brctl
 	$(STRIP) $(INSTALLDIR)/bridge/usr/sbin/brctl
 
+dmalloc: dmalloc/Makefile dmalloc/dmalloc.h.2 dmalloc/settings.h
+	$(MAKE) -C dmalloc all shlib cxx
+
+dmalloc/Makefile dmalloc/dmalloc.h.2 dmalloc/settings.h:
+	$(MAKE) dmalloc-configure
+
+dmalloc-configure:
+	( cd dmalloc ; \
+		$(CONFIGURE) \
+		--prefix=/usr \
+		--bindir=/usr/sbin \
+		--libdir=/usr/lib \
+		--enable-cxx --enable-threads --enable-shlib --with-pagesize=12 \
+	)
+
+dmalloc-install: dmalloc-stage
+	install -D $(STAGEDIR)/usr/sbin/dmalloc $(INSTALLDIR)/dmalloc/usr/sbin/dmalloc
+	install -d $(INSTALLDIR)/dmalloc/usr/lib
+	install -D $(STAGEDIR)/usr/lib/*.a $(INSTALLDIR)/dmalloc/usr/lib
+	install -D $(STAGEDIR)/usr/lib/*.so* $(INSTALLDIR)/dmalloc/usr/lib
+	$(STRIP) $(INSTALLDIR)/dmalloc/usr/sbin/dmalloc
+	$(STRIP) $(INSTALLDIR)/dmalloc/usr/lib/*.so*
+
+dmalloc-clean:
+	[ ! -f dmalloc/Makefile ] || $(MAKE) -C dmalloc clean
+	-rm -f dmalloc/{conf.h,dmalloc.h,dmalloc.h.2,settings.h,Makefile}
+
 dnsmasq:
 	@$(SEP)
 	@$(MAKE) -C dnsmasq \
-	COPTS="-DHAVE_BROKEN_RTC -DHAVE_LEASEFILE_EXPIRE $(if $(RTCONFIG_IPV6),-DUSE_IPV6,-DNO_IPV6) $(if $(RTCONFIG_USB_EXTRAS),,-DNO_SCRIPT -DNO_TFTP)" \
-	CFLAGS="-Os $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
-	LDFLAGS="-Wl,--gc-sections -fPIC"
+	COPTS="-DHAVE_BROKEN_RTC -DHAVE_LEASEFILE_EXPIRE -DNO_AUTH -DNO_IPSET \
+	    $(if $(RTCONFIG_IPV6),-DUSE_IPV6,-DNO_IPV6) \
+	    $(if $(RTCONFIG_USB_EXTRAS),,-DNO_SCRIPT -DNO_TFTP)" \
+	CFLAGS="-Os -ffunction-sections -fdata-sections $(EXTRACFLAGS)" \
+	LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections"
 
 dnsmasq-install:
 	install -D dnsmasq/src/dnsmasq $(INSTALLDIR)/dnsmasq/usr/sbin/dnsmasq
@@ -1383,10 +1430,10 @@ util-linux-clean:
 
 radvd/stamp-h1:
 	cd radvd && CFLAGS="-Os $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
-	LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" \
+	LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections $(EXTRALDFLAGS)" \
 	$(CONFIGURE) --prefix="" --disable-dependency-tracking \
 	DAEMON_CFLAGS="-I$(TOP)/libdaemon" \
-	DAEMON_LIBS="-ldaemon -L$(TOP)/libdaemon/libdaemon/.libs"
+	DAEMON_LIBS="-ldaemon -L$(TOP)/libdaemon/libdaemon/.libs $(EXTRALDFLAGS2)"
 	-@$(MAKE) -C radvd clean
 	@touch $@
 
@@ -1491,8 +1538,7 @@ else
 endif
 
 accel-pptpd-clean:
-	-@$(MAKE) -C accel-pptpd clean
-	@rm -rf accel-pptpd/pptpd-1.3.3/Makefile
+	-@$(MAKE) -C accel-pptpd distclean
 
 accel-pptpd-install: accel-pptpd
 	$(MAKE) -C accel-pptpd server_install
@@ -1813,7 +1859,7 @@ dropbear/config.h:
 
 sqlite/stamp-h1:
 	cd sqlite && \
-	CC=$(CC) CFLAGS="-Os $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
+	CC=$(CC) CFLAGS="-Os $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" \
 		$(CONFIGURE) --prefix=/usr --enable-shared --enable-static \
 		--disable-readline --disable-dynamic-extensions --enable-threadsafe \
@@ -1973,7 +2019,7 @@ endif
 
 zlib/stamp-h1:
 	cd zlib && \
-	CC=$(CC) AR="ar rc" RANLIB=$(RANLIB) LD=$(LD) CFLAGS="-Os -Wall $(EXTRACFLAGS)" \
+	CC=$(CC) AR="ar rc" RANLIB=$(RANLIB) LD=$(LD) CFLAGS="-Os -Wall $(EXTRACFLAGS) -fPIC" LDSHAREDLIBC="$(EXTRALDFLAGS)" \
 	./configure --shared --prefix=/usr --libdir=/usr/lib
 	touch $@
 
@@ -2135,7 +2181,7 @@ wps$(BCMEX): nvram$(BCMEX) shared
 ifeq ($(RTCONFIG_WPS),y)
 	-rm -rf $(SRCBASE)/../src/wps
 	-ln -s $(SRCBASE)/../$(SRCBASEDIR)/wps $(SRCBASE)/../src/wps
-	[ ! -f wps/Makefile ] || $(MAKE) -C wps$(BCMEX)
+	[ ! -f wps$(BCMEX)/Makefile ] || $(MAKE) -C wps$(BCMEX) EXTRA_LDFLAGS=$(EXTRALDFLAGS)
 else
 	# Prevent to use generic rules"
 	@true
@@ -2388,7 +2434,7 @@ pcre-8.12-clean:
 
 pcre-8.31/stamp-h1:
 	cd pcre-8.31 && \
-	CC=$(CC) CXX=$(CXX) AR=$(AR) RANLIB=$(RANLIB) LD=$(LD) CFLAGS="-Os -Wall $(EXTRACFLAGS)" \
+	CC=$(CC) CXX=$(CXX) AR=$(AR) RANLIB=$(RANLIB) LD=$(LD) CFLAGS="-Os -Wall $(EXTRACFLAGS)" LIBS="$(EXTRALDFLAGS)" \
 	./$(CONFIGURE) --prefix=/usr --disable-dependency-tracking
 	touch $@
 	[ -d pcre-8.31/m4 ] || mkdir pcre-8.31/m4
@@ -2427,13 +2473,13 @@ libxml2-clean:
 
 #add by alan 
 #add install neon 
-neon/stamp-h1:
+neon/stamp-h1 neon/config.h:
 	cd neon && \
 	$(CONFIGURE) CC=$(CC) --enable-shared --disable-static --disable-nls --with-zlib --with-ssl=openssl --with-libs=$(TOP)/openssl:$(TOP)/libxml2 CFLAGS='-I$(TOP)/zlib -I$(TOP)/libxml2/include -I$(TOP)/openssl/include' LDFLAGS='-L$(TOP)/libxml2/.libs -L$(TOP)/openssl -L$(TOP)/zlib' LIBS='-lxml2 -lssl -lcrypto -lz' XML2_CONFIG='$(TOP)/libxml2/xml2-config'
 	cp -f neon/config.h neon/src/config.h
 	touch $@
 
-neon: neon/stamp-h1
+neon: neon/stamp-h1 neon/config.h
 	@$(MAKE) -C neon
 
 neon-install: neon
@@ -2550,6 +2596,46 @@ netstat-nat: netstat-nat/stamp-h1
 
 netstat-nat: netstat-nat/Makefile
 	$(MAKE) -C netstat-nat
+
+.PHONY : email-3.1.3 email-3.1.3-clean
+email-3.1.3:
+	echo "Build emailaaa"
+	cd email-3.1.3 && \
+	./configure --with-ssl --sysconfdir=/etc --host=mipsel-uclibc CFLAGS=-I$(SRCBASE)/router/openssl/include LDFLAGS="-L$(SRCBASE)/router/openssl"  LIBS="-lcrypto -lssl"
+	echo "Build emailbbb"
+	$(MAKE) -C email-3.1.3
+
+email-3.1.3-clean:
+	-@$(MAKE) -C email-3.1.3 clean
+
+email-3.1.3-install: email-3.1.3
+	install -D email-3.1.3/src/email $(INSTALLDIR)/email-3.1.3/usr/sbin/email
+	$(STRIP) $(INSTALLDIR)/email-3.1.3/usr/sbin/email
+
+valgrind: valgrind/Makefile
+	$(MAKE) -C $@
+
+valgrind/Makefile: valgrind/configure
+	$(MAKE) valgrind-configure
+
+valgrind/configure:
+	( cd valgrind ; ./autogen.sh )
+
+valgrind-configure:
+	( cd valgrind ; \
+		$(CONFIGURE) \
+		--prefix=/usr \
+		--libdir=/usr/lib \
+		--enable-only32bit --with-pagesize=4 \
+		--disable-drd --without-drd \
+		CFLAGS="-mips32r2" \
+	)
+
+valgrind-install:
+	# FIXME
+
+valgrind-clean:
+	[ ! -f valgrind/Makefile ] || $(MAKE) -C valgrind distclean
 
 #
 # Generic rules

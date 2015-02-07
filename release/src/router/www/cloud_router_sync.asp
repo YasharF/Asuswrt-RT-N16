@@ -120,12 +120,6 @@ src='images/New_ui/bottom_bg.png',
 sizingMethod='scale')";
 
 }
-
-#mailto{
-position:absolute;
-margin-left:375px;
-*margin-left:-75px
-}
 </style>
 <script>
 var $j = jQuery.noConflict();
@@ -143,11 +137,11 @@ var cloud_obj = "";
 var cloud_msg = "";
 var curRule = -1;
 <% UI_cloud_status(); %>
-var cloud_sync = '<% nvram_show_chinese_char("share_link_host"); %>';
+//var cloud_sync = '<% nvram_show_chinese_char("share_link_host"); %>';
+var cloud_sync =decodeURIComponent('<% nvram_char_to_ascii("","share_link_host"); %>');
 /* type>user>password>url>rule>dir>enable */
 var cloud_synclist_array = cloud_sync.replace(/>/g, "&#62").replace(/</g, "&#60"); 
 var cloud_synclist_all = new Array(); 
-var isEdit = 0;
 
 var maxrulenum = 1;
 var rulenum = 1;
@@ -158,7 +152,8 @@ var _layer_order = "";
 var isNotIE = (navigator.userAgent.search("MSIE") == -1); 
 var PROTOCOL = "cifs";
 //window.onresize = cal_panel_block;
-var router_sync = '<% nvram_show_chinese_char("share_link_host"); %>';
+//var router_sync = '<% nvram_show_chinese_char("share_link_host"); %>';
+var router_sync =decodeURIComponent('<% nvram_char_to_ascii("","share_link_host"); %>');
 var router_synclist = '';
 var router_synclist_type = new Array();
 var router_synclist_desc = new Array();
@@ -178,7 +173,7 @@ var isMD5DDNSName = "A"+hexMD5(macAddr).toUpperCase()+".asuscomm.com";
 var webdav_aidisk = '<% nvram_get("webdav_aidisk"); %>';
 var webdav_proxy = '<% nvram_get("webdav_proxy"); %>';
 	
-if('<% nvram_get("rrsut"); %>' != '1'){
+if(!rrsut_support){
 	alert("This function is not supported on this system.");
 	location.href = "/cloud_main.asp";
 }
@@ -187,7 +182,6 @@ function initial(){
 	check_aicloud();
 	decode_router_synclist();
 	show_menu();
-	showAddTable();
 	showcloud_synclist();
 	document.aidiskForm.protocol.value = PROTOCOL;
 	initial_dir();
@@ -303,8 +297,12 @@ function showcloud_synclist(){
 				else{
 					if(j == 0)
 						code +='<td width="'+wid[j]+'%"><span style="display:none">'+ cloud_synclist_col[j] +'</span><img width="30px" src="/images/cloudsync/rssync.png"></td>';
-					else if(j == 1)
-						code +='<td width="'+wid[j]+'%"><span style="display:none">'+ cloud_synclist_col[j] +'</span><span style="font-size:16px;font-family: Calibri;font-weight: bolder;"  onclick="isEdit=1;showAddTable();">'+ cloud_synclist_col[j] +'</span></td>';
+					else if(j == 1){
+						if(cloud_synclist_col[j].length > 18)
+							code +='<td width="'+wid[j]+'%"><span style="display:none">'+ cloud_synclist_col[j] +'</span><span style="font-size:16px;font-family: Calibri;font-weight: bolder;" title="'+ cloud_synclist_col[j] +'">'+ cloud_synclist_col[j].substring(0,15) + '...</span></td>';
+						else
+							code +='<td width="'+wid[j]+'%"><span style="display:none">'+ cloud_synclist_col[j] +'</span><span style="font-size:16px;font-family: Calibri;font-weight: bolder;">'+ cloud_synclist_col[j] +'</span></td>';
+						}
 					else if(j == 3){
 						curRule = cloud_synclist_col[j];
 						if(cloud_synclist_col[j] == 2)
@@ -315,7 +313,10 @@ function showcloud_synclist(){
 							code +='<td width="'+wid[j]+'%"><span style="display:none">'+ cloud_synclist_col[j] +'</span><div id="status_image"><div id="status_png_Img_LR_ok"></div></div></td>';
 					}
 					else{
-						code +='<td width="'+wid[j]+'%"><span style="display:none;">'+ cloud_synclist_col[j] +'</span><span style="word-break:break-all;">'+ cloud_synclist_col[j].substr(4, cloud_synclist_col[j].length) +'</span></td>';
+						if(cloud_synclist_col[j].substr(4,cloud_synclist_col[j].length).length > 26)
+							code +='<td width="'+wid[j]+'%"><span style="display:none;">'+ cloud_synclist_col[j] +'</span><span style="word-break:break-all;" title="'+ cloud_synclist_col[j].substr(4, cloud_synclist_col[j].length) +'">'+ cloud_synclist_col[j].substr(4,23) +'...</span></td>';
+						else
+							code +='<td width="'+wid[j]+'%"><span style="display:none;">'+ cloud_synclist_col[j] +'</span><span style="word-break:break-all;">'+ cloud_synclist_col[j].substr(4, cloud_synclist_col[j].length) +'</span></td>';
 					}
 				}
 			}
@@ -349,28 +350,6 @@ function validform(){
 		return false;
 	}
 	return true;
-}
-
-function showAddTable(){
-	if(isEdit == 1){ // edit
-		//$j("#cloudAddTable").fadeIn();
-		//$("creatBtn").style.display = "none";
-		//$j("#applyBtn").fadeIn();
-		if(cloud_synclist_array != ""){
-			edit_Row(0);
-		}
-	}
-	else{ // list
-		//$("cloudAddTable").style.display = "none";
-		if(cloud_synclist_array == ""){
-			//$j("#creatBtn").fadeIn();
-			//$("applyBtn").style.display = "none";
-		}
-		else{
-			//$("creatBtn").style.display = "none";
-			//$("applyBtn").style.display = "none";			
-		}
-	}
 }
 
 // get folder tree
@@ -779,6 +758,9 @@ function applyRule(sharelink){
 }
 var url_combined = "";
 function domain_name_select(){
+	if(!Block_chars(document.form.router_sync_desc, ["<", ">"]))
+		return false;
+
 	if(ip_flag == 1 && $('host_name').value == ""){
 		alert("<#JS_fieldblank#>");
 		$('host_name').focus();
@@ -938,7 +920,7 @@ function appendMailTo(){
 	mailtoCode += "Please connect your device to ASUS router through WiFi or ethernet and click the link below to reconfirm this invitation.%0D%0A".replace(/ /g, "%20");
 	mailtoCode += $('invite_share').innerHTML.replace(/ /g, "%20") + "%0D%0A"; 
 	// mailtoCode += $('invite_captcha').innerHTML; 
-	mailtoCode += '"><div onmouseover="" style="margin-right:15px;background-image:url(images/cloudsync/mail_send.png);background-repeat:no-repeat;width:64px;height:64px;"></div><div style="font-size:12px;margin-top:3px;margin-right:15px;">Send mail</div></a>';
+	mailtoCode += '"><div onmouseover="" style="margin-right:15px;background-image:url(images/cloudsync/mail_send.png);background-repeat:no-repeat;width:64px;height:64px;"></div><div style="font-size:12px;margin-top:3px;margin-right:17px;">Send mail</div></a>';
 	return mailtoCode;
 }
 
@@ -1043,8 +1025,8 @@ hint_string += "<#routerSync_rule_CtoS#>";
 	<table><tr><td>
 		<div class="machineName" style="width:200px;font-family:Microsoft JhengHei;font-size:12pt;font-weight:bolder; margin-top:20px;margin-left:30px;">Invitation</div>
 	</td></tr></table>
-	<div style="overflow:auto;margin-top:0px;height:311px;padding:20px;">
-		<table style="margin-left:10px;word-break:break-all;word-wrap:break-word;">
+	<div style="overflow:auto;margin-top:0px;height:311px;padding:10px;width:485px;">
+		<table style="margin-left:20px;word-break:break-all;word-wrap:break-word;">
 			<tr >
 				<td>
 					<div>Hi, lets share our files with smart sync!</div>				
@@ -1052,21 +1034,21 @@ hint_string += "<#routerSync_rule_CtoS#>";
 			</tr>
 			<tr>
 				<td>
-					<div id="invite_desc" style="margin-top:10px;"></div>
+					<div id="invite_desc" style="margin-top:10px;width:440px;"></div>
 					<div>Sync path:
-						<span id="invite_path" style="text-decoration:underline;"></span>
+						<span id="invite_path" style="text-decoration:underline;width:440px;"></span>
 					</div>
 					<div id="invite_rule"></div>
 				</td>
 			</tr>
 			<tr>
 				<td>
-					<div style="margin-top:10px;">Please connect your device to ASUS router through WiFi or ethernet and click the link below to reconfirm this invitation.</div>
+					<div style="margin-top:10px;width:440px;">Please connect your device to ASUS router through WiFi or ethernet and click the link below to reconfirm this invitation.</div>
 				</td>
 			</tr>
 			<tr>
 				<td>
-					<div style="text-decoration:underline;margin-top:10px;" id="invite_share"></div>
+					<div style="text-decoration:underline;margin-top:10px;width:440px;" id="invite_share"></div>
 				</td>
 			</tr>
 			<tr>
@@ -1092,7 +1074,6 @@ hint_string += "<#routerSync_rule_CtoS#>";
 <input type="hidden" name="firmver" value="<% nvram_get("firmver"); %>">
 <input type="hidden" name="current_page" value="cloud_router_sync.asp">
 <input type="hidden" name="next_page" value="cloud_router_sync.asp">
-<input type="hidden" name="next_host" value="">
 <input type="hidden" name="modified" value="0">
 <input type="hidden" name="action_mode" value="apply">
 <input type="hidden" name="action_script" value="">
@@ -1304,7 +1285,6 @@ hint_string += "<#routerSync_rule_CtoS#>";
 <input type="hidden" name="firmver" value="<% nvram_get("firmver"); %>">
 <input type="hidden" name="current_page" value="cloud_sync.asp">
 <input type="hidden" name="next_page" value="cloud_sync.asp">
-<input type="hidden" name="next_host" value="">
 <input type="hidden" name="modified" value="0">
 <input type="hidden" name="action_mode" value="apply">
 <input type="hidden" name="action_script" value="restart_cloudsync">

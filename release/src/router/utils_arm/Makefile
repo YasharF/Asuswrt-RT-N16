@@ -9,12 +9,12 @@
 # SPECIFICALLY DISCLAIMS ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS
 # FOR A SPECIFIC PURPOSE OR NONINFRINGEMENT CONCERNING THIS SOFTWARE.
 #
-# $Id: Makefile 401201 2013-05-09 03:06:42Z $
+# $Id: Makefile 382640 2013-02-03 04:35:49Z $
 #
 
 include $(SRCBASE)/router/.config
 
-WLU_OBJS := wlu.o wlu_cmd.o wlu_iov.o wlu_linux.o bcmutils.o wlu_client_shared.o wlu_pipe.o wlu_pipe_linux.o miniopt.o bcm_app_utils.o wlu_rates_matrix.o wlc_ppr.o
+WLU_OBJS := wlu.o wlu_cmd.o wlu_iov.o wlu_linux.o bcmutils.o bcmwifi_channels.o wlu_client_shared.o wlu_pipe.o wlu_pipe_linux.o miniopt.o bcm_app_utils.o wlu_rates_matrix.o wlc_ppr.o
 ifneq ($(wildcard $(SRCBASE)/wl/exe/wlu_common.c),)
 WLU_OBJS += wlu_common.o
 endif
@@ -36,7 +36,7 @@ WL_EXE  := wl
 endif
 
 UTILS := epi_ttcp
-CFLAGS += -s -I$(SRCBASE)/include
+CFLAGS += -s -I$(SRCBASE)/include -I$(SRCBASE)/common/include
 CFLAGS += $(if $(WLAN_ComponentIncPath),$(WLAN_ComponentIncPath),$(addprefix -I,$(wildcard $(SRCBASE)/shared/bcmwifi/include)))
 ifeq ($(CONFIG_RTR_OPTIMIZE_SIZE),y)
 CFLAGS  += -Os
@@ -47,7 +47,8 @@ CFLAGS += -DBCMINTERNAL -DBCMDBG
 
 CFLAGS += -DLINUX -I$(SRCBASE)/wl/exe
 
-CFLAGS += -DPPR_API
+# Use newer 11ac ratespec for wl command line
+CFLAGS += -DD11AC_IOTYPES -DPPR_API
 
 #ifdef WLCNT
 CFLAGS += -DWLCNT
@@ -89,10 +90,6 @@ UTILS += $(SERVER_WIFI)
 vpath %.c $(SRCBASE)/wl/exe $(SRCBASE)/shared
 endif
 endif
-
-LDFLAGS += -L$(TOP)/nvram${BCMEX} -L$(INSTALLDIR)/nvram/usr/lib -lnvram
-LDFLAGS += -L$(TOP)/shared -L$(INSTALLDIR)/shared/usr/lib -lshared
-LDFLAGS += -lgcc_s
 
 all: $(UTILS)
 

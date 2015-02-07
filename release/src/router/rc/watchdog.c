@@ -37,6 +37,7 @@
 #ifdef RTCONFIG_RALINK
 #include <ralink.h>
 #endif
+#include <shared.h>
 
 #include <syslog.h>
 #include <bcmnvram.h>
@@ -49,6 +50,13 @@
 #include <sys/wait.h>
 #include <sys/ioctl.h>
 #include <sys/reboot.h>
+#ifdef RTCONFIG_EMAIL
+#include <push_log.h>
+#endif
+#ifdef RTCONFIG_USER_LOW_RSSI
+#include <wlioctl.h>
+#endif
+
 #define BCM47XX_SOFTWARE_RESET	0x40		/* GPIO 6 */
 #define RESET_WAIT		2		/* seconds */
 #define RESET_WAIT_COUNT	RESET_WAIT * 10 /* 10 times a second */
@@ -66,6 +74,11 @@
 #endif // BTN_SETUP
 #define WPS_TIMEOUT_COUNT	121 * 20
 
+#if defined(RTCONFIG_JFFS2LOG) && defined(RTCONFIG_JFFS2)
+#define LOG_COMMIT_PERIOD	2		/* 2 x 30 seconds */
+static int log_commit_count = 0;
+#endif
+
 #if 0
 static int cpu_timer = 0;
 static int ddns_timer = 1;
@@ -75,6 +88,10 @@ static int u2ec_timer = 0;
 #endif
 static struct itimerval itv;
 static int watchdog_period = 0;
+#ifdef RTCONFIG_BCMARM
+static int chkusb3_period = 0;
+static int u3_chk_life = 6;
+#endif
 static int btn_pressed = 0;
 static int btn_count = 0;
 #ifdef BTN_SETUP
@@ -98,7 +115,7 @@ static int LED_status_on = -1;
 #endif
 
 extern int g_wsc_configured;
-extern int g_isEnrollee;
+extern int g_isEnrollee[MAX_NR_WL_IF];
 
 void 
 sys_exit()
@@ -460,11 +477,13 @@ void btn_check(void)
 
 	if (btn_pressed_setup < BTNSETUP_START)
 	{
-		if (!no_need_to_start_wps() && !wps_band_radio_off(0) &&
+		if (button_pressed(BTN_WPS) &&
+		    !no_need_to_start_wps() &&
+		    !wps_band_radio_off(get_radio_band(0)) &&
 #ifndef RTCONFIG_WIFI_TOG_BTN
-		nvram_match("btn_ez_radiotoggle", "0") &&
+		    nvram_match("btn_ez_radiotoggle", "0") &&
 #endif
-			!nvram_match("wps_ign_btn", "1") && button_pressed(BTN_WPS))
+		    !nvram_match("wps_ign_btn", "1"))
 		{
 			TRACE_PT("button WPS pressed\n");
 
@@ -502,7 +521,9 @@ void btn_check(void)
 	else 
 	{
 		if (!nvram_match("wps_ign_btn", "1")) {
-			if (!no_need_to_start_wps() && !wps_band_radio_off(0) && button_pressed(BTN_WPS))
+			if (button_pressed(BTN_WPS) &&
+			    !no_need_to_start_wps() &&
+			    !wps_band_radio_off(get_radio_band(0)))
 			{
 				/* Whenever it is pushed steady, again... */
 				if (++btn_count_setup_second > SETUP_WAIT_COUNT)
@@ -671,9 +692,6 @@ int timecheck_item(char *activeDate, char *activeTime, char *activeTime2)
 	return active;
 }
 
-#ifdef RTCONFIG_RALINK
-extern char *wif_to_vif(char *wif);
-#endif
 
 int svcStatus[8] = { -1, -1, -1, -1, -1, -1, -1, -1};
 
@@ -745,11 +763,7 @@ void timecheck(void)
 		sprintf(wl_vifs, "%s %s", nvram_safe_get("wl0_vifs"), nvram_safe_get("wl1_vifs"));
 
 		foreach (word, wl_vifs, next) {
-#ifdef RTCONFIG_RALINK
 			snprintf(nv, sizeof(nv) - 1, "%s_expire_tmp", wif_to_vif(word));
-#else
-			snprintf(nv, sizeof(nv) - 1, "%s_expire_tmp", word);
-#endif
 			expire = atoi(nvram_safe_get(nv));
 
 			if (expire)
@@ -757,11 +771,7 @@ void timecheck(void)
 				if (expire <= 30)
 				{
 					nvram_set(nv, "0");
-#ifdef RTCONFIG_RALINK
 					snprintf(nv, sizeof(nv) - 1, "%s_bss_enabled", wif_to_vif(word));
-#else
-					snprintf(nv, sizeof(nv) - 1, "%s_bss_enabled", word);
-#endif
 					nvram_set(nv, "0");
 					if (!need_commit) need_commit = 1;
 #ifdef CONFIG_BCMWL5
@@ -1235,6 +1245,286 @@ void ddns_check(void)
 	return;
 }
 
+#if defined(RTCONFIG_JFFS2LOG) && defined(RTCONFIG_JFFS2)
+void syslog_commit_check(void)
+{
+        struct stat tmp_log_stat, jffs_log_stat;
+	int tmp_stat, jffs_stat;
+
+        tmp_stat = stat("/tmp/syslog.log", &tmp_log_stat);
+	if(tmp_stat == -1) 
+                return;
+
+        if(++log_commit_count >= LOG_COMMIT_PERIOD) {
+
+                jffs_stat = stat("/jffs/syslog.log", &jffs_log_stat);
+		if( jffs_stat == -1) {
+                        eval("cp", "/tmp/syslog.log", "/tmp/syslog.log-1", "/jffs");
+                        return;
+                }
+
+                if(tmp_log_stat.st_size > jffs_log_stat.st_size)
+                        eval("cp", "/tmp/syslog.log", "/tmp/syslog.log-1", "/jffs");
+
+                log_commit_count = 0;
+        }
+        return;
+}
+#endif
+
+#ifdef RTCONFIG_EMAIL
+
+#define PM_CONTENT "/tmp/push_mail"
+#define PM_CONFIGURE "/etc/email/email.conf"
+#define PM_WEEKLY 1
+#define PM_MONTHLY 2
+void SendOutMail(void){
+	FILE *fp;
+	char tmp[1024]={0}, buf[1024]={0};
+	char tmp_sender[64]={0}, tmp_titile[64]={0}, tmp_attachment[64]={0};
+
+#if 0
+	fp = fopen(PM_CONTENT, "w");
+	if(fp) {
+		fputs(" Push Mail Service!!! ", fp);
+		fclose(fp);
+	}
+#else
+	getlogbyinterval(PM_CONTENT, 0);
+
+	if(f_size(PM_CONTENT) <= 0){
+		cprintf("No notified log.\n");
+		return;
+	}
+#endif
+
+	/* write the configuration file.*/
+	system("mkdir /etc/email");
+	fp = fopen(PM_CONFIGURE,"w");
+	if(fp == NULL){
+		cprintf("create configuration file fail.\n");
+		return;
+	}
+
+	/*SMTP_SERVER*/
+	sprintf(tmp,"SMTP_SERVER = '%s'\n", nvram_safe_get("PM_SMTP_SERVER"));
+	strcat(buf, tmp);
+	/*SMTP_PORT*/
+	sprintf(tmp,"SMTP_PORT = '%s'\n", nvram_safe_get("PM_SMTP_PORT"));
+	strcat(buf, tmp);
+	/*MY_NAME*/
+	sprintf(tmp,"MY_NAME = '%s'\n", nvram_safe_get("PM_MY_NAME"));
+	strcat(buf, tmp);
+	/*MY_EMAIL*/
+	sprintf(tmp,"MY_EMAIL = '%s'\n", nvram_safe_get("PM_MY_EMAIL"));
+	strcat(buf, tmp);
+	/*USE_TLS*/
+	sprintf(tmp,"USE_TLS = '%s'\n", nvram_safe_get("PM_USE_TLS"));
+	strcat(buf, tmp);
+	/*SMTP_AUTH*/
+	sprintf(tmp,"SMTP_AUTH = '%s'\n", nvram_safe_get("PM_SMTP_AUTH"));
+	strcat(buf, tmp);
+	/*SMTP_AUTH_USER*/
+	sprintf(tmp,"SMTP_AUTH_USER = '%s'\n", nvram_safe_get("PM_SMTP_AUTH_USER"));
+	strcat(buf, tmp);
+	/*SMTP_AUTH_PASS*/
+	sprintf(tmp,"SMTP_AUTH_PASS = '%s'\n", nvram_safe_get("PM_SMTP_AUTH_PASS"));
+	strcat(buf, tmp);
+
+	fputs(buf,fp);
+	fclose(fp);
+
+	/* issue command line to trigger eMail*/
+	sprintf(tmp_sender, "Administrator");
+	sprintf(tmp_titile, "RT-N16");
+	sprintf(tmp_attachment, "/tmp/syslog.log");
+	sprintf(tmp,"cat %s | email -V -n \"%s\" -s \"%s\" %s -a \"%s\"", PM_CONTENT, tmp_sender, tmp_titile, nvram_safe_get("PM_target"), tmp_attachment);
+	system(tmp);
+}
+
+void save_next_time(struct tm *tm){
+	nvram_set_int("PM_mon", tm->tm_mon);
+	nvram_set_int("PM_day", tm->tm_mday);
+	nvram_set_int("PM_hour", tm->tm_hour);
+}
+
+int nexthour = 0;
+int nextday = 0;
+int nextmonth = 0;
+void schedule_mail(int interval, struct tm *tm){
+	if(nextday == 0){
+		cprintf("Schedule the next report.!!!\n");
+		tm->tm_mday += interval;
+		mktime(tm);
+		nextmonth = tm->tm_mon;
+		nextday = tm->tm_mday;
+		nexthour = tm->tm_hour;
+
+		save_next_time(tm);
+	}
+	else{
+		if((tm->tm_mon == nextmonth) && (tm->tm_mday == nextday) && (tm->tm_hour == nexthour)){
+			tm->tm_mday += interval;
+			mktime(tm);
+			nextmonth = tm->tm_mon;
+			nextday = tm->tm_mday;
+			nexthour = tm->tm_hour;
+			save_next_time(tm);
+
+			cprintf("Sending Push Mail Service out!!!\n");
+			SendOutMail();
+		}
+	}
+}
+
+void push_mail(void)
+{
+	static int count =0;	//for debug
+	time_t now;
+	struct tm *tm;
+	int tmpfreq = 0;
+	//char tmp[32]={0};
+
+	//tcapi_get("PushMail_Entry", "PM_enable", tmp);
+	if(nvram_get_int("PM_enable")  == 0){
+		return;
+	}
+
+	/* reset the Push Mail Service */
+	//tcapi_get("PushMail_Entry", "PM_restart", tmp);
+	if(nvram_get_int("PM_restart") == 1){
+		nexthour = 0;
+		nextday = 0;
+		nextmonth = 0;
+		//tcapi_set("PushMail_Entry", "PM_restart", "0");
+		nvram_set_int("PM_restart", 0);
+	}
+
+	//tcapi_get("PushMail_Entry", "PM_freq", tmp);
+	tmpfreq=nvram_get_int("PM_freq");
+
+	time(&now);
+	tm = localtime(&now);
+
+	if(tmpfreq == PM_MONTHLY){ /* Monthly report */
+		schedule_mail(30, tm);
+	}
+	else if(tmpfreq == PM_WEEKLY){	/* Weekly report */
+		schedule_mail(7, tm);
+	}
+	else{	/* Daily report */
+		schedule_mail(1, tm);
+	}
+
+	//debug.javi
+	//tcapi_get("PushMail_Entry", "PM_debug", tmp);
+	if(nvram_get_int("PM_debug") == 1){
+		if((count %10) == 0){
+			cprintf("year=%d, month=%d, day=%d, wday=%d, hour=%d, min=%d, sec=%d\n",(tm->tm_year+1900), tm->tm_mon, tm->tm_mday, tm->tm_wday, tm->tm_hour, tm->tm_min, tm->tm_sec);
+			cprintf("tmpfreq =%d, nextmonth =%d, nextday=%d nexthour=%d\n", tmpfreq, nextmonth , nextday, nexthour);
+			cprintf("\n");
+		}
+		count ++;
+	}
+	//debug.javi
+}
+#endif
+
+#ifdef RTCONFIG_USER_LOW_RSSI
+#define ETHER_ADDR_STR_LEN      18
+
+typedef struct wl_low_rssi_count{
+	char wlif[32];
+	int  lowc;
+}wl_lowr_count_t;
+
+#define 	WLLC_SIZE	10
+static struct maclist *assoc;
+static int max_sta_count = 128;
+static int maclist_size;
+static int lrsi=0, lrc=0;
+static wl_lowr_count_t  wllc[WLLC_SIZE];
+
+void init_wllc(){
+        char tmp[128], prefix[] = "wlXXXXXXXXXX_";
+        char wlif[128], *next;
+	int i=0, idx=0;
+        int unit=0;
+
+	memset(wllc, 0, sizeof(wllc));
+		
+	maclist_size = sizeof(assoc->count) + max_sta_count * sizeof(struct ether_addr);
+
+        foreach (wlif, nvram_safe_get("wl_ifnames"), next)
+		strncpy(wllc[idx++].wlif, wlif, 32);
+
+        for (i = 1; i < 4; i++) {
+#ifdef RTCONFIG_WIRELESSREPEATER
+                if ((nvram_get_int("sw_mode") == SW_MODE_REPEATER)
+                        && (unit == nvram_get_int("wlc_band")) && (i == 1))
+                        break;
+#endif
+                sprintf(prefix, "wl%d.%d_", unit, i);
+                if (nvram_match(strcat_r(prefix, "bss_enabled", tmp), "1"))
+                        sprintf(wllc[idx++].wlif, "wl%d.%d", unit, i);
+	}
+}
+
+void rssi_check(void)
+{
+        scb_val_t scb_val;
+	char ea[ETHER_ADDR_STR_LEN];
+        int i, idx;
+
+        /* buffers and length */
+        assoc = malloc(maclist_size);
+
+        if (!assoc)
+                goto exit;
+
+	for(idx=0; idx < WLLC_SIZE; ++idx){
+		if(!*wllc[idx].wlif)
+			continue;
+
+                /* query wl for associated sta list */
+                assoc->count = max_sta_count;
+                if (wl_ioctl(wllc[idx].wlif, WLC_GET_ASSOCLIST, assoc, maclist_size))
+                        goto exit;
+
+                for (i = 0; i < assoc->count; i ++) {
+                        memcpy(&scb_val.ea, &assoc->ea[i], sizeof(scb_val.ea));
+
+                        if (wl_ioctl(wllc[idx].wlif, WLC_GET_RSSI, &scb_val, sizeof(scb_val)))
+                                goto exit;
+
+                        ether_etoa((void *)&assoc->ea[i], ea);
+
+                        _dprintf("rssi chk.1. wlif(%s), chk ea=%s, rssi=%d(%d), lowr_cnt=%d, lrc=%d\n", wllc[idx].wlif, ea, scb_val.val, lrsi, wllc[idx].lowc, lrc);      // tmp test
+
+			if(scb_val.val < lrsi){
+				_dprintf("rssi chk.2. low rssi: ea=%s, lowc=%d(%d)\n", ea, wllc[idx].lowc, lrc);    //tmp test
+                        	if(++wllc[idx].lowc > lrc){
+					_dprintf("rssi chk.3. deauth ea=%s\n", ea);    //tmp test
+
+					scb_val.val = 8;	// reason code: Disassociated because sending STA is leaving BSS
+					wllc[idx].lowc = 0;
+
+                                	if (wl_ioctl(wllc[idx].wlif, WLC_SCB_DEAUTHENTICATE_FOR_REASON, &scb_val, sizeof(scb_val)))
+                                        	goto exit;
+                        	}
+			} else
+				wllc[idx].lowc = 0;
+                }
+        }
+
+        /* error/exit */
+exit:
+        if (assoc) free(assoc);
+
+        return;
+}
+#endif
+
 /* wathchdog is runned in NORMAL_PERIOD, 1 seconds
  * check in each NORMAL_PERIOD
  *	1. button
@@ -1246,6 +1536,9 @@ void ddns_check(void)
 
 void watchdog(int sig)
 {
+#ifdef RTCONFIG_EMAIL
+	push_mail();
+#endif
 	/* handle button */
   	 btn_check();
 	if(nvram_match("asus_mfg", "0")
@@ -1256,17 +1549,16 @@ void watchdog(int sig)
 		led_check();
 
 #ifdef RTCONFIG_RALINK
-	if(need_restart_wsc)
-	{
-		char word[256], *next;
-		foreach (word, nvram_safe_get("wl_ifnames"), next) {
+	if(need_restart_wsc) {
+		char word[256], *next, ifnames[128];
+
+		strcpy(ifnames, nvram_safe_get("wl_ifnames"));
+		foreach (word, ifnames, next) {
 			eval("iwpriv", word, "set", "WscConfMode=0");
 		}
-		stop_wpsfix();
 
 		need_restart_wsc = 0;
 		start_wsc_pin_enrollee();
-		start_wpsfix();
 	}
 #endif
 #ifdef RTCONFIG_SWMODE_SWITCH
@@ -1280,8 +1572,28 @@ void watchdog(int sig)
 
 	watchdog_period = (watchdog_period + 1) % 30;
 
+#ifdef RTCONFIG_BCMARM
+	if(u3_chk_life < 20) {
+		chkusb3_period = (chkusb3_period + 1) % u3_chk_life;
+		if(!chkusb3_period && nvram_match("usb_usb3", "1") && nvram_match("usb_path1_speed", "12")){
+			_dprintf("force reset usb pwr\n");      // tmp test     
+			stop_usb_program(1);
+			sleep(1);
+			set_pwr_usb(0);
+			sleep(3);
+			set_pwr_usb(1);
+			u3_chk_life *= 2;
+		}
+	}
+#endif
 	if (watchdog_period) return;
 
+#ifdef RTCONFIG_USER_LOW_RSSI
+	lrc = atoi(nvram_safe_get("wl_lrc"));
+	if(!lrc)  lrc = 2;
+	if(lrsi = atoi(nvram_safe_get("wl_user_rssi")))
+		rssi_check();
+#endif
 #ifdef BTN_SETUP
 	if (btn_pressed_setup >= BTNSETUP_START) return;
 #endif
@@ -1292,6 +1604,10 @@ void watchdog(int sig)
 	cpu_usage_monitor();
 #endif
 	ddns_check();
+
+#if defined(RTCONFIG_JFFS2LOG) && defined(RTCONFIG_JFFS2)
+        syslog_commit_check();
+#endif
 
 	return;
 }
@@ -1318,6 +1634,7 @@ watchdog_main(int argc, char *argv[])
 #endif
 
 	/* set the signal handler */
+	signal(SIGCHLD, chld_reap);
 	signal(SIGUSR1, catch_sig);
 	signal(SIGUSR2, catch_sig);
 	signal(SIGTSTP, catch_sig);
@@ -1354,6 +1671,9 @@ watchdog_main(int argc, char *argv[])
 
 	led_control_normal();
 
+#ifdef RTCONFIG_USER_LOW_RSSI
+	init_wllc();
+#endif
 	/* Most of time it goes to sleep */
 	while (1)
 	{

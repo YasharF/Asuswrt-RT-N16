@@ -494,7 +494,7 @@ static void *thread_do_arp_check_function(void *srvInfo)
 	pthread_exit(NULL);
 }
 
-static int thread_arpping(char *iface)
+static int thread_arpping(char* iface)
 {
 	int res;
 	int lots_of_threads;
@@ -977,7 +977,7 @@ static void sigaction_handler(int sig, siginfo_t *si, void *context)
 		//- Remove all
 		g_kill_list = 1;
 		break;
-	}
+	}	
 }
 
 int main(int argc, char *argv[]) 
@@ -1037,7 +1037,7 @@ int main(int argc, char *argv[])
 	sigaction(SIGCHLD, &act, NULL);	
 	sigaction(SIGUSR1, &act, NULL);	
 #endif
-	
+
 	//int          dbglv = -1;//9;
 	int          dbglv = 0;
 	smbc_init(get_auth_data_fn, dbglv);

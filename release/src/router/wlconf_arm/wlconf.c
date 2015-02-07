@@ -1,7 +1,7 @@
 /*
  * Wireless Network Adapter Configuration Utility
  *
- * Copyright (C) 2012, Broadcom Corporation
+ * Copyright (C) 2013, Broadcom Corporation
  * All Rights Reserved.
  * 
  * This is UNPUBLISHED PROPRIETARY SOURCE CODE of Broadcom Corporation;
@@ -9,7 +9,7 @@
  * or duplicated in any form, in whole or in part, without the prior
  * written permission of Broadcom Corporation.
  *
- * $Id: wlconf.c 397252 2013-04-17 23:51:01Z $
+ * $Id: wlconf.c 415896 2013-08-01 02:59:43Z $
  */
 
 #include <typedefs.h>
@@ -62,9 +62,6 @@
 #define	IDCODE_ID_SHIFT		12
 #define	IDCODE_REV_MASK		0xf0000000
 #define	IDCODE_REV_SHIFT	28
-
-/* Length of the wl capabilities string */
-#define CAP_STR_LEN 250
 
 /*
  * Debugging Macros
@@ -953,6 +950,15 @@ wlconf_security_options(char *name, char *prefix, int bsscfg_idx, bool id_supp,
 	/* Set 802.11 authentication mode - open/shared */
 	val = atoi(nvram_safe_get(strcat_r(prefix, "auth", tmp)));
 	WL_BSSIOVAR_SETINT(name, "auth", bsscfg_idx, val);
+#ifdef MFP
+		/* Set MFP */
+	val = WPA_AUTH_DISABLED;
+	WL_BSSIOVAR_GET(name, "wpa_auth", bsscfg_idx, &val, sizeof(val));
+	if (val & (WPA2_AUTH_PSK | WPA2_AUTH_UNSPECIFIED)) {
+		val = atoi(nvram_safe_get(strcat_r(prefix, "mfp", tmp)));
+		WL_BSSIOVAR_SETINT(name, "mfp", bsscfg_idx, val);
+	}
+#endif
 }
 
 static void
@@ -1009,34 +1015,35 @@ wlconf_ampdu_amsdu_set(char *name, char prefix[PREFIX_LEN], int nmode, int btc_m
 	bool ampdu_valid_option = FALSE;
 	bool amsdu_valid_option = FALSE;
 	int  val, ampdu_option_val = OFF, amsdu_option_val = OFF;
+	int rx_amsdu_in_ampdu_option_val = OFF;
 	int wme_option_val = ON;  /* On by default */
-	char tmp[CAP_STR_LEN], var[80], *next, *wme_val;
+	char caps[WLC_IOCTL_MEDLEN], var[80], *next, *wme_val;
 	char buf[WLC_IOCTL_SMLEN];
 	int len = strlen("amsdu");
-	int ret;
-#if defined(linux)
-	int phytype;
+	int ret, phytype;
+	wlc_rev_info_t rev;
+#ifdef linux
 	struct utsname unamebuf;
-	char *lx_rel;
-
-	WL_IOCTL(name, WLC_GET_PHYTYPE, &phytype, sizeof(phytype));
 
 	uname(&unamebuf);
-	lx_rel = unamebuf.release;
-#endif /* linux */
+#endif
+
+	WL_IOCTL(name, WLC_GET_REVINFO, &rev, sizeof(rev));
+
+	WL_GETINT(name, WLC_GET_PHYTYPE, &phytype);
 
 	/* First, clear WMM settings to avoid conflicts */
 	WL_IOVAR_SETINT(name, "wme", OFF);
 
 	/* Get WME setting from NVRAM if present */
-	wme_val = nvram_get(strcat_r(prefix, "wme", tmp));
+	wme_val = nvram_get(strcat_r(prefix, "wme", caps));
 	if (wme_val && !strcmp(wme_val, "off")) {
 		wme_option_val = OFF;
 	}
 
 	/* Set options based on capability */
-	wl_iovar_get(name, "cap", (void *)tmp, CAP_STR_LEN);
-	foreach(var, tmp, next) {
+	wl_iovar_get(name, "cap", (void *)caps, sizeof(caps));
+	foreach(var, caps, next) {
 		char *nvram_str;
 		bool amsdu = 0;
 
@@ -1066,37 +1073,46 @@ wlconf_ampdu_amsdu_set(char *name, char prefix[PREFIX_LEN], int nmode, int btc_m
 		if (amsdu) {
 			amsdu_valid_option = TRUE;
 			amsdu_option_val = val;
+
+			nvram_str = nvram_get(strcat_r(prefix, "rx_amsdu_in_ampdu", buf));
+			if (nvram_str) {
+				if (!strcmp(nvram_str, "on"))
+					rx_amsdu_in_ampdu_option_val = ON;
+				else if (!strcmp(nvram_str, "auto"))
+					rx_amsdu_in_ampdu_option_val = AUTO;
+			}
 		}
 	}
 
 	if (nmode != OFF) { /* N-mode is ON/AUTO */
 		if (ampdu_valid_option) {
 			if (ampdu_option_val != OFF) {
-#if defined(linux)
-				if ((memcmp(lx_rel, "2.6.36", 6) != 0) ||
-				    (phytype != PHY_TYPE_AC)) {
-					WL_IOVAR_SETINT(name, "amsdu", OFF);
-				}
-#else
 				WL_IOVAR_SETINT(name, "amsdu", OFF);
-#endif /* defined(linux) */
 				WL_IOVAR_SETINT(name, "ampdu", ampdu_option_val);
 			} else {
 				WL_IOVAR_SETINT(name, "ampdu", OFF);
 			}
 
 			wlconf_set_ampdu_retry_limit(name, prefix);
+
+#ifdef linux
+			/* For MIPS routers set the num mpdu per ampdu limit to 32. We observed
+			 * that having this value at 32 helps with bi-di thru'put as well.
+			 */
+			if ((phytype == PHY_TYPE_AC) &&
+			    (strncmp(unamebuf.machine, "mips", 4) == 0)) {
+#ifndef __CONFIG_USBAP__
+				WL_IOVAR_SETINT(name, "ampdu_mpdu", 32);
+#endif /* __CONFIG_USBAP__ */
+			}
+#endif /* linux */
 		}
 
 		if (amsdu_valid_option) {
 			if (amsdu_option_val != OFF) { /* AMPDU (above) has priority over AMSDU */
-#if defined(linux)
-				if ((memcmp(lx_rel, "2.6.36", 6) == 0) &&
-				    (phytype == PHY_TYPE_AC)) {
+				if (rev.corerev >= 40) {
 					WL_IOVAR_SETINT(name, "amsdu", amsdu_option_val);
-				} else
-#endif /* defined(linux) */
-				if (ampdu_option_val == OFF) {
+				} else if (ampdu_option_val == OFF) {
 					WL_IOVAR_SETINT(name, "ampdu", OFF);
 					WL_IOVAR_SETINT(name, "amsdu", amsdu_option_val);
 				}
@@ -1104,7 +1120,7 @@ wlconf_ampdu_amsdu_set(char *name, char prefix[PREFIX_LEN], int nmode, int btc_m
 				WL_IOVAR_SETINT(name, "amsdu", OFF);
 		}
 
-		WL_IOVAR_SETINT(name, "rx_amsdu_in_ampdu", OFF);
+		WL_IOVAR_SETINT(name, "rx_amsdu_in_ampdu", rx_amsdu_in_ampdu_option_val);
 	} else {
 		/* When N-mode is off or for non N-phy device, turn off AMPDU, AMSDU;
 		 */
@@ -1151,7 +1167,6 @@ static void wlconf_set_txbf(char *name, char *prefix)
 	wlc_rev_info_t rev;
 	uint32 txbf_bfe_cap = 0;
 	uint32 txbf_bfr_cap = 0;
-	wl_txbf_rateset_t rs;
 	int ret = 0;
 
 	WL_IOCTL(name, WLC_GET_REVINFO, &rev, sizeof(rev));
@@ -1177,16 +1192,6 @@ static void wlconf_set_txbf(char *name, char *prefix)
 
 		WL_IOVAR_SETINT(name, "txbf_bfe_cap", txbf_bfe_cap ? 1 : 0);
 	}
-
-	if ((nvram_get("disable_WAR116021")) == NULL) {
-		WL_IOVAR_GET(name, "txbf_rateset", &rs, sizeof(wl_txbf_rateset_t));
-		if (!ret) {
-			rs.txbf_rate_vht[0] &= ~ 0x03;
-			rs.txbf_rate_vht_bcm[0] &= ~ 0x03;
-			WL_IOVAR_SET(name, "txbf_rateset", &rs, sizeof(wl_txbf_rateset_t));
-		}
-	}
-
 }
 
 /* Set up TxBF timer. Called when i/f is up. */
@@ -1209,7 +1214,7 @@ static void wlconf_set_txbf_timer(char *name, char *prefix)
 
 /* Apply Traffic Management filter settings stored in NVRAM */
 static void
-trf_mgmt_settings(char *prefix)
+trf_mgmt_settings(char *prefix, bool dwm_supported)
 {
 	char buffer[sizeof(trf_mgmt_filter_t)*(MAX_NUM_TRF_MGMT_RULES+1)];
 	char iobuff[sizeof(trf_mgmt_filter_t)*(MAX_NUM_TRF_MGMT_RULES+1)+32];
@@ -1221,6 +1226,16 @@ trf_mgmt_settings(char *prefix)
 	char *wlifname;
 	struct in_addr ipaddr, ipmask;
 	char nvram_ifname[32];
+	bool tm_filters_configured = FALSE;
+	/* DWM variables */
+	bool dwm_filters_configured = FALSE;
+	char dscp_filter_buffer[sizeof(trf_mgmt_filter_t)*(MAX_NUM_TRF_MGMT_DWM_RULES)];
+	char dscp_filter_iobuff[sizeof(trf_mgmt_filter_t)*(MAX_NUM_TRF_MGMT_DWM_RULES)+
+	strlen("trf_mgmt_filters_add")+ 1 + OFFSETOF(trf_mgmt_filter_list_t, filter)];
+	int dscp_filterlen;
+	trf_mgmt_filter_t *trf_mgmt_dwm_filter;
+	trf_mgmt_filter_list_t *trf_mgmt_dwm_filter_list = NULL;
+	netconf_trmgmt_t nettrm_dwm;
 
 	snprintf(nvram_ifname, sizeof(nvram_ifname), "%sifname", prefix);
 	wlifname = nvram_get(nvram_ifname);
@@ -1270,23 +1285,62 @@ trf_mgmt_settings(char *prefix)
 		trf_mgmt_filter_list->num_filters += 1;
 		trfmgmt++;
 	}
+	if (trf_mgmt_filter_list->num_filters)
+		tm_filters_configured = TRUE;
+
+	if (dwm_supported) {
+		trf_mgmt_dwm_filter_list = (trf_mgmt_filter_list_t *)dscp_filter_buffer;
+		trf_mgmt_dwm_filter = &trf_mgmt_dwm_filter_list->filter[0];
+		memset(dscp_filter_buffer, 0, sizeof(dscp_filter_buffer));
+
+		/* Read up to NUM_TFF_MGMT_FILTERS entries from NVRAM */
+		for (i = 0; i < MAX_NUM_TRF_MGMT_DWM_RULES; i++) {
+			if (get_trf_mgmt_dwm(prefix, i, &nettrm_dwm) == FALSE) {
+				continue;
+			}
+			if (nettrm_dwm.match.flags == NETCONF_DISABLED) {
+				continue;
+			}
+
+			trf_mgmt_dwm_filter->dscp = nettrm_dwm.match.dscp;
+			if (nettrm_dwm.favored)
+				trf_mgmt_dwm_filter->flags |= TRF_FILTER_FAVORED;
+			trf_mgmt_dwm_filter->flags |= TRF_FILTER_DWM;
+			trf_mgmt_dwm_filter->priority = nettrm_dwm.prio;
+			trf_mgmt_dwm_filter++;
+			trf_mgmt_dwm_filter_list->num_filters += 1;
+		}
+		if (trf_mgmt_dwm_filter_list->num_filters)
+			dwm_filters_configured = TRUE;
+	}
 
 	/* Disable traffic management module to initial known state */
 	trf_mgmt_config.trf_mgmt_enabled = 0;
 	WL_IOVAR_SET(wlifname, "trf_mgmt_config", &trf_mgmt_config, sizeof(trf_mgmt_config_t));
 
 	/* Add traffic management filter entries */
-	if (trf_mgmt_filter_list->num_filters) {
+	if (tm_filters_configured || dwm_filters_configured) {
 		/* Enable traffic management module  before adding filter mappings */
 		trf_mgmt_config.trf_mgmt_enabled = 1;
 		WL_IOVAR_SET(wlifname, "trf_mgmt_config", &trf_mgmt_config,
 			sizeof(trf_mgmt_config_t));
 
-		/* Configure TM module filters mappings */
-		filterlen = trf_mgmt_filter_list->num_filters *
-			sizeof(trf_mgmt_filter_t) + OFFSETOF(trf_mgmt_filter_list_t, filter);
-		wl_iovar_setbuf(wlifname, "trf_mgmt_filters_add", trf_mgmt_filter_list,
-			filterlen, iobuff, sizeof(iobuff));
+		if (tm_filters_configured) {
+			/* Configure TM module filters mappings */
+			filterlen = trf_mgmt_filter_list->num_filters *
+				sizeof(trf_mgmt_filter_t) +
+				OFFSETOF(trf_mgmt_filter_list_t, filter);
+			wl_iovar_setbuf(wlifname, "trf_mgmt_filters_add", trf_mgmt_filter_list,
+				filterlen, iobuff, sizeof(iobuff));
+		}
+
+		if (dwm_filters_configured) {
+			dscp_filterlen =  trf_mgmt_dwm_filter_list->num_filters *
+				sizeof(trf_mgmt_filter_t) +
+				OFFSETOF(trf_mgmt_filter_list_t, filter);
+			wl_iovar_setbuf(wlifname, "trf_mgmt_filters_add", trf_mgmt_dwm_filter_list,
+			    dscp_filterlen, dscp_filter_iobuff, sizeof(dscp_filter_iobuff));
+		}
 	}
 }
 
@@ -1438,6 +1492,92 @@ err:
 	return (ret);
 }
 
+/*
+ * wlconf_process_sta_config_entry() - process a single sta_config settings entry.
+ *
+ *	This function processes a single sta_config settings entry by parsing the entry and
+ *	calling the appropriate IOVAR(s) to apply the settings in the driver.
+ *
+ * Inputs:
+ *	params	- address of a nul terminated ascii string buffer containing a single sta_config
+ *		  settings entry in the form "xx:xx:xx:xx:xx:xx,prio[,steerflag]".
+ *
+ *	At least the mac address of the station to which the settings are to be applied needs
+ *	to be present, with one or more setting values, in a specific order. New settings must
+ *	be added at the end. Alternatively, we could allow "prio=<value>,steerflag=<value>" and
+ *	so on, but that would take some more parsing and use more nvram space.
+ *
+ * Outputs:
+ *	Driver settings may be updated.
+ *
+ * Returns:
+ *	 This function returns a BCME_xxx status indicating success (BCME_OK) or failure.
+ *
+ * Side effects: The input buffer is trashed by the strsep() function.
+ *
+ */
+static int
+wlconf_process_sta_config_entry(char *ifname, char *param_list)
+{
+	enum {	/* Parameter index in comma-separated list of settings. */
+		PARAM_MACADDRESS = 0,
+		PARAM_PRIO	 = 1,
+		PARAM_STEERFLAG	 = 2,
+		PARAM_COUNT
+	} param_idx = PARAM_MACADDRESS;
+	char *param;
+	struct ether_addr ea;
+	char *end;
+	uint32 value;
+
+	while ((param = strsep(&param_list, ","))) {
+		switch (param_idx) {
+
+		case PARAM_MACADDRESS: /* MAC Address - parse into ea */
+			if (!param || !ether_atoe(param, &ea.octet[0])) {
+				return BCME_BADADDR;
+			}
+			break;
+
+		case PARAM_PRIO: /* prio value - parse and apply through "staprio" iovar */
+			if (*param) { /* If no value is provided, do not configure the prio */
+				wl_staprio_cfg_t staprio_arg;
+				int ret;
+
+				value = strtol(param, &end, 0);
+				if (*end != '\0') {
+					return BCME_BADARG;
+				}
+				memset(&staprio_arg, 0, sizeof(staprio_arg));
+				memcpy(&staprio_arg.ea, &ea, sizeof(ea));
+				staprio_arg.prio = value; /* prio is byte sized, no htod() needed */
+				WL_IOVAR_SET(ifname, "staprio", &staprio_arg, sizeof(staprio_arg));
+			}
+			break;
+
+		case PARAM_STEERFLAG:
+			if (*param) {
+				value = strtol(param, &end, 0);
+				if (*end != '\0') {
+					return BCME_BADARG;
+				}
+			}
+			break;
+
+		default:
+			/* Future use parameter already set in nvram config - ignore. */
+			break;
+		}
+		++param_idx;
+	}
+
+	if (param_idx <= PARAM_PRIO) { /* No mac address and/or no parameters at all, forget it. */
+		return BCME_BADARG;
+	}
+
+	return BCME_OK;
+}
+
 #define VIFNAME_LEN 16
 
 /* configure the specified wireless interface */
@@ -1473,7 +1613,7 @@ wlconf(char *name)
 	int wlsubunit = -1;
 	int wl_ap_build = 0; /* wl compiled with AP capabilities */
 	char cap[WLC_IOCTL_SMLEN];
-	char caps[WLC_IOCTL_SMLEN];
+	char caps[WLC_IOCTL_MEDLEN];
 	int btc_mode;
 	uint32 leddc;
 	uint nbw = WL_CHANSPEC_BW_20;
@@ -1516,7 +1656,7 @@ wlconf(char *name)
 	 * can't use the same iovars to configure the wl.
 	 * so we use "wl_ap_build" to help us know how to configure the driver
 	 */
-	if (wl_iovar_get(name, "cap", (void *)caps, WLC_IOCTL_SMLEN))
+	if (wl_iovar_get(name, "cap", (void *)caps, sizeof(caps)))
 		return -1;
 
 	foreach(cap, caps, next) {
@@ -1863,7 +2003,8 @@ wlconf(char *name)
 			val = atoi(nvram_safe_get(strcat_r(bsscfg->prefix, "wmf_bss_enable", tmp)));
 			WL_BSSIOVAR_SETINT(name, "wmf_bss_enable", bsscfg->idx, val);
 
-			val = atoi(nvram_safe_get(strcat_r(bsscfg->prefix, "wmf_psta_disable", tmp)));
+			val = atoi(nvram_safe_get(strcat_r(bsscfg->prefix,
+				"wmf_psta_disable", tmp)));
 			WL_BSSIOVAR_SETINT(name, "wmf_psta_disable", bsscfg->idx, val);
 		}
 
@@ -2530,37 +2671,95 @@ wlconf(char *name)
 		wl_iovar_set(name, "avg_dma_xfer_rate", &val, sizeof(val));
 	}
 
-	{ /*
-	   * If no nvram variable exists to force non-aggregated mpdu regulation on/off,
-	   * limit to 2G interfaces.
-	   */
-	    str = nvram_get(strcat_r(prefix, "nar", tmp));
-	    if (str) {
+	/*
+	 * If no nvram variable exists to force non-aggregated mpdu regulation on/off,
+	 * limit to 2G interfaces.
+	 */
+	str = nvram_get(strcat_r(prefix, "nar", tmp));
+	if (str) {
 		val = atoi(str);
-	    } else {
+	} else {
 		val = (bandtype == WLC_BAND_2G) ? 1 : 0;
-	    }
-	    WLCONF_DBG("%sabling non-aggregated regulation on band %d\n", (val) ?
-	        "En":"Dis", bandtype);
-	    WL_IOVAR_SETINT(name, "nar", val);
-	    if (val) {
+	}
+	WLCONF_DBG("%sabling non-aggregated regulation on band %d\n", (val) ? "En":"Dis", bandtype);
+	WL_IOVAR_SETINT(name, "nar", val);
+	if (val) {
 		/* nar is enabled on this interface, add tuneable parameters */
 		str = nvram_get(strcat_r(prefix, "nar_handle_ampdu", tmp));
 		if (str) {
-		    WL_IOVAR_SETINT(name, "nar_handle_ampdu", atoi(str));
+			WL_IOVAR_SETINT(name, "nar_handle_ampdu", atoi(str));
 		}
 		str = nvram_get(strcat_r(prefix, "nar_transit_limit", tmp));
 		if (str) {
-		    WL_IOVAR_SETINT(name, "nar_transit_limit", atoi(str));
+			WL_IOVAR_SETINT(name, "nar_transit_limit", atoi(str));
 		}
-	    }
 	}
 
 	/* Set up TxBF */
 	wlconf_set_txbf(name, prefix);
 
+	/* set airtime fairness */
+	val = 0;
+	str = nvram_get(strcat_r(prefix, "atf", tmp));
+	if (str) {
+		val = atoi(str);
+	}
+	WL_IOVAR_SETINT(name, "atf", val);
+
+	str = nvram_get(strcat_r(prefix, "ampdu_atf_us", tmp));
+	if (str) {
+		val = atoi(str);
+		if (val) {
+			WL_IOVAR_SETINT(name, "ampdu_atf_us", val);
+			WL_IOVAR_SETINT(name, "nar_atf_us", val);
+		}
+	}
+
+	/* set TAF */
+	val = 0;
+	str = nvram_get(strcat_r(prefix, "taf_enable", tmp));
+	if (str) {
+		val = atoi(str);
+	}
+	WL_IOVAR_SETINT(name, "taf", val);
+
+	/* set ebos */
+	val = 0;
+	str = nvram_get(strcat_r(prefix, "ebos_enable", tmp));
+	if (str) {
+		val = atoi(str);
+	}
+	WL_IOVAR_SETINT(name, "ebos_enable", val);
+
+	val = 0;
+	str = nvram_get(strcat_r(prefix, "ebos_flags", tmp));
+	if (str) {
+		val = atoi(str);
+		WL_IOVAR_SETINT(name, "ebos_flags", val);
+	}
+
+	val = 0;
+	str = nvram_get(strcat_r(prefix, "ebos_prr_threshold", tmp));
+	if (str) {
+		val = strtol(str, NULL, 0);
+		WL_IOVAR_SETINT(name, "ebos_prr_threshold", val);
+	}
+
+	val = 0;
+	str = nvram_get(strcat_r(prefix, "ebos_prr_flags", tmp));
+	if (str) {
+		val = atoi(str);
+		WL_IOVAR_SETINT(name, "ebos_prr_flags", val);
+	}
+
 	/* Bring the interface back up */
 	WL_IOCTL(name, WLC_UP, NULL, 0);
+
+	/* set phy_percal_delay */
+	val = atoi(nvram_safe_get(strcat_r(prefix, "percal_delay", tmp)));
+	if (val) {
+		wl_iovar_set(name, "phy_percal_delay", &val, sizeof(val));
+	}
 
 	/* Set antenna */
 	val = atoi(nvram_safe_get(strcat_r(prefix, "antdiv", tmp)));
@@ -2577,6 +2776,19 @@ wlconf(char *name)
 	/* set pspretend */
 	val = 0;
 	if (ap) {
+		/* Set pspretend for multi-ssid bss */
+		for (i = 0; i < bclist->count; i++) {
+			bsscfg = &bclist->bsscfgs[i];
+			str = nvram_safe_get(strcat_r(bsscfg->prefix,
+				"pspretend_retry_limit", tmp));
+			if (str) {
+				val = atoi(str);
+				WL_BSSIOVAR_SETINT(name, "pspretend_retry_limit", bsscfg->idx, val);
+			}
+		}
+
+		/* now set it for primary bss */
+		val = 0;
 		str = nvram_get(strcat_r(prefix, "pspretend_retry_limit", tmp));
 		if (str) {
 			val = atoi(str);
@@ -2734,7 +2946,12 @@ legacy_mode:
 legacy_end:
 		;
 #endif /* EXT_ACS */
-	}
+		/* Apply sta_config configuration settings for this interface */
+		foreach(var, nvram_safe_get("sta_config"), next) {
+			wlconf_process_sta_config_entry(name, var);
+		}
+
+	} /* AP or APSTA */
 
 	/* Security settings for each BSS Configuration */
 	for (i = 0; i < bclist->count; i++) {
@@ -2827,7 +3044,7 @@ wlconf_down(char *name)
 	struct {int bsscfg_idx; int enable;} setbuf;
 	int wl_ap_build = 0; /* 1 = wl compiled with AP capabilities */
 	char cap[WLC_IOCTL_SMLEN];
-	char caps[WLC_IOCTL_SMLEN];
+	char caps[WLC_IOCTL_MEDLEN];
 	char *next;
 	wlc_ssid_t ssid;
 
@@ -2845,7 +3062,7 @@ wlconf_down(char *name)
 	 * can't use the same iovars to configure the wl.
 	 * so we use "wl_ap_build" to help us know how to configure the driver
 	 */
-	if (wl_iovar_get(name, "cap", (void *)caps, WLC_IOCTL_SMLEN))
+	if (wl_iovar_get(name, "cap", (void *)caps, sizeof(caps)))
 		return -1;
 
 	foreach(cap, caps, next) {
@@ -2904,11 +3121,12 @@ wlconf_start(char *name)
 	struct maclist *maclist;
 	struct ether_addr *ea;
 	struct bsscfg_list *bclist = NULL;
-	struct bsscfg_info *bsscfg;
+	struct bsscfg_info *bsscfg = NULL;
 	wlc_ssid_t ssid;
-	char cap[WLC_IOCTL_SMLEN], caps[WLC_IOCTL_SMLEN];
+	char cap[WLC_IOCTL_SMLEN], caps[WLC_IOCTL_MEDLEN];
 	char var[80], tmp[100], prefix[PREFIX_LEN], *str, *next;
-	int trf_mgmt_cap = 0;
+	int trf_mgmt_cap = 0, trf_mgmt_dwm_cap = 0;
+	bool dwm_supported = FALSE;
 
 	/* Check interface (fail silently for non-wl interfaces) */
 	if ((ret = wl_probe(name)))
@@ -2940,7 +3158,7 @@ wlconf_start(char *name)
 	 * can't use the same iovars to configure the wl.
 	 * so we use "wl_ap_build" to help us know how to configure the driver
 	 */
-	if (wl_iovar_get(name, "cap", (void *)caps, WLC_IOCTL_SMLEN))
+	if (wl_iovar_get(name, "cap", (void *)caps, sizeof(caps)))
 		return -1;
 
 	foreach(cap, caps, next) {
@@ -2949,6 +3167,9 @@ wlconf_start(char *name)
 
 		if (!strcmp(cap, "traffic-mgmt"))
 			trf_mgmt_cap = 1;
+
+		if (!strcmp(cap, "traffic-mgmt-dwm"))
+			trf_mgmt_dwm_cap = 1;
 	}
 
 	/* Get instance */
@@ -3038,7 +3259,9 @@ wlconf_start(char *name)
 
 	}
 	if ((ap || apsta || sta) && (trf_mgmt_cap)) {
-		trf_mgmt_settings(prefix);
+		if (trf_mgmt_dwm_cap && ap)
+			dwm_supported = TRUE;
+		trf_mgmt_settings(prefix, dwm_supported);
 	}
 
 #ifdef TRAFFIC_MGMT_RSSI_POLICY
@@ -3055,6 +3278,8 @@ wlconf_start(char *name)
 		wl_iovar_setint(name, "wmf_mcast_data_sendup", val);
 		val = atoi(nvram_safe_get(strcat_r(prefix, "wmf_ucast_upnp", tmp)));
 		wl_iovar_setint(name, "wmf_ucast_upnp", val);
+		val = atoi(nvram_safe_get(strcat_r(prefix, "wmf_igmpq_filter", tmp)));
+		wl_iovar_setint(name, "wmf_igmpq_filter", val);
 	}
 #endif /* __CONFIG_EMF__ */
 

@@ -20,12 +20,13 @@ static const struct model_s model_list[] = {
 	{ "RT-AC68U",	MODEL_RTAC68U	},
 	{ "RT-N53",	MODEL_RTN53	},
 	{ "RT-N16",	MODEL_RTN16	},
-	{ "RT-N18UHP",	MODEL_RTN18UHP	},
+	{ "RT-N18U",	MODEL_RTN18U	},
 	{ "RT-N15U",	MODEL_RTN15U	},
 	{ "RT-N12",	MODEL_RTN12	},
 	{ "RT-N12B1",	MODEL_RTN12B1	},
 	{ "RT-N12C1",	MODEL_RTN12C1	},
 	{ "RT-N12D1",	MODEL_RTN12D1	},
+	{ "RT-N12VP",	MODEL_RTN12VP	},
 	{ "RT-N12HP",	MODEL_RTN12HP	},
 	{ "AP-N12",	MODEL_APN12	},
 	{ "AP-N12HP",	MODEL_APN12HP	},
@@ -34,6 +35,7 @@ static const struct model_s model_list[] = {
 	{ "RT-N10+",	MODEL_RTN10P	},
 	{ "RT-N10P",	MODEL_RTN10P	},
 	{ "RT-N10D1",	MODEL_RTN10D1	},
+	{ "RT-N10PV2",	MODEL_RTN10PV2	},
 #else	/* RTCONFIG_RALINK */
 #ifdef RTCONFIG_DSL
 	{ "DSL-N55U",	MODEL_DSLN55U	},
@@ -63,6 +65,8 @@ static int get_model_by_hw(void)
 			return MODEL_RTN12C1;
 		if (strncmp(hw_version, "RTN12D1", 7) == 0)
 			return MODEL_RTN12D1;
+		if (strncmp(hw_version, "RTN12VP", 7) == 0)
+			return MODEL_RTN12VP;
 		if (strncmp(hw_version, "RTN12HP", 7) == 0)
 			return MODEL_RTN12HP;
 		if (strncmp(hw_version, "APN12HP", 7) == 0)

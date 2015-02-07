@@ -1903,6 +1903,26 @@ err:
 }
 #endif
 
+int ruleHasFTPport(void)
+{
+	char *nvp = NULL, *nv = NULL, *b = NULL, *desc = NULL, *port = NULL, *dstip = NULL, *lport = NULL, *proto = NULL;
+
+	nvp = nv = strdup(nvram_safe_get("vts_rulelist"));
+	while (nv && (b = strsep(&nvp, "<")) != NULL) {
+		if ((vstrsep(b, ">", &desc, &port, &dstip, &lport, &proto) != 5))
+		{
+			continue;
+		}
+
+		if(strstr(port, "21"))
+		{
+			return 1;
+		}
+	}
+	free(nv);
+	return 0;
+}
+
 void
 filter_setting(char *wan_if, char *wan_ip, char *lan_if, char *lan_ip, char *logaccept, char *logdrop)
 {
@@ -2134,7 +2154,7 @@ TRACE_PT("writing Parental Control\n");
 		if (!nvram_match("enable_ftp", "0"))
 		{
 			fprintf(fp, "-A INPUT -p tcp -m tcp --dport 21 -j %s\n", logaccept);
-			if(nvram_match("vts_enable_x", "1") && nvram_get_int("vts_ftpport") != 0 && nvram_get_int("vts_ftpport") != 21)
+			if(nvram_match("vts_enable_x", "1") && nvram_get_int("vts_ftpport") != 0 && nvram_get_int("vts_ftpport") != 21 && ruleHasFTPport() )
 				fprintf(fp, "-A INPUT -p tcp -m tcp --dport %s -j %s\n", nvram_safe_get("vts_ftpport"), logaccept);
 		}
 
@@ -3923,27 +3943,28 @@ void
 del_samba_rules(void)
 {
         char ifname[IFNAMSIZ];
+	char *lan_ip = nvram_safe_get("lan_ipaddr");
 
         strncpy(ifname, nvram_safe_get("lan_ifname"), IFNAMSIZ);
 
         /* delete existed rules */
-        eval("iptables", "-t", "raw", "-D", "PREROUTING", "-i", ifname, "-p", "tcp",
+        eval("iptables", "-t", "raw", "-D", "PREROUTING", "-i", ifname, "-d", lan_ip, "-p", "tcp",
                 "--dport", "137:139", "-j", "NOTRACK");
-        eval("iptables", "-t", "raw", "-D", "PREROUTING", "-i", ifname, "-p", "tcp",
+        eval("iptables", "-t", "raw", "-D", "PREROUTING", "-i", ifname, "-d", lan_ip, "-p", "tcp",
                 "--dport", "445", "-j", "NOTRACK");
-        eval("iptables", "-t", "raw", "-D", "PREROUTING", "-i", ifname, "-p", "udp",
+        eval("iptables", "-t", "raw", "-D", "PREROUTING", "-i", ifname, "-d", lan_ip, "-p", "udp",
                 "--dport", "137:139", "-j", "NOTRACK");
-        eval("iptables", "-t", "raw", "-D", "PREROUTING", "-i", ifname, "-p", "udp",
+        eval("iptables", "-t", "raw", "-D", "PREROUTING", "-i", ifname, "-d", lan_ip, "-p", "udp",
                 "--dport", "445", "-j", "NOTRACK");
-        eval("iptables", "-t", "raw", "-D", "OUTPUT", "-o", ifname, "-p", "tcp",
+        eval("iptables", "-t", "raw", "-D", "OUTPUT", "-p", "tcp",
                 "--sport", "137:139", "-j", "NOTRACK");
-        eval("iptables", "-t", "raw", "-D", "OUTPUT", "-o", ifname, "-p", "tcp",
+        eval("iptables", "-t", "raw", "-D", "OUTPUT", "-p", "tcp",
                 "--sport", "445", "-j", "NOTRACK");
-        eval("iptables", "-t", "raw", "-D", "OUTPUT", "-o", ifname, "-p", "udp",
+        eval("iptables", "-t", "raw", "-D", "OUTPUT", "-p", "udp",
                 "--sport", "137:139", "-j", "NOTRACK");
-        eval("iptables", "-t", "raw", "-D", "OUTPUT", "-o", ifname, "-p", "udp",
+        eval("iptables", "-t", "raw", "-D", "OUTPUT", "-p", "udp",
                 "--sport", "445", "-j", "NOTRACK");
-
+/*
         eval("iptables", "-t", "filter", "-D", "INPUT", "-i", ifname, "-p", "udp",
                 "--dport", "137:139", "-j", "ACCEPT");
         eval("iptables", "-t", "filter", "-D", "INPUT", "-i", ifname, "-p", "udp",
@@ -3952,34 +3973,36 @@ del_samba_rules(void)
                 "--dport", "137:139", "-j", "ACCEPT");
         eval("iptables", "-t", "filter", "-D", "INPUT", "-i", ifname, "-p", "tcp",
                 "--dport", "445", "-j", "ACCEPT");
+*/
 }
 
 add_samba_rules(void)
 {
         char ifname[IFNAMSIZ];
+	char *lan_ip = nvram_safe_get("lan_ipaddr");
 
         strncpy(ifname, nvram_safe_get("lan_ifname"), IFNAMSIZ);
 
         /* Add rules to disable conntrack on SMB ports to reduce CPU loading
 	 * for SAMBA storage application
 	 */
-        eval("iptables", "-t", "raw", "-A", "PREROUTING", "-i", ifname, "-p", "tcp",
+        eval("iptables", "-t", "raw", "-A", "PREROUTING", "-i", ifname, "-d", lan_ip, "-p", "tcp",
                 "--dport", "137:139", "-j", "NOTRACK");
-        eval("iptables", "-t", "raw", "-A", "PREROUTING", "-i", ifname, "-p", "tcp",
+        eval("iptables", "-t", "raw", "-A", "PREROUTING", "-i", ifname, "-d", lan_ip, "-p", "tcp",
                 "--dport", "445", "-j", "NOTRACK");
-        eval("iptables", "-t", "raw", "-A", "PREROUTING", "-i", ifname, "-p", "udp",
+        eval("iptables", "-t", "raw", "-A", "PREROUTING", "-i", ifname, "-d", lan_ip, "-p", "udp",
                 "--dport", "137:139", "-j", "NOTRACK");
-        eval("iptables", "-t", "raw", "-A", "PREROUTING", "-i", ifname, "-p", "udp",
+        eval("iptables", "-t", "raw", "-A", "PREROUTING", "-i", ifname, "-d", lan_ip, "-p", "udp",
                 "--dport", "445", "-j", "NOTRACK");
-        eval("iptables", "-t", "raw", "-A", "OUTPUT", "-o", ifname, "-p", "tcp",
+        eval("iptables", "-t", "raw", "-A", "OUTPUT", "-p", "tcp",
                 "--sport", "137:139", "-j", "NOTRACK");
-        eval("iptables", "-t", "raw", "-A", "OUTPUT", "-o", ifname, "-p", "tcp",
+        eval("iptables", "-t", "raw", "-A", "OUTPUT", "-p", "tcp",
                 "--sport", "445", "-j", "NOTRACK");
-        eval("iptables", "-t", "raw", "-A", "OUTPUT", "-o", ifname, "-p", "udp",
+        eval("iptables", "-t", "raw", "-A", "OUTPUT", "-p", "udp",
                 "--sport", "137:139", "-j", "NOTRACK");
-        eval("iptables", "-t", "raw", "-A", "OUTPUT", "-o", ifname, "-p", "udp",
+        eval("iptables", "-t", "raw", "-A", "OUTPUT", "-p", "udp",
                 "--sport", "445", "-j", "NOTRACK");
-
+/*
         eval("iptables", "-t", "filter", "-I", "INPUT", "-i", ifname, "-p", "udp",
                 "--dport", "137:139", "-j", "ACCEPT");
         eval("iptables", "-t", "filter", "-I", "INPUT", "-i", ifname, "-p", "udp",
@@ -3988,6 +4011,7 @@ add_samba_rules(void)
                 "--dport", "137:139", "-j", "ACCEPT");
         eval("iptables", "-t", "filter", "-I", "INPUT", "-i", ifname, "-p", "tcp",
 		"--dport", "445", "-j", "ACCEPT");
+*/
 }
 #endif
 

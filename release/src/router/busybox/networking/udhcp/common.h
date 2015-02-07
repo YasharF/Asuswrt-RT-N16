@@ -14,7 +14,7 @@
 
 PUSH_AND_SET_FUNCTION_VISIBILITY_TO_HIDDEN
 
-extern const uint8_t MAC_BCAST_ADDR[6]; /* six all-ones */
+extern const uint8_t MAC_BCAST_ADDR[6] ALIGN2; /* six all-ones */
 
 
 /*** DHCP packet ***/
@@ -24,6 +24,9 @@ extern const uint8_t MAC_BCAST_ADDR[6]; /* six all-ones */
 #define DHCP_OPTIONS_BUFSIZE    308
 #define BOOTREQUEST             1
 #define BOOTREPLY               2
+
+/* Minimal BOOTP message size. See RFC 1542 */
+#define DHCP_MIN_SIZE           300
 
 //TODO: rename ciaddr/yiaddr/chaddr
 struct dhcp_packet {
@@ -189,8 +192,8 @@ struct option_set {
 };
 
 extern const struct dhcp_optflag dhcp_optflags[];
-extern const char dhcp_option_strings[];
-extern const uint8_t dhcp_option_lengths[];
+extern const char dhcp_option_strings[] ALIGN1;
+extern const uint8_t dhcp_option_lengths[] ALIGN1;
 
 unsigned FAST_FUNC udhcp_option_idx(const char *name);
 

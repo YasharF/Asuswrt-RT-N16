@@ -14,7 +14,7 @@
 
 include $(TOP)/.config
 
-CFLAGS	+= -Wsign-compare -I. -I../httpd -I$(SRCBASE)/include -Wall -fPIC
+CFLAGS	+= -Wsign-compare -I. -I$(SRCBASE)/common/include -I../httpd -I$(SRCBASE)/include -Wall -fPIC
 #CFLAGS	+= -g -DDEBUG
 CFLAGS	+= -s
 LDFLAGS += -L.
@@ -30,7 +30,7 @@ endif
 OBJS := aes.o aeskeywrap.o rijndael-alg-fst.o dh.o bn.o sha1.o passhash.o prf.o md5.o hmac.o rc4.o random.o
 # For customer backwords compatibility, for now we keep CONFIG_WSCCMD here and can be removed when
 # all customers migrate to new SDK (no CONFIG_WSCCMD in configration files).
-#ifneq ($(CONFIG_WPS)$(CONFIG_WSCCMD)$(CONFIG_MFP),)
+#ifneq ($(RTCONFIG_WPS)$(CONFIG_WPS)$(CONFIG_WSCCMD)$(CONFIG_MFP),)
 OBJS += sha256.o hmac_sha256.o
 #endif
 

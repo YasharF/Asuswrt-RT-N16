@@ -144,9 +144,6 @@ typedef uint32_t __u32; //2008.08 magic
 #define MAP_FAILED (-1)
 #endif
 
-#include <syslog.h>
-#define logs(s) syslog(LOG_NOTICE, s)
-
 /* #define sys_upgrade(image) eval("mtd-write", "-i", image, "-d", "linux"); */
 #define sys_upload(image) eval("nvram", "restore", image)
 #define sys_download(file) eval("nvram", "save", file)
@@ -1112,6 +1109,10 @@ ej_wl_get_guestnetwork(int eid, webs_t wp, int argc, char_t **argv)
 		ret += webWriteNvram(wp, strcat_r(word2, "_lanaccess", tmp));
 		ret += websWrite(wp, "\", \"");
 		ret += webWriteNvram(wp, strcat_r(word2, "_expire_tmp", tmp));
+		ret += websWrite(wp, "\", \"");
+		ret += webWriteNvram(wp, strcat_r(word2, "_macmode", tmp));	// gn_array[][14]
+		ret += websWrite(wp, "\", \"");
+		ret += webWriteNvram(wp, strcat_r(word2, "_mbss", tmp));	// gn_array[][15]
 		ret += websWrite(wp, "\"]");
 	}
 	ret += websWrite(wp, "]");
@@ -1341,15 +1342,18 @@ static int validate_apply(webs_t wp) {
 			// unit nvram should be in fron of each apply,
 			// seems not a good design
 
-			if(!strcmp(name, "wl_unit") ||
-			   !strcmp(name, "wan_unit") ||
-			   !strcmp(name, "lan_unit")
+			if(!strcmp(name, "wl_unit")
+					|| !strcmp(name, "wan_unit")
+					|| !strcmp(name, "lan_unit")
 #ifdef RTCONFIG_DSL
-			|| !strcmp(name, "dsl_unit")
+					|| !strcmp(name, "dsl_unit")
 #endif
-) {
-				unit=atoi(value);
-				if(unit!=nvram_get_int(name)) {
+#ifdef RTCONFIG_DISK_MONITOR
+					|| !strcmp(name, "diskmon_usbport")
+#endif
+					) {
+				unit = atoi(value);
+				if(unit != nvram_get_int(name)) {
 					nvram_set_int(name, unit);
 					nvram_modified=1;
 				}
@@ -1361,7 +1365,7 @@ static int validate_apply(webs_t wp) {
 					nvram_modified=1;
 				}
 			}
-			else if(!strncmp(name, "wl_", 3) && unit!=-1) {
+			else if(!strncmp(name, "wl_", 3) && unit != -1) {
 				// convert wl_ to wl[unit], only when wl_unit is parsed
 				if(subunit==-1||subunit==0)
 					snprintf(prefix, sizeof(prefix), "wl%d_", unit);
@@ -1375,7 +1379,7 @@ static int validate_apply(webs_t wp) {
 					_dprintf("set %s=%s\n", tmp, value);
 				}
 			}
-			else if(!strncmp(name, "wan_", 4) && unit!=-1) {
+			else if(!strncmp(name, "wan_", 4) && unit != -1) {
 				snprintf(prefix, sizeof(prefix), "wan%d_", unit);
 				(void)strcat_r(prefix, name+4, tmp);
 
@@ -1385,7 +1389,7 @@ static int validate_apply(webs_t wp) {
 					_dprintf("set %s=%s\n", tmp, value);
 				}
 			}
-			else if(!strncmp(name, "lan_", 4) && unit!=-1) {
+			else if(!strncmp(name, "lan_", 4) && unit != -1) {
 				snprintf(prefix, sizeof(prefix), "lan%d_", unit);
 				(void)strcat_r(prefix, name+4, tmp);
 
@@ -1396,9 +1400,21 @@ static int validate_apply(webs_t wp) {
 				}
 			}
 #ifdef RTCONFIG_DSL
-			else if(!strncmp(name, "dsl_", 4) && unit!=-1) {
+			else if(!strncmp(name, "dsl_", 4) && unit != -1) {
 				snprintf(prefix, sizeof(prefix), "dsl%d_", unit);
 				(void)strcat_r(prefix, name+4, tmp);
+
+				if(strcmp(nvram_safe_get(tmp), value)) {
+					nvram_set(tmp, value);
+					nvram_modified = 1;
+					_dprintf("set %s=%s\n", tmp, value);
+				}
+			}
+#endif
+#ifdef RTCONFIG_DISK_MONITOR
+			else if(!strncmp(name, "diskmon_", 8) && unit != -1) {
+				snprintf(prefix, sizeof(prefix), "usb_path%d_diskmon_", unit);
+				(void)strcat_r(prefix, name+8, tmp);
 
 				if(strcmp(nvram_safe_get(tmp), value)) {
 					nvram_set(tmp, value);
@@ -1635,20 +1651,6 @@ static int check_hwnat(int eid, webs_t wp, int argc, char_t **argv){
 		websWrite(wp, "1");
 
 	return 0;
-}
-
-void logmessage(char *logheader, char *fmt, ...)
-{
-  va_list args;
-  char buf[512];
-
-  va_start(args, fmt);
-
-  vsnprintf(buf, sizeof(buf), fmt, args);
-  openlog(logheader, 0, 0);
-  syslog(0, buf);
-  closelog();
-  va_end(args);
 }
 
 static int wanstate_hook(int eid, webs_t wp, int argc, char_t **argv){
@@ -2983,6 +2985,8 @@ static int ipv6_client_numbers(void)
 	return numbers;
 }
 #endif
+
+#if 1 /* temporary till httpd route table redo */
 static char *get_traceroute_1st_hop()
 {
 	FILE *fp;
@@ -3018,53 +3022,80 @@ static char *get_traceroute_1st_hop()
 
 	return ipv6_address(ipaddr);
 }
+#endif
 
 int
 ej_lan_ipv6_network(int eid, webs_t wp, int argc, char_t **argv)
 {
 	FILE *fp;
-	int ret = 0, r;
 	char hostname[64], macaddr[32], ipaddr[256];
 	char ipv6_dns_str[1024];
-	char *p;
+	char *wan_type, *wan_dns;
+	int service, i, ret = 0;
 
-	if (!(ipv6_enabled() && is_routing_enabled()))
-	{
+	if (!(ipv6_enabled() && is_routing_enabled())) {
 		ret += websWrite(wp, "IPv6 disabled\n");
 		return ret;
 	}
 
-	ret += websWrite(wp, "           IPv6 Connection Type: %s\n", (get_ipv6_service() == IPV6_NATIVE_DHCP) ? "Native with DHCP-PD" : (get_ipv6_service() == IPV6_6TO4) ? "Tunnel 6to4" : (get_ipv6_service() == IPV6_6IN4) ? "Tunnel 6in4" : (get_ipv6_service() == IPV6_6RD) ? "Tunnel 6rd" : (get_ipv6_service() == IPV6_MANUAL) ? "Static" : "Disabled");
-	ret += websWrite(wp, "               WAN IPv6 Address: %s/%d\n", getifaddr(get_wan6face(), AF_INET6, 0), (get_ipv6_service() == IPV6_MANUAL) ? atoi(nvram_safe_get("ipv6_prefix_len_wan")) : 64);
-	ret += websWrite(wp, "               WAN IPv6 Gateway: %s\n", (get_ipv6_service() == IPV6_NATIVE_DHCP) ? nvram_match("ipv6_ifdev", "ppp") ? ipv6_address(nvram_safe_get("ipv6_ll_remote")) : strlen(nvram_safe_get("ipv6_gw_addr")) ? ipv6_address(nvram_safe_get("ipv6_gw_addr")) : strtok(ipv6_gateway_address(), " ") : (get_ipv6_service() == IPV6_6TO4) ? get_traceroute_1st_hop() : (get_ipv6_service() == IPV6_6IN4) ? get_traceroute_1st_hop() : (get_ipv6_service() == IPV6_6RD) ? get_traceroute_1st_hop() : (get_ipv6_service() == IPV6_MANUAL) ? nvram_safe_get("ipv6_gateway") : "");
-	ret += websWrite(wp, "               LAN IPv6 Address: %s/%d\n", nvram_safe_get("ipv6_rtr_addr"), atoi(nvram_safe_get("ipv6_prefix_length")));
-	ret += websWrite(wp, "    LAN IPv6 Link-Local Address: %s/%d\n", getifaddr(nvram_safe_get("lan_ifname"), AF_INET6, 1), atoi(nvram_safe_get("ipv6_prefix_length")));
-	if (get_ipv6_service() == IPV6_NATIVE_DHCP)
-	ret += websWrite(wp, "                        DHCP-PD: %s\n", nvram_get_int("ipv6_dhcp_pd") ? "Enabled" : "Disabled");
-	ret += websWrite(wp, "                LAN IPv6 prefix: %s/%d\n", nvram_safe_get("ipv6_prefix"), atoi(nvram_safe_get("ipv6_prefix_length")));
+	service = get_ipv6_service();
+	switch (service) {
+	case IPV6_NATIVE_DHCP:
+		wan_type = "Native with DHCP-PD"; break;
+	case IPV6_6TO4:
+		wan_type = "Tunnel 6to4"; break;
+	case IPV6_6IN4:
+		wan_type = "Tunnel 6in4"; break;
+	case IPV6_6RD:
+		wan_type = "Tunnel 6rd"; break;
+	case IPV6_MANUAL:
+		wan_type = "Static"; break;
+	default:
+		wan_type = "Disabled"; break;
+	}
 
-        if ((get_ipv6_service() == IPV6_NATIVE_DHCP) && nvram_match("ipv6_dnsenable", "1")) {
-                p = nvram_safe_get("ipv6_get_dns");
-        } else {
-                char nvname[sizeof("ipv6_dnsXXX")];
-                char *next = ipv6_dns_str;
-                int i;
+	ret += websWrite(wp, "%30s: %s\n", "IPv6 Connection Type", wan_type);
+	ret += websWrite(wp, "%30s: %s\n", "WAN IPv6 Address",
+			 getifaddr((char *) get_wan6face(), AF_INET6, GIF_PREFIXLEN) ? : "");
+	ret += websWrite(wp, "%30s: %s\n", "WAN IPv6 Gateway",
+#if 1 /* temporary till httpd route table redo */
+			 (get_ipv6_service() == IPV6_NATIVE_DHCP) ? nvram_match("ipv6_ifdev", "ppp") ? ipv6_address(nvram_safe_get("ipv6_ll_remote")) : strlen(nvram_safe_get("ipv6_gw_addr")) ? ipv6_address(nvram_safe_get("ipv6_gw_addr")) : strtok(ipv6_gateway_address(), " ") : (get_ipv6_service() == IPV6_6TO4) ? get_traceroute_1st_hop() : (get_ipv6_service() == IPV6_6IN4) ? get_traceroute_1st_hop() : (get_ipv6_service() == IPV6_6RD) ? get_traceroute_1st_hop() : (get_ipv6_service() == IPV6_MANUAL) ? nvram_safe_get("ipv6_gateway") : "");
+#else
+			 ipv6_gateway_address());
+#endif
+	ret += websWrite(wp, "%30s: %s/%d\n", "LAN IPv6 Address",
+			 nvram_safe_get("ipv6_rtr_addr"), atoi(nvram_safe_get("ipv6_prefix_length")));
+	ret += websWrite(wp, "%30s: %s\n", "LAN IPv6 Link-Local Address",
+			 getifaddr(nvram_safe_get("lan_ifname"), AF_INET6, GIF_LINKLOCAL | GIF_PREFIXLEN) ? : "");
+	if (service == IPV6_NATIVE_DHCP) {
+		ret += websWrite(wp, "%30s: %s\n", "DHCP-PD",
+				 nvram_get_int("ipv6_dhcp_pd") ? "Enabled" : "Disabled");
+	}
+	ret += websWrite(wp, "%30s: %s/%d\n", "LAN IPv6 Prefix",
+			 nvram_safe_get("ipv6_prefix"), atoi(nvram_safe_get("ipv6_prefix_length")));
+
+	if (service == IPV6_NATIVE_DHCP &&
+	    nvram_get_int("ipv6_dnsenable")) {
+		wan_dns = nvram_safe_get("ipv6_get_dns");
+	} else {
+		char nvname[sizeof("ipv6_dnsXXX")];
+		char *next = ipv6_dns_str;
 
 		ipv6_dns_str[0] = '\0';
-                for (i = 0; i < 3; i++) {
-                        snprintf(nvname, sizeof(nvname), "ipv6_dns%d", i + 1);
-                        p = nvram_safe_get(nvname);
-                        if (!strlen(p)) continue;
-                        next += sprintf(next, strlen(ipv6_dns_str) ? " %s" : "%s", p);
+		for (i = 1; i <= 3; i++) {
+			snprintf(nvname, sizeof(nvname), "ipv6_dns%d", i);
+			wan_dns = nvram_safe_get(nvname);
+			if (*wan_dns)
+				next += sprintf(next, *ipv6_dns_str ? " %s" : "%s", wan_dns);
                 }
-                p = ipv6_dns_str;
+                wan_dns = ipv6_dns_str;
         }
-	ret += websWrite(wp, "                    DNS Address: %s\n", p);
+	ret += websWrite(wp, "%30s: %s\n", "DNS Address", wan_dns);
 
-        ret += websWrite(wp, "\n\nIPv6 LAN Devices List\n");
-        ret += websWrite(wp, "-------------------------------------------------------------------\n");
+	ret += websWrite(wp, "\n\nIPv6 LAN Devices List\n");
+	ret += websWrite(wp, "-------------------------------------------------------------------\n");
 	ret += websWrite(wp, "%-32s %-17s %-39s\n",
-		"Hostname", "MAC Address", "IPv6 Address");
+			 "Hostname", "MAC Address", "IPv6 Address");
 
 	/* Refresh lease file to get actual expire time */
 	killall("dnsmasq", SIGUSR2);
@@ -3073,21 +3104,13 @@ ej_lan_ipv6_network(int eid, webs_t wp, int argc, char_t **argv)
 	get_ipv6_client_info();
 	get_ipv6_client_list();
 
-	if ((fp = fopen(IPV6_CLIENT_LIST, "r")) == NULL)
-	{
-		dbg("can't open %s: %s", IPV6_CLIENT_LIST,
-			strerror(errno));
-
+	if ((fp = fopen(IPV6_CLIENT_LIST, "r")) == NULL) {
+		dbg("can't open %s: %s", IPV6_CLIENT_LIST, strerror(errno));
 		return ret;
 	}
 
-	while ((r = fscanf(fp, "%64s %32s %256s\n",
-		hostname, macaddr, ipaddr)) != EOF)
-	{
-		if (r != 3) continue;
-
-		if (strlen(hostname) > 32)
-		{
+	while (fscanf(fp, "%64s %32s %256s\n", hostname, macaddr, ipaddr) == 3) {
+		if (strlen(hostname) > 32) {
 			strcpy(hostname + 29, "...");
 			hostname[32] = '\0';
 		}
@@ -3096,11 +3119,7 @@ ej_lan_ipv6_network(int eid, webs_t wp, int argc, char_t **argv)
 			*p = '\0';
 #endif
 		ret += websWrite(wp, "%-32s %-17s %-39s\n",
-			hostname, macaddr, ipaddr);
-
-		memset(hostname, 0, sizeof(hostname));
-		memset(ipaddr, 0, sizeof(ipaddr));
-		memset(macaddr, 0, sizeof(macaddr));
+				 hostname, macaddr, ipaddr);
 	}
 	fclose(fp);
 
@@ -3109,6 +3128,7 @@ ej_lan_ipv6_network(int eid, webs_t wp, int argc, char_t **argv)
 
 static void INET6_displayroutes(webs_t wp)
 {
+#if 1 /* temporary till httpd route table redo */
 	char addr6[128], *naddr6;
 	/* In addr6x, we store both 40-byte ':'-delimited ipv6 addresses.
 	 * We read the non-delimited strings into the tail of the buffer
@@ -3195,6 +3215,7 @@ static void INET6_displayroutes(webs_t wp)
 	}
 
 	return;
+#endif
 }
 #endif
 
@@ -4254,6 +4275,9 @@ apply_cgi(webs_t wp, char_t *urlPrefix, char_t *webDir, int arg,
 
 		/* Enlarge reboot_time temporarily. */
 		nvram_set_int("reboot_time", nvram_get_int("reboot_time") + offset);
+
+		eval("/sbin/ejusb", "-1", "0");
+
 		nvram_set("lan_ipaddr", "192.168.1.1");
 		websApply(wp, "Restarting.asp");
 		shutdown(fileno(wp), SHUT_RDWR);
@@ -4286,9 +4310,12 @@ apply_cgi(webs_t wp, char_t *urlPrefix, char_t *webDir, int arg,
 	else if (!strcmp(action_mode, "change_wps_unit"))
 	{
 		action_para = websGetVar(wp, "wps_band","");
-
 		if(action_para) 
 			nvram_set("wps_band", action_para);
+#if defined(RTCONFIG_WPSMULTIBAND)
+		if ((action_para = websGetVar(wp, "wps_multiband","")))
+			nvram_set("wps_multiband", action_para);
+#endif
 
 		websRedirect(wp, current_url);
 	}
@@ -4308,6 +4335,10 @@ apply_cgi(webs_t wp, char_t *urlPrefix, char_t *webDir, int arg,
 		if(action_para) 
 			nvram_set("wps_sta_pin", action_para);
 		else goto wps_finish;
+#if defined(RTCONFIG_WPSMULTIBAND)
+		if ((action_para = websGetVar(wp, "wps_multiband","")))
+			nvram_set("wps_multiband", action_para);
+#endif
 
 		notify_rc("start_wps_method");
 
@@ -4317,9 +4348,12 @@ wps_finish:
 	else if (!strcmp(action_mode, "wps_reset"))
 	{
 		action_para = websGetVar(wp, "wps_band","");
-
 		if(action_para) 
 			nvram_set("wps_band", action_para);
+#if defined(RTCONFIG_WPSMULTIBAND)
+		if ((action_para = websGetVar(wp, "wps_multiband","")))
+			nvram_set("wps_multiband", action_para);
+#endif
 
 		notify_rc("reset_wps");
 
@@ -4606,8 +4640,10 @@ do_upgrade_post(char *url, FILE *stream, int len, char *boundary)
 	int offset;
 
 	upgrade_err=1;
-
+	eval("/sbin/ejusb", "-1", "0");
+#if defined(RTCONFIG_SMALL_FW_UPDATE)
 	notify_rc("stop_upgrade");
+#endif
 
 	/* Look for our part */
 	while (len > 0) 
@@ -4735,6 +4771,9 @@ do_upgrade_post(char *url, FILE *stream, int len, char *boundary)
 		goto err;
 #endif 
 	upgrade_err = 0;
+#if !defined(RTCONFIG_SMALL_FW_UPDATE)
+	notify_rc("stop_upgrade");
+#endif
 
 err:
 	if (fifo)
@@ -4781,13 +4820,13 @@ do_upgrade_cgi(char *url, FILE *stream)
 		}
 #endif
 		shutdown(fileno(stream), SHUT_RDWR);
+		notify_rc_after_period_wait("start_upgrade", 60);
 	}
 	else    
 	{
 	   	websApply(stream, "UpdateError.asp");
 		unlink("/tmp/linux.trx");
 	}
-	notify_rc_after_period_wait("start_upgrade", 60);
 }
 
 static void
@@ -5339,8 +5378,7 @@ static int ej_safely_remove_disk(int eid, webs_t wp, int argc, char_t **argv){
 	csprintf("disk_port = %s\n", disk_port);
 
 	if(!strcmp(disk_port, "all")){
-		result = eval("/sbin/ejusb", "1", "0");
-		result = result + eval("/sbin/ejusb", "2", "0");
+		result = eval("/sbin/ejusb", "-1", "0");
 	}
 	else{
 		result = eval("/sbin/ejusb", disk_port, "0");
@@ -7127,7 +7165,13 @@ int ej_webdavInfo(int eid, webs_t wp, int argc, char **argv) {
 	websWrite(wp, "'%s',", nvram_safe_get("wan0_ipaddr"));
 	websWrite(wp, "'%s',", nvram_safe_get(""));
 	websWrite(wp, "'%s',", nvram_safe_get("x_Setting"));
-	websWrite(wp, "'%s'", nvram_safe_get("webdav_https_port"));
+	websWrite(wp, "'%s',", nvram_safe_get("webdav_https_port"));
+#ifdef RTCONFIG_WEBDAV
+ 	websWrite(wp, "'1'");
+#else
+	if(check_if_file_exist("/opt/etc/init.d/S50aicloud")) websWrite(wp, "'1'");
+	else websWrite(wp, "'0'");
+#endif
 	websWrite(wp, "];\n");
 
 	return 0;
@@ -7186,15 +7230,19 @@ int setting_lan(int eid, webs_t wp, int argc, char **argv){
 dbg("http: get lan_subnet=%x!\n", lan_subnet);
 
 #ifdef RTCONFIG_DUALWAN
+	int wan_type;
+
 	for(unit = WAN_UNIT_FIRST; unit < WAN_UNIT_MAX; ++unit){
 		if(unit != wan_primary_ifunit()
 				&& !nvram_match("wans_mode", "lb")
 				)
 			continue;
 
-		int wan_type = get_dualwan_by_unit(unit);
+		wan_type = get_dualwan_by_unit(unit);
 		if(wan_type != WANS_DUALWAN_IF_WAN
-				&& wan_type != WANS_DUALWAN_IF_LAN)
+				&& wan_type != WANS_DUALWAN_IF_LAN
+				&& wan_type != WANS_DUALWAN_IF_USB
+				)
 			continue;
 
 		break;
@@ -7207,25 +7255,33 @@ dbg("http: Can't get the WAN's unit!\n");
 #else
 	unit = wan_primary_ifunit();
 #endif
-	wan_prefix(unit, prefix_wan);
 
-	memset(wan_ipaddr_t, 0, 16);
-	strcpy(wan_ipaddr_t, nvram_safe_get(strcat_r(prefix_lan, "ipaddr", tmp_wan)));
-	memset(&addr, 0, sizeof(addr));
-	wan_ip_num = ntohl(inet_aton(wan_ipaddr_t, &addr));
-	wan_ip_num = ntohl(addr.s_addr);
-	memset(wan_netmask_t, 0, 16);
-	strcpy(wan_netmask_t, nvram_safe_get(strcat_r(prefix_lan, "netmask", tmp_wan)));
-	memset(&addr, 0, sizeof(addr));
-	wan_mask_num = ntohl(inet_aton(wan_netmask_t, &addr));
-	wan_mask_num = ntohl(addr.s_addr);
-	wan_subnet = wan_ip_num&wan_mask_num;
+#ifdef RTCONFIG_DUALWAN
+	if(wan_type != WANS_DUALWAN_IF_USB)
+#else
+	if(unit != WAN_UNIT_SECOND)
+#endif
+	{
+		wan_prefix(unit, prefix_wan);
+
+		memset(wan_ipaddr_t, 0, 16);
+		strcpy(wan_ipaddr_t, nvram_safe_get(strcat_r(prefix_lan, "ipaddr", tmp_wan)));
+		memset(&addr, 0, sizeof(addr));
+		wan_ip_num = ntohl(inet_aton(wan_ipaddr_t, &addr));
+		wan_ip_num = ntohl(addr.s_addr);
+		memset(wan_netmask_t, 0, 16);
+		strcpy(wan_netmask_t, nvram_safe_get(strcat_r(prefix_lan, "netmask", tmp_wan)));
+		memset(&addr, 0, sizeof(addr));
+		wan_mask_num = ntohl(inet_aton(wan_netmask_t, &addr));
+		wan_mask_num = ntohl(addr.s_addr);
+		wan_subnet = wan_ip_num&wan_mask_num;
 dbg("http: get wan_subnet=%x!\n", wan_subnet);
 
-	if(lan_subnet != wan_subnet){
+		if(lan_subnet != wan_subnet){
 dbg("http: The subnets of WAN and LAN aren't the same already.!\n");
-		websWrite(wp, "0");
-		return 0;
+			websWrite(wp, "0");
+			return 0;
+		}
 	}
 
 	if(lan_subnet >= MAX_SUBNET)
@@ -8074,14 +8130,6 @@ write_ver:
 	nvram_set_f("general.log", "productid", productid);
 	nvram_set_f("general.log", "firmver", fwver);
 }
-
-#ifdef DLM
-void
-umount_disc_parts(int usb_port)
-{
-	eval("ejusb");
-}
-#endif
 
 int
 get_nat_vserver_table(int eid, webs_t wp, int argc, char_t **argv)

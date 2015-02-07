@@ -7,6 +7,7 @@
 #include <errno.h>
 #include <net/if.h>
 #include <rtstate.h>
+#include <stdarg.h>
 
 #ifdef RTCONFIG_USB
 #include <mntent.h>	// !!TB
@@ -72,6 +73,9 @@ enum {
 #define IPV6_MASK (RTF_GATEWAY|RTF_HOST|RTF_DEFAULT|RTF_ADDRCONF|RTF_CACHE)
 #endif
 
+#define GIF_LINKLOCAL  0x0001  /* return link-local addr */
+#define GIF_PREFIXLEN  0x0002  /* return addr & prefix */
+
 enum {
 	ACT_IDLE,
 	ACT_TFTP_UPGRADE_UNUSED,
@@ -114,8 +118,10 @@ extern int get_wan_proto(void);
 extern int get_ipv6_service(void);
 #define ipv6_enabled()	(get_ipv6_service() != IPV6_DISABLED)
 extern const char *ipv6_router_address(struct in6_addr *in6addr);
+#if 1 /* temporary till httpd route table redo */
 extern void ipv6_set_flags(char *flagstr, int flags);
-extern const char *ipv6_gateway_address();
+#endif
+extern const char *ipv6_gateway_address(void);
 #else
 #define ipv6_enabled()	(0)
 #endif
@@ -125,7 +131,7 @@ extern void set_action(int a);
 extern int check_action(void);
 extern int wait_action_idle(int n);
 extern int wl_client(int unit, int subunit);
-extern const char *getifaddr(char *ifname, int family, int linklocal);
+extern const char *getifaddr(char *ifname, int family, int flags);
 extern long uptime(void);
 extern char *wl_nvname(const char *nv, int unit, int subunit);
 extern int get_radio(int unit, int subunit);
@@ -195,11 +201,12 @@ enum {
 	MODEL_RTN12B1,
 	MODEL_RTN12C1,
 	MODEL_RTN12D1,
+	MODEL_RTN12VP,
 	MODEL_RTN12HP,
 	MODEL_APN12,
 	MODEL_APN12HP,
 	MODEL_RTN16,
-	MODEL_RTN18UHP,
+	MODEL_RTN18U,
 	MODEL_RTN15U,
 	MODEL_RTN53,
 	MODEL_RTN66U,
@@ -210,6 +217,7 @@ enum {
 	MODEL_RTN10U,
 	MODEL_RTN10P,
 	MODEL_RTN10D1,
+	MODEL_RTN10PV2,
 	MODEL_GENERIC
 };
 
@@ -273,7 +281,8 @@ extern int pids(char *appname);
 extern char *psname(int pid, char *buffer, int maxlen);
 extern int pidof(const char *name);
 extern int killall(const char *name, int sig);
-
+extern int process_exists(pid_t pid);
+extern int module_loaded(const char *module);
 
 // files.c
 extern int check_if_dir_empty(const char *dirpath);
@@ -287,6 +296,7 @@ extern void file_unlock(int lockfd);
 
 extern unsigned long f_size(const char *path);
 extern int f_exists(const char *file);
+extern int d_exists(const char *path);
 extern int f_read(const char *file, void *buffer, int max);												// returns bytes read
 extern int f_write(const char *file, const void *buffer, int len, unsigned flags, unsigned cmode);		//
 extern int f_read_string(const char *file, char *buffer, int max);										// returns bytes read, not including term; max includes term
@@ -338,6 +348,25 @@ extern int f_wait_notexists(const char *name, int max);
 #define HAVE_FAN_OFF			4
 #define	HAVE_FAN_ON			5
 
+#define MAX_NR_WL_IF			2
+static inline int get_wps_multiband(void)
+{
+#if defined(RTCONFIG_WPSMULTIBAND)
+	return nvram_get_int("wps_multiband");
+#else
+	return 0;
+#endif
+}
+
+static inline int get_radio_band(int band)
+{
+#if defined(RTCONFIG_WPSMULTIBAND)
+	return -1;
+#else
+	return band;
+#endif
+}
+
 extern int init_gpio(void);
 extern int set_pwr_usb(int boolOn);
 extern int button_pressed(int which);
@@ -374,6 +403,8 @@ extern int ralink_gpio_init(unsigned int idx, int dir);
 extern int config_rtkswitch(int argc, char *argv[]);
 extern int get_channel_list_via_driver(int unit, char *buffer, int len);
 extern int get_channel_list_via_country(int unit, const char *country_code, char *buffer, int len);
+#else
+#define wif_to_vif(wif) (wif)
 #endif
 
 // base64.c
@@ -403,6 +434,7 @@ extern int check_if_dir_writable(const char *dir);
 
 /* misc.c */
 extern char *get_productid(void);
+extern void logmessage(char *logheader, char *fmt, ...);
 extern char *get_logfile_path(void);
 extern char *get_syslog_fname(unsigned int idx);
 #if defined(RTCONFIG_SSH) || defined(RTCONFIG_HTTPS)
@@ -426,9 +458,11 @@ extern const char *ipv6_address(const char *ipaddr6);
 extern const char *ipv6_prefix(struct in6_addr *in6addr);
 extern void reset_ipv6_linklocal_addr(const char *ifname, int flush);
 extern int with_ipv6_linklocal_addr(const char *ifname);
+#if 1 /* temporary till httpd route table redo */
 extern void ipv6_set_flags(char *flagstr, int flags);
 extern char* INET6_rresolve(struct sockaddr_in6 *sin6, int numeric);
-extern const char *ipv6_gateway_address();
+#endif
+extern const char *ipv6_gateway_address(void);
 #endif
 
 /* mt7620.c */
@@ -439,6 +473,7 @@ extern int notify_rc(const char *event_name);
 extern int notify_rc_after_wait(const char *event_name);
 extern int notify_rc_after_period_wait(const char *event_name, int wait);
 extern int notify_rc_and_wait(const char *event_name);
+extern int notify_rc_and_wait_1min(const char *event_name);
 extern int notify_rc_and_wait_2min(const char *event_name);
 
 /* rtstate.c */

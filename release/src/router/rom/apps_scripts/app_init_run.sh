@@ -53,7 +53,7 @@ for f in $APPS_RUN_DIR/S*; do
 		continue
 	fi
 
-	if [ "$2" == "start" ]; then
+	if [ "$2" == "start" ] || [ "$2" == "firewall-start" ]; then
 		app_enable=`app_get_field.sh $tmp_apps_name "Enabled" 1`
 		if [ "$app_enable" != "yes" ]; then
 			if [ "$1" != "allpkg" ] && [ "$1" == "$tmp_apps_name" ]; then
@@ -62,6 +62,25 @@ for f in $APPS_RUN_DIR/S*; do
 			fi
 
 			continue
+		fi
+	fi
+
+	# If all process of a package are not exist, skip the stop procedure.
+	if [ "$2" == "stop" ]; then
+		proc_list=""
+		if [ "$tmp_apps_name" == "downloadmaster" ] ; then
+			proc_list="\(dm2_amuled\|dm2_snarfmaster\|dm2_transmission-daemon\|dm2_nzbget\|dm2_amuled\)"
+		elif [ "$tmp_apps_name" == "mediaserver" ] ; then
+			proc_list="\(watch_app\|minidlna\)"
+		elif [ "$tmp_apps_name" == "asuslighttpd" ] ; then
+			proc_list="\(asus_lighttpd\)"
+		fi
+
+		if [ "$proc_list" != "" ] ; then
+			if [ "`ps|grep -c $proc_list`" == "0" ] ; then
+				echo "Skip stop procedure of $tmp_apps_name package."
+				continue;
+			fi
 		fi
 	fi
 
@@ -75,6 +94,23 @@ for f in $APPS_RUN_DIR/S*; do
 
 	echo "$nice_cmd sh $s $2" | logger -c
 	$nice_cmd sh $s $2
+
+	if [ "$tmp_apps_name" == "mediaserver" ] && [ "$2" == "stop" ] ; then
+		sleep 1
+		ms_pid=`pidof minidlna`
+		i=0
+		while [ ! -z "$ms_pid" ] && [ $i -lt 10 ] ; do
+			i=$(($i+1))
+			echo "$i: $nice_cmd sh $s $2" | logger -c
+			$nice_cmd sh $s $2
+			sleep 1
+			ms_pid=`pidof minidlna`
+		done
+		ms_pid=`pidof minidlna`
+		if [ ! -z "$ms_pid" ] ; then
+			killall -9 minidlna
+		fi
+	fi
 
 	if [ "$1" != "allpkg" ] && [ "$1" == "$tmp_apps_name" ]; then
 		break

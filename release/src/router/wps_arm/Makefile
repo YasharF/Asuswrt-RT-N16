@@ -1,7 +1,7 @@
 #
 # Broadcom Linux Router WPS Makefile
 #
-# Copyright (C) 2012, Broadcom Corporation
+# Copyright (C) 2013, Broadcom Corporation
 # All Rights Reserved.
 # 
 # This is UNPUBLISHED PROPRIETARY SOURCE CODE of Broadcom Corporation;
@@ -9,7 +9,7 @@
 # or duplicated in any form, in whole or in part, without the prior
 # written permission of Broadcom Corporation.
 #
-# $Id: Makefile 372004 2012-11-30 03:46:58Z $
+# $Id: Makefile 383955 2013-02-08 06:00:32Z $
 #
 ifneq (true,$(parallel))
   .NOTPARALLEL:
@@ -55,6 +55,9 @@ endif
 ifeq ($(CONFIG_PLC),y)
 CFLAGS += -DWPS_PLC
 endif
+ifeq ($(CONFIG_NFC),y)
+export WPS_NFC_DEVICE = 1
+endif
 include $(WPSSRC)/common/config/wps.mk
 EXTRA_CFLAGS = $(WPS_FLAGS)
 
@@ -87,14 +90,14 @@ CFLAGS += -g
 endif
 
 
-CFLAGS += -I$(SRCBASE)/include -I$(SRCBASE)/wps/common/include	\
-	-I$(SRCBASE)/router/libbcm -I$(SRCBASE)/router/eapd	\
+CFLAGS += -I$(SRCBASE)/include -I$(SRCBASE)/common/include -I$(SRCBASE)/wps/common/include	\
+	-I$(SRCBASE)/router/libbcm -I$(SRCBASE)/router/eapd${BCMEX}	\
 	-I$(SRCBASE)/router/shared -I$(SRCBASE)/wps/brcm_apps/include	\
 	-I$(SRCBASE)/include/bcmcrypto ${WLAN_ComponentIncPath}
 
 LDFLAGS += -lgcc_s
 
-WPSM_LIBS = -lnvram -lbcm -lshared -lbcmcrypto -lm -lc
+WPSM_LIBS = -lnvram -lbcm -lshared -lbcmcrypto -lm
 # Set link libraries search path
 export LIBPATH  = -L$(TOP)/libbcmcrypto -L$(INSTALLDIR)/libbcmcrypto/usr/lib
 export LIBPATH += -L$(TOP)/libbcm -L$(INSTALLDIR)/libbcm/usr/lib
@@ -107,6 +110,14 @@ ifeq ($(WPS_UPNP_DEVICE),1)
 export LIBPATH += -L$(TOP)/libupnp -L$(INSTALLDIR)/libupnp/usr/lib
 WPSM_LIBS += -lupnp
 CFLAGS += -I$(SRCBASE)/router/libupnp/include -I$(SRCBASE)/wps/brcm_apps/upnp/WFADevice
+endif
+
+ifeq ($(WPS_NFC_DEVICE),1)
+export LIBPATH += -L$(TOP)/nfc -L$(INSTALLDIR)/nfc/usr/lib
+WPSM_LIBS += -lnsa -lipcnsa -lpthread
+CFLAGS += -I$(SRCBASE)/wps/brcm_apps/nfc
+CFLAGS += -I$(BASEDIR)/components/apps/nfc/3rdparty/embedded/nsa_examples/linux/libnsa/include
+CFLAGS += -include $(BASEDIR)/components/apps/nfc/3rdparty/embedded/nsa_examples/linux/libnsa/include/buildcfg.h
 endif
 
 WPS_OSL := $(WPS_ROUTERHALFILES)
@@ -174,7 +185,7 @@ mkversion :
 # target
 # force compile wps_monitor in case the library changed.
 wps_monitor : objs FORCE
-	$(CC) $(LIBPATH) $(WPS_OSLOBJS) $(WPSM_LIBS) -l$(WPS_LIB_FILE) $(LDFLAGS) -o $@
+	$(CC) $(LIBPATH) $(WPS_OSLOBJS) -l$(WPS_LIB_FILE) $(WPSM_LIBS) $(LDFLAGS) -o $@
 
 FORCE:
 

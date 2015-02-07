@@ -38,9 +38,14 @@ function initial(){
 	if((sw_mode == 2 || sw_mode == 4) && '<% nvram_get("wl_unit"); %>' == '<% nvram_get("wlc_band"); %>' && '<% nvram_get("wl_subunit"); %>' != '1'){
 		_change_wl_unit('<% nvram_get("wl_unit"); %>');
 	}
+
 	if(band5g_support && band5g_11ac_support && document.form.wl_unit[1].selected == true){
-		document.form.wl_nmode_x[1].text = "N + AC";
+		document.form.wl_nmode_x[1].text = "N + AC";	
+		document.getElementById('wl_mode_desc').onclick=function(){return openHint(1, 5)};		
+	}else if(band5g_support && document.form.wl_unit[1].selected == true){
+		document.getElementById('wl_mode_desc').onclick=function(){return openHint(1, 4)};
 	}
+
 	// special case after modifing GuestNetwork
 	if("<% nvram_get("wl_unit"); %>" == "-1" && "<% nvram_get("wl_subunit"); %>" == "-1"){
 		change_wl_unit();
@@ -49,7 +54,12 @@ function initial(){
 	if('<% nvram_get("wl_nmode_x"); %>' == "2")
 			inputCtrl(document.form.wl_bw, 0);
 
-	insertExtChannelOption();
+	if('<% nvram_get("wl_unit"); %>' == '1')		
+		insertExtChannelOption_5g();
+	else
+		check_channel_2g();
+
+	limit_auth_method();	
 	wl_auth_mode_change(1);
 	//mbss_display_ctrl();
 
@@ -97,8 +107,76 @@ function initial(){
 	if("<% nvram_get("wl_closed"); %>" == 1){
 		$('WPS_hideSSID_hint').style.display = "";	
 	}	
+	
+	automode_hint();
+}
+
+function check_channel_2g(){
+	var wmode = document.form.wl_nmode_x.value;
+	var CurrentCh = document.form.wl_channel_orig.value;
+	if(is_high_power && auto_channel == 1){
+		CurrentCh = document.form.wl_channel_orig.value = 0;
+	}
+	
+	wl_channel_list_2g = eval('<% channel_list_2g(); %>');
+	if(wl_channel_list_2g[0] != "<#Auto#>")
+  		wl_channel_list_2g.splice(0,0,"0");
 		
-	automode_hint();	
+	var ch_v2 = new Array();
+    for(var i=0; i<wl_channel_list_2g.length; i++){
+        ch_v2[i] = wl_channel_list_2g[i];
+    }
+	
+    if(ch_v2[0] == "0")
+        wl_channel_list_2g[0] = "<#Auto#>";	
+
+	add_options_x2(document.form.wl_channel, wl_channel_list_2g, ch_v2, CurrentCh);
+	var option_length = document.form.wl_channel.options.length;	
+	if ((wmode == "0"||wmode == "1") && document.form.wl_bw.value != "0"){
+		inputCtrl(document.form.wl_nctrlsb, 1);
+		var x = document.form.wl_nctrlsb;
+		var length = document.form.wl_nctrlsb.options.length;
+		if (length > 1){
+			x.selectedIndex = 1;
+			x.remove(x.selectedIndex);
+		}
+		
+		if ((CurrentCh >=1) && (CurrentCh <= 4)){
+			x.options[0].text = "Lower";
+			x.options[0].value = "lower";
+		}
+		else if ((CurrentCh >= 5) && (CurrentCh <= 7)){
+			x.options[0].text = "Lower";
+			x.options[0].value = "lower";
+			add_option(document.form.wl_nctrlsb, "Upper", "upper");
+			if (document.form.wl_nctrlsb_old.value == "upper")
+				document.form.wl_nctrlsb.options.selectedIndex=1;
+				
+			if(is_high_power && CurrentCh == 5) // for high power model, Jieming added at 2013/08/19
+				document.form.wl_nctrlsb.remove(1);
+			else if(is_high_power && CurrentCh == 7)
+				document.form.wl_nctrlsb.remove(0);	
+		}
+		else if ((CurrentCh >= 8) && (CurrentCh <= 10)){
+			x.options[0].text = "Upper";
+			x.options[0].value = "upper";
+			if (option_length >=14){
+				add_option(document.form.wl_nctrlsb, "Lower", "lower");
+				if (document.form.wl_nctrlsb_old.value == "lower")
+					document.form.wl_nctrlsb.options.selectedIndex=1;
+			}
+		}
+		else if (CurrentCh >= 11){
+			x.options[0].text = "Upper";
+			x.options[0].value = "upper";
+		}
+		else{
+			x.options[0].text = "<#Auto#>";
+			x.options[0].value = "1";
+		}
+	}
+	else
+		inputCtrl(document.form.wl_nctrlsb, 0);
 }
 
 function mbss_display_ctrl(){
@@ -131,7 +209,7 @@ function applyRule(){
 	
 	if(document.form.wl_wpa_psk.value == "<#wireless_psk_fillin#>")
 		document.form.wl_wpa_psk.value = "";
-
+		
 	if(validForm()){
 		showLoading();
 		document.form.wps_config_state.value = "1";
@@ -158,7 +236,7 @@ function applyRule(){
 		inputCtrl(document.form.wl_key4, 1);
 		inputCtrl(document.form.wl_phrase_x, 1);
 		inputCtrl(document.form.wl_wpa_gtk_rekey, 1);*/
-
+		
 		if(sw_mode == 2 || sw_mode == 4)
 			document.form.action_wait.value = "5";
 
@@ -201,20 +279,6 @@ function validForm(){
 
 function done_validating(action){
 	refreshpage();
-}
-
-function change_key_des(){
-	var objs = getElementsByName_iefix("span", "key_des");
-	var wep_type = document.form.wl_wep_x.value;
-	var str = "";
-
-	if(wep_type == "1")
-		str = "(<#WLANConfig11b_WEPKey_itemtype1#>)";
-	else if(wep_type == "2")
-		str = "(<#WLANConfig11b_WEPKey_itemtype2#>)";
-	
-	for(var i = 0; i < objs.length; ++i)
-		showtext(objs[i], str);
 }
 
 function validate_wlphrase(s, v, obj){
@@ -266,6 +330,32 @@ function check_NOnly_to_GN(){
 	return true;
 //  Viz add 2012.11.05 restriction for 'N Only' mode  ) end		
 }
+
+function high_power_auto_channel(){
+	if(is_high_power){
+		if(document.form.wl_channel.value == 1){
+			if(confirm(Untranslated.WLANConfig11b_Channel_HighPower_desc1)){
+				document.form.wl_channel.value = 2;
+			}
+			else if(!(confirm(Untranslated.WLANConfig11b_Channel_HighPower_desc2))){
+				document.form.wl_channel.value = 2;
+			}
+		}
+		else if(document.form.wl_channel.value == 11){
+			if(confirm(Untranslated.WLANConfig11b_Channel_HighPower_desc3)){
+				document.form.wl_channel.value = 10;
+			}
+			else if(!(confirm(Untranslated.WLANConfig11b_Channel_HighPower_desc4))){
+				document.form.wl_channel.value = 10;
+			}
+		}	
+
+		if(document.form.wl_channel.value == 0)
+			document.form.AUTO_CHANNEL.value = 1;
+		else
+			document.form.AUTO_CHANNEL.value = 0;
+	}
+}
 </script>
 </head>
 
@@ -307,7 +397,6 @@ function check_NOnly_to_GN(){
 <input type="hidden" name="firmver" value="<% nvram_get("firmver"); %>">
 <input type="hidden" name="wps_mode" value="<% nvram_get("wps_mode"); %>">
 <input type="hidden" name="wps_config_state" value="<% nvram_get("wps_config_state"); %>">
-<input type="hidden" name="wl_wpa_mode" value="<% nvram_get("wl_wpa_mode"); %>">
 <input type="hidden" name="wl_wpa_psk_org" value="<% nvram_char_to_ascii("WLANConfig11b", "wl_wpa_psk"); %>">
 <input type="hidden" name="wl_key1_org" value="<% nvram_char_to_ascii("WLANConfig11b", "wl_key1"); %>">
 <input type="hidden" name="wl_key2_org" value="<% nvram_char_to_ascii("WLANConfig11b", "wl_key2"); %>">
@@ -322,6 +411,7 @@ function check_NOnly_to_GN(){
 <input type="hidden" name="wl_nctrlsb_old" value="<% nvram_get("wl_nctrlsb"); %>">
 <input type="hidden" name="wl_key_type" value='<% nvram_get("wl_key_type"); %>'> <!--Lock Add 2009.03.10 for ralink platform-->
 <input type="hidden" name="wl_channel_orig" value='<% nvram_get("wl_channel"); %>'>
+<input type="hidden" name="AUTO_CHANNEL" value='<% nvram_get("AUTO_CHANNEL"); %>'>
 <input type="hidden" name="wl_wep_x_orig" value='<% nvram_get("wl_wep_x"); %>'>
 <input type="hidden" name="wl_optimizexbox" value='<% nvram_get("wl_optimizexbox"); %>'>
 <input type="hidden" name="wl_subunit" value='-1'>
@@ -394,15 +484,15 @@ function check_NOnly_to_GN(){
 				</tr>
 					  
 			  <tr>
-					<th><a class="hintstyle" href="javascript:void(0);" onClick="openHint(0, 4);"><#WLANConfig11b_x_Mode11g_itemname#></a></th>
+					<th><a id="wl_mode_desc" class="hintstyle" href="javascript:void(0);" onClick="openHint(0, 4);"><#WLANConfig11b_x_Mode_itemname#></a></th>
 					<td>									
-						<select name="wl_nmode_x" class="input_option" onChange="return change_common(this, 'WLANConfig11b', 'wl_nmode_x');">
+						<select name="wl_nmode_x" class="input_option" onChange="wireless_mode_change(this);">
 							<option value="0" <% nvram_match("wl_nmode_x", "0","selected"); %>><#Auto#></option>
 							<option value="1" <% nvram_match("wl_nmode_x", "1","selected"); %>>N Only</option>
 							<option value="2" <% nvram_match("wl_nmode_x", "2","selected"); %>>Legacy</option>
 						</select>
 						<span id="wl_optimizexbox_span" style="display:none"><input type="checkbox" name="wl_optimizexbox_ckb" id="wl_optimizexbox_ckb" value="<% nvram_get("wl_optimizexbox"); %>" onclick="document.form.wl_optimizexbox.value=(this.checked==true)?1:0;"> Optimized for Xbox</input></span>
-						<span id="wl_gmode_checkbox" style="display:none;"><input type="checkbox" name="wl_gmode_check" id="wl_gmode_check" value="" onClick="return change_common(this, 'WLANConfig11b', 'wl_gmode_check', '1')"> b/g Protection</input></span>
+						<span id="wl_gmode_checkbox" style="display:none;"><input type="checkbox" name="wl_gmode_check" id="wl_gmode_check" value="" onClick="wl_gmode_protection_check();"> b/g Protection</input></span>
 						<span id="wl_nmode_x_hint" style="display:none;"><br><#WLANConfig11n_automode_limition_hint#><br></span>
 						<span id="wl_NOnly_note" style="display:none;"><br>* [N only] is not compatible with current guest network authentication method(TKIP or WEP),  Please go to <a id="gn_link" href="/Guest_network.asp?af=wl_NOnly_note" target="_blank" style="color:#FFCC00;font-family:Lucida Console;text-decoration:underline;">guest network</a> and change the authentication method.</span>
 					</td>
@@ -411,7 +501,7 @@ function check_NOnly_to_GN(){
 			 	<tr id="wl_bw_field">
 			   	<th><a class="hintstyle" href="javascript:void(0);" onClick="openHint(0, 14);"><#WLANConfig11b_ChannelBW_itemname#></a></th>
 			   	<td>				    			
-						<select name="wl_bw" class="input_option" onChange="return change_common(this, 'WLANConfig11b', 'wl_bw')">
+						<select name="wl_bw" class="input_option" onChange="insertExtChannelOption();">
 							<option class="content_input_fd" value="1" <% nvram_match("wl_bw", "1","selected"); %>>20/40/80 MHz</option>
 							<option class="content_input_fd" value="0" <% nvram_match("wl_bw", "0","selected"); %>>20 MHz</option>
 							<option class="content_input_fd" value="2" <% nvram_match("wl_bw", "2","selected"); %>>40 MHz</option>
@@ -423,7 +513,7 @@ function check_NOnly_to_GN(){
 				<tr id="wl_channel_field">
 					<th><a id="wl_channel_select" class="hintstyle" href="javascript:void(0);" onClick="openHint(0, 3);"><#WLANConfig11b_Channel_itemname#></a></th>
 					<td>
-				 		<select name="wl_channel" class="input_option" onChange="return change_common(this, 'WLANConfig11b', 'wl_channel')"></select>
+				 		<select name="wl_channel" class="input_option" onChange="high_power_auto_channel();insertExtChannelOption();"></select>
 					</td>
 			  </tr>			 
 
@@ -440,7 +530,7 @@ function check_NOnly_to_GN(){
 			  	<tr>
 					<th><a class="hintstyle" href="javascript:void(0);" onClick="openHint(0, 5);"><#WLANConfig11b_AuthenticationMethod_itemname#></a></th>
 					<td>
-				  		<select name="wl_auth_mode_x" class="input_option" onChange="return change_common(this, 'WLANConfig11b', 'wl_auth_mode_x');">
+				  		<select name="wl_auth_mode_x" class="input_option" onChange="authentication_method_change(this);">
 							<option value="open"    <% nvram_match("wl_auth_mode_x", "open",   "selected"); %>>Open System</option>
 							<option value="shared"  <% nvram_match("wl_auth_mode_x", "shared", "selected"); %>>Shared Key</option>
 							<option value="psk"     <% nvram_match("wl_auth_mode_x", "psk",    "selected"); %>>WPA-Personal</option>
@@ -474,7 +564,7 @@ function check_NOnly_to_GN(){
 			  	<tr>
 					<th><a class="hintstyle" href="javascript:void(0);" onClick="openHint(0, 9);"><#WLANConfig11b_WEPType_itemname#></a></th>
 					<td>
-				  		<select name="wl_wep_x" class="input_option" onChange="return change_common(this, 'WLANConfig11b', 'wl_wep_x');">
+				  		<select name="wl_wep_x" class="input_option" onChange="wep_encryption_change(this);">
 								<option value="0" <% nvram_match("wl_wep_x", "0", "selected"); %>><#wl_securitylevel_0#></option>
 								<option value="1" <% nvram_match("wl_wep_x", "1", "selected"); %>>WEP-64bits</option>
 								<option value="2" <% nvram_match("wl_wep_x", "2", "selected"); %>>WEP-128bits</option>
@@ -486,7 +576,7 @@ function check_NOnly_to_GN(){
 			  	<tr>
 					<th><a class="hintstyle" href="javascript:void(0);" onClick="openHint(0, 10);"><#WLANConfig11b_WEPDefaultKey_itemname#></a></th>
 					<td>		
-				  		<select name="wl_key" class="input_option"  onChange="return change_common(this, 'WLANConfig11b', 'wl_key');">
+				  		<select name="wl_key" class="input_option"  onChange="wep_key_index_change(this);">
 							<option value="1" <% nvram_match("wl_key", "1","selected"); %>>1</option>
 							<option value="2" <% nvram_match("wl_key", "2","selected"); %>>2</option>
 							<option value="3" <% nvram_match("wl_key", "3","selected"); %>>3</option>

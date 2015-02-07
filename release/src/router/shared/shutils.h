@@ -83,6 +83,7 @@ extern int _cpu_eval(int *ppid, char *cmds[]);
  */
 extern int kill_pidfile(char *pidfile);
 extern int kill_pidfile_s(char *pidfile, int sig);
+extern int kill_pidfile_s_rm(char *pidfile, int sig);
 
 /*
  * fread() with automatic retry on syscall interrupt
@@ -180,6 +181,20 @@ static inline char * strcat_r(const char *s1, const char *s2, char *buf)
 	     word[strcspn(word, " ")] = '\0', \
 	     word[sizeof(word) - 1] = '\0', \
 	     next = strchr(next, ' '))
+
+/* Copy each token in wordlist delimited by ascii_58 into word */
+#define foreach_58(word, wordlist, next) \
+		for (next = &wordlist[strspn(wordlist, ":")], \
+				strncpy(word, next, sizeof(word)), \
+				word[strcspn(word, ":")] = '\0', \
+				word[sizeof(word) - 1] = '\0', \
+				next = strchr(next, ':'); \
+				strlen(word); \
+				next = next ? &next[strspn(next, ":")] : "", \
+				strncpy(word, next, sizeof(word)), \
+				word[strcspn(word, ":")] = '\0', \
+				word[sizeof(word) - 1] = '\0', \
+				next = strchr(next, ':'))
 
 /* Copy each token in wordlist delimited by ascii_60 into word */
 #define foreach_60(word, wordlist, next) \
@@ -296,7 +311,7 @@ extern int osifname_to_nvifname(const char *osifname, char *nvifname_buf,
 
 int ure_any_enabled(void);
 
-int is_hwnat_loaded(void);
+#define is_hwnat_loaded() module_loaded("hw_nat")
 
 #define vstrsep(buf, sep, args...) _vstrsep(buf, sep, args, NULL)
 extern int _vstrsep(char *buf, const char *sep, ...);

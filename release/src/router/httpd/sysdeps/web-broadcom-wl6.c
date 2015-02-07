@@ -1190,6 +1190,14 @@ ej_wl_status(int eid, webs_t wp, int argc, char_t **argv, int unit)
 	int ii, jj;
 
 	snprintf(prefix, sizeof(prefix), "wl%d_", unit);
+#ifdef RTCONFIG_PROXYSTA
+	if (is_psta(1 - unit))
+	{
+		ret += websWrite(wp, "%s radio is disabled\n",
+			nvram_match(strcat_r(prefix, "nband", tmp), "1") ? "5 GHz" : "2.4 GHz");
+		return ret;
+	}
+#endif
 #ifdef RTCONFIG_WIRELESSREPEATER
 	if ((nvram_get_int("sw_mode") == SW_MODE_REPEATER)
 		&& (nvram_get_int("wlc_band") == unit))
@@ -1206,7 +1214,7 @@ ej_wl_status(int eid, webs_t wp, int argc, char_t **argv, int unit)
 	if (nvram_match(strcat_r(prefix, "mode", tmp), "wds")) {
 		// dump static info only for wds mode:
 		// ret += websWrite(wp, "SSID: %s\n", nvram_safe_get(strcat_r(prefix, "ssid", tmp)));
-		ret += websWrite(wp, "Channel: %s\n", nvram_safe_get(strcat_r(prefix, "channel", tmp)));
+		ret += websWrite(wp, "Channel: %d\n", wl_control_channel(unit));
 	}
 	else {
 		ret += wl_status(eid, wp, argc, argv, unit);
@@ -1391,7 +1399,7 @@ ej_wl_status_2g(int eid, webs_t wp, int argc, char_t **argv)
 	return retval;
 }
 
-static int
+int
 wl_control_channel(int unit)
 {
 	int ret;
@@ -2411,7 +2419,12 @@ ej_SiteSurvey(int eid, webs_t wp, int argc, char_t **argv)
 					if (info->n_cap)
 					{
 						if (NetWorkType == Ndis802_11OFDM5)
-							NetWorkType = Ndis802_11OFDM5_N;
+						{
+							if (info->vht_cap)
+								NetWorkType = Ndis802_11OFDM5_VHT;
+							else
+								NetWorkType = Ndis802_11OFDM5_N;
+						}
 						else
 							NetWorkType = Ndis802_11OFDM24_N;
 					}
@@ -2484,6 +2497,8 @@ next_info:
 				fprintf(stderr, "%-7s", "11a");
 			else if (apinfos[k].NetworkType == Ndis802_11OFDM5_N)
 				fprintf(stderr, "%-7s", "11a/n");
+			else if (apinfos[k].NetworkType == Ndis802_11OFDM5_VHT)
+				fprintf(stderr, "%-7s", "11ac");
 			else if (apinfos[k].NetworkType == Ndis802_11OFDM24)
 				fprintf(stderr, "%-7s", "11b/g");
 			else if (apinfos[k].NetworkType == Ndis802_11OFDM24_N)
@@ -2493,7 +2508,7 @@ next_info:
 
 			fprintf(stderr, "%3d", apinfos[k].ctl_ch);
 
-			if (	((apinfos[k].NetworkType == Ndis802_11OFDM5_N) || (apinfos[k].NetworkType == Ndis802_11OFDM24_N)) &&
+			if (	((apinfos[k].NetworkType == Ndis802_11OFDM5_VHT) || (apinfos[k].NetworkType == Ndis802_11OFDM5_N) || (apinfos[k].NetworkType == Ndis802_11OFDM24_N)) &&
 				(apinfos[k].channel != apinfos[k].ctl_ch))
 			{
 				if (apinfos[k].ctl_ch < apinfos[k].channel)
@@ -2609,6 +2624,8 @@ next_info:
 			retval += websWrite(wp, "\"%s\", ", "a");
 		else if (apinfos[i].NetworkType == Ndis802_11OFDM5_N)
 			retval += websWrite(wp, "\"%s\", ", "an");
+                else if (apinfos[i].NetworkType == Ndis802_11OFDM5_VHT)
+                        retval += websWrite(wp, "\"%s\", ", "ac");
 		else if (apinfos[i].NetworkType == Ndis802_11OFDM24)
 			retval += websWrite(wp, "\"%s\", ", "bg");
 		else if (apinfos[i].NetworkType == Ndis802_11OFDM24_N)

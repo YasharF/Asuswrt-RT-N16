@@ -4,7 +4,7 @@
 #          pkttype stp among limit ulog nflog
 #EXT_TABLES+=filter nat broute
 
-EXT_FUNC+=standard redirect mark
+EXT_FUNC+=ip standard redirect mark
 ifeq ($(DO_IPV6), 1)
 #EXT_FUNC+=ip6
 endif

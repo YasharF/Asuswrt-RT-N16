@@ -44,24 +44,48 @@ fi
 
 need_asuslighttpd=0
 need_smartsync=0
-if [ "$1" == "downloadmaster" ] || [ "$1" == "mediaserver" ]; then
+if [ "$1" == "downloadmaster" ]; then
 	DM_version1=`app_get_field.sh downloadmaster Version 1 |awk '{FS=".";print $1}'`
 	DM_version4=`app_get_field.sh downloadmaster Version 1 |awk '{FS=".";print $4}'`
-	MS_version=`app_get_field.sh mediaserver Version 1 |awk '{FS=".";print $4}'`
 
-	if [ "$1" == "downloadmaster" ] && [ "$DM_version1" -gt "2" ] && [ "$DM_version4" -gt "59" ]; then
+	if [ "$DM_version1" -gt "3" ]; then
 		need_asuslighttpd=1
-	elif [ "$1" == "mediaserver" ] && [ "$MS_version" -gt "15" ]; then
+	elif [ "$DM_version1" -eq "3" ] && [ "$DM_version4" -gt "59" ]; then
+		need_asuslighttpd=1
+	fi
+elif [ "$1" == "mediaserver" ]; then
+	MS_version1=`app_get_field.sh mediaserver Version 1 |awk '{FS=".";print $1}'`
+	MS_version4=`app_get_field.sh mediaserver Version 1 |awk '{FS=".";print $4}'`
+
+	if [ "$MS_version1" -gt "1" ]; then
+		need_asuslighttpd=1
+	elif [ "$MS_version1" -eq "1" ] && [ "$MS_version4" -gt "15" ]; then
 		need_asuslighttpd=1
 	fi
 elif [ "$1" == "aicloud" ] && [ -z "$is_arm_machine" ]; then
-	AC_version=`app_get_field.sh aicloud Version 1 |awk '{FS=".";print $4}'`
+	AC_version1=`app_get_field.sh aicloud Version 1 |awk '{FS=".";print $1}'`
+	AC_version4=`app_get_field.sh aicloud Version 1 |awk '{FS=".";print $4}'`
 
-	if [ "$AC_version" -gt "4" ]; then
+	if [ "$AC_version1" -gt "1" ]; then
+		need_smartsync=1
+	elif [ "$AC_version1" -eq "1" ] && [ "$AC_version4" -gt "4" ]; then
 		need_smartsync=1
 	fi
 fi
 
+if [ "$need_asuslighttpd" == "1" ]; then
+	dep_on_asuslighttpd=0
+	if [ "$1" == "downloadmaster" ] ; then
+		dep_on_asuslighttpd=`ipkg list_installed|awk '{print $1}'|grep -c mediaserver`
+	elif [ "$1" == "mediaserver" ] ; then
+		dep_on_asuslighttpd=`ipkg list_installed|awk '{print $1}'|grep -c downloadmaster`
+	fi
+
+	if [ "$dep_on_asuslighttpd" != "0" ] ; then
+		echo "asuslighttpd is need by another installed package"
+		need_asuslighttpd=0
+	fi
+fi
 
 nvram set apps_state_remove=1 # REMOVING
 if [ "$need_asuslighttpd" == "1" ]; then

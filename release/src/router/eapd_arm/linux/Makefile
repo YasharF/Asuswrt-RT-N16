@@ -2,7 +2,7 @@
 
 include $(SRCBASE)/router/.config
 
-INCLUDE += -I. -I.. -I$(SRCBASE)/include -I$(SRCBASE)/shared -I$(SRCBASE)/router/shared -I$(SRCBASE)/router/nas
+INCLUDE += -I. -I.. -I$(SRCBASE)/include -I$(SRCBASE)/common/include -I$(SRCBASE)/shared -I$(SRCBASE)/router/shared -I$(SRCBASE)/router/nas${BCMEX}
 
 CFLAGS += $(INCLUDE)
 CFLAGS += $(WLAN_ComponentIncPath)
@@ -21,7 +21,7 @@ LDFLAGS += -L$(TOP)/nvram${BCMEX} -L$(INSTALLDIR)/nvram/usr/lib -lnvram
 LDFLAGS += -L$(TOP)/shared -L$(INSTALLDIR)/shared/usr/lib -lshared
 LDFLAGS += -lgcc_s
 
-vpath %.c $(SRCBASE)/router/eapd $(SRCBASE)/shared
+vpath %.c $(SRCBASE)/router/eapd${BCMEX} $(SRCBASE)/shared
 
 OBJS = eapd.o eapd_linux.o
 OBJS += nas_eap.o wps_eap.o ses_eap.o
@@ -38,6 +38,13 @@ CFLAGS += -DBCM_DCS
 ifeq ($(CONFIG_BCM_MEVENT),y)
 OBJS += mevent_eap.o
 CFLAGS += -DBCM_MEVENT
+endif
+#endif
+
+#ifdef BCM_BSD
+ifeq ($(CONFIG_BCMBSD),y)
+OBJS += bsd_eap.o
+CFLAGS += -DBCM_BSD
 endif
 #endif
 

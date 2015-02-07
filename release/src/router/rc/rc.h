@@ -37,6 +37,8 @@
 #include "sysdeps.h"
 #include <linux/version.h>
 
+#define IFUP (IFF_UP | IFF_RUNNING | IFF_BROADCAST | IFF_MULTICAST)
+
 #define DUT_DOMAIN_NAME "router.asus.com"
 #define OLD_DUT_DOMAIN_NAME1 "www.asusnetwork.net"
 #define OLD_DUT_DOMAIN_NAME2 "www.asusrouter.com"
@@ -169,7 +171,7 @@ typedef enum { IPT_TABLE_NAT, IPT_TABLE_FILTER, IPT_TABLE_MANGLE } ipt_table_t;
 /* api-*.c */
 extern uint32_t get_phy_status(uint32_t portmask);
 extern uint32_t get_phy_speed(uint32_t portmask);
-extern uint32_t set_phy_ctrl(uint32_t portmask, uint32_t ctrl);
+extern uint32_t set_phy_ctrl(uint32_t portmask, int ctrl);
 extern uint32_t set_gpio(uint32_t gpio, uint32_t value);
 extern uint32_t get_gpio(uint32_t gpio);
 extern uint32_t gpio_dir(uint32_t gpio, int dir);
@@ -241,8 +243,11 @@ extern void ate_run_in(void);
 #endif
 extern int gen_ralink_config(int band, int is_iNIC);
 extern int get_channel(int band);
+extern int __need_to_start_wps_band(char *prefix);
+extern int need_to_start_wps_band(int wps_band);
 extern void start_wsc_pin_enrollee(void);
 extern void stop_wsc(void);
+extern void stop_wsc_both(void);
 extern void start_wsc(void);
 extern void wps_oob_both(void);
 extern void wsc_user_commit();
@@ -252,10 +257,12 @@ extern int stainfo(int band);
 extern int Set_SwitchPort_LEDs(const char *group, const char *action);
 extern int ralink_mssid_mac_validate(const char *macaddr);
 extern char * get_wpsifname(void);
-extern int getWscStatus(void);
+extern int getWscStatus(int unit);
 extern int wl_WscConfigured(int unit);
 extern int Get_Device_Flags(void);
 extern int Set_Device_Flags(const char *flags_str);
+extern char *get_wifname(int band);
+extern char *get_wpsifname(void);
 #endif
 
 /* sysdeps/dsl-*.c */
@@ -313,7 +320,7 @@ extern void stop_wan6(void);
 
 // lan.c
 extern void update_lan_state(int state, int reason);
-extern void set_et_qos_mode(int sfd);
+extern void set_et_qos_mode(void);
 extern void start_wl(void);
 extern void stop_wl(void);
 extern char *get_hwaddr(const char *ifname);
@@ -341,7 +348,6 @@ extern void start_lan_wlport(void);
 extern void stop_lan_wlport(void);
 extern int wl_dev_exist(void);
 #ifdef RTCONFIG_RALINK
-extern char *wif_to_vif(char *wif);
 extern pid_t pid_from_file(char *pidfile);
 #endif
 #ifdef RTCONFIG_IPV6
@@ -459,15 +465,15 @@ extern int mtd_unlock_erase_main(int argc, char *argv[]);
 // jffs2.c
 #if defined(RTCONFIG_UBIFS)
 extern void start_ubifs(void);
-extern void stop_ubifs(void);
+extern void stop_ubifs(int stop);
 static inline void start_jffs2(void) { start_ubifs(); }
-static inline void stop_jffs2(void) { stop_ubifs(); }
+static inline void stop_jffs2(int stop) { stop_ubifs(stop); }
 #elif defined(RTCONFIG_JFFS2) || defined(RTCONFIG_JFFSV1)
 extern void start_jffs2(void);
-extern void stop_jffs2(void);
+extern void stop_jffs2(int stop);
 #else
 static inline void start_jffs2(void) { }
-static inline void stop_jffs2(void) { }
+static inline void stop_jffs2(int stop) { }
 #endif
 
 // watchdog.c
@@ -476,11 +482,6 @@ extern void erase_nvram(void);
 extern int init_toggle(void);
 extern void btn_check(void);
 extern int watchdog_main(int argc, char *argv[]);
-
-// wpsfix.c
-#ifdef RTCONFIG_RALINK
-extern int wpsfix_main(int argc, char *argv[]);
-#endif
 
 // usbled.c
 extern int usbled_main(int argc, char *argv[]);
@@ -534,6 +535,7 @@ extern void setup_ct_timeout(int connflag);
 extern void setup_udp_timeout(int connflag);
 extern void setup_ftp_conntrack(int port);
 extern void setup_pt_conntrack(void);
+extern void remove_conntrack(void);
 extern int pppstatus(void);
 extern void time_zone_x_mapping(void);
 extern void stop_if_misc(void);
@@ -571,6 +573,9 @@ extern void start_samba(void);
 #endif
 #ifdef RTCONFIG_WEBDAV
 extern void stop_webdav(void);
+extern void stop_all_webdav(void);
+#else
+static inline void stop_all_webdav(void) { }
 #endif
 #ifdef RTCONFIG_FTP
 extern void stop_ftpd(void);
@@ -681,6 +686,7 @@ extern void stop_dhcp6s(void);
 extern void start_ipv6(void);
 extern void stop_ipv6(void);
 #endif
+extern int wps_band_radio_off(int wps_band);
 #ifdef CONFIG_BCMWL5
 extern void set_acs_ifnames();
 #endif
@@ -706,6 +712,7 @@ extern void create_passwd(void);
 extern int start_services(void);
 extern void check_services(void);
 extern int no_need_to_start_wps(void);
+extern int wps_band_radio_off(int wps_band);
 extern int start_wanduck(void);
 extern void stop_wanduck(void);
 extern void stop_ntpc(void);
@@ -733,8 +740,6 @@ extern int exec_8021x_start(int band, int is_iNIC);
 extern int exec_8021x_stop(int band, int is_iNIC);
 extern int start_8021x(void);
 extern int stop_8021x(void);
-extern int start_wpsfix(void);
-extern int stop_wpsfix(void);
 #endif
 #ifdef RTCONFIG_DNSMASQ
 extern void stop_dnsmasq(void);

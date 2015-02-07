@@ -3,32 +3,34 @@ helpcontent[0] = new Array("",
 							 "<#WLANConfig11b_SSID_itemdesc#>",
 						   "<#WLANConfig11b_x_BlockBCSSID_itemdesc#>",						   
 						   "<#WLANConfig11b_Channel_itemdesc#>",
-						   "<#WLANConfig11b_x_Mode11g_itemdesc#>",
+						   "<#WLANConfig11b_x_Mode_itemdesc2#>",
 						   "<#WLANConfig11b_AuthenticationMethod_itemdesc#>",
 						   "<#WLANConfig11b_WPAType_itemdesc#>",
 						   "<#WLANConfig11b_x_PSKKey_itemdesc#>",
 						   "<#WLANConfig11b_x_Phrase_itemdesc#>",
 						   "<#WLANConfig11b_WEPType_itemdesc#>",
 						   "<#WLANConfig11b_WEPDefaultKey_itemdesc#>",
-						   "<#WLANConfig11b_x_Rekey_itemdesc#><#JS_field_wanip_rule3#>",
+						   "<#WLANConfig11b_x_Rekey_itemdesc#><#JS_field_wanip_rule3#>",	//11
 						   "<#WLANConfig11b_WEPKey_itemtype1#>",
 						   "<#WLANConfig11b_WEPKey_itemtype2#>",
 						   "<#WLANConfig11b_ChannelBW_itemdesc#><br/><#WLANConfig11b_Wireless_Speed_itemname_3#>",
 						   "<#WLANConfig11b_EChannel_itemdesc#>",
-							 "Set the capability for transmission power. The maximum value is 100 %.",
+							 "<#WLANConfig11b_TxPower_help1#>",
 							 "<#WLANConfig11b_TxPower_help#>",
 							 "WEP-64bits: <#WLANConfig11b_WEPKey_itemtype1#><br/>WEP-128bits: <#WLANConfig11b_WEPKey_itemtype2#>",
 							 "<#WLANConfig11b_WEPKey_itemtype1#><br/><#WLANConfig11b_WEPKey_itemtype2#>",
 							 "<#WLANConfig11b_WEPKey_itemtype1#><br/><#WLANConfig11b_WEPKey_itemtype2#>",
-							 "<#WLANConfig11b_WEPKey_itemtype1#><br/><#WLANConfig11b_WEPKey_itemtype2#>",
+							 "<#WLANConfig11b_WEPKey_itemtype1#><br/><#WLANConfig11b_WEPKey_itemtype2#>",	//21
 							 '<div><#qis_wireless_help1#></div><br/><img src="/images/qis/select_wireless.jpg">',
 							 '<div><#qis_wireless_help2#></div><br/><img width="350px" src="/images/qis/security_key.png">',
-							 "<#WLANConfig11n_automode_limition_hint#>"
+							 "<#WLANConfig11n_automode_limition_hint#>"							 
 							 );
 helpcontent[1] = new Array("",
 						   "<#WLANConfig11b_x_APMode_itemdesc#>",
 						   "<#WLANConfig11b_Channel_itemdesc#>",
-						   "<#WLANConfig11b_x_BRApply_itemdesc#>");
+						   "<#WLANConfig11b_x_BRApply_itemdesc#>",
+						   "<#WLANConfig11b_x_Mode_itemdesc5#>",
+							 "<#WLANConfig11b_x_Mode_itemdescAC#>");
 helpcontent[2] = new Array("",
 						   "<#WLANAuthentication11a_ExAuthDBIPAddr_itemdesc#>",
 						   "<#WLANAuthentication11a_ExAuthDBPortNumber_itemdesc#>",
@@ -57,12 +59,13 @@ helpcontent[3] = new Array("",
 						   "<#WLANConfig11b_x_EnhanInter_itemdesc#>", //21
 						   "<#WLANConfig11b_x_IgmpSnEnable_itemdesc#>",
 						   "<#WLANConfig11b_x_SchedEnable_itemdesc#>",
-							 "The adapter and router both support beamforming and are able to communicate estimates of the channel and steering direction to each other in order to improve downlink and uplink speed.",
-							 "For legacy wireless network adapters not supporting beamforming, the router will estimate the channel and determine steering in order to improve downlink speed.",
-							 "Optimize max number of mpdus in an ampdu.",
-							 "Optimize max number of ack to suppress in a row.",
-							 "256-QAM (MCS 8/9) support.",
-							 "Reduced USB 3.0 interference is enabled to ensure the best wireless performance on the 2.4 GHz band. Disabling this feature can increase transmission speed of USB3.0 port but may affect 2.4GHz wireless range.");
+							 "<#WLANConfig11b_x_ExpBeam_desc#>",
+							 "<#WLANConfig11b_x_ImpBeam_desc#>",
+							 "<#WLANConfig11b_x_AMPDU_desc#>",
+							 "<#WLANConfig11b_x_ACK_desc#>",
+							 "<#WLANConfig11b_x_TurboQAM_desc#>",
+							 "<#WLANConfig11b_x_ReduceUSB3_desc#>",
+							 "Use RTS for AMPDU");
 
 helpcontent[4] = new Array("",
 						   "<#LANHostConfig_IPRouters_itemdesc#>",
@@ -102,7 +105,7 @@ helpcontent[7] = new Array("",
 							 "<#PPPConnection_x_PPPoEMRU_itemdesc#>",
 							 "<#PPPConnection_x_ServiceName_itemdesc#>",
 							 "<#PPPConnection_x_AccessConcentrator_itemdesc#>",
-							 "<#PPPConnection_x_PPPoERelay_itemdesc#>",
+							 "<#PPPConnection_x_PPPoERelay_itemdesc#>",	//11
 							 "<#IPConnection_x_DNSServerEnable_itemdesc#>",
 							 "<#IPConnection_x_DNSServer1_itemdesc#>",
 							 "<#IPConnection_x_DNSServer2_itemdesc#>",
@@ -113,7 +116,7 @@ helpcontent[7] = new Array("",
 							 "<#BOP_isp_heart_desc#>",
 							 "<#IPConnection_BattleNet_itemdesc#>",
 							 "<#Layer3Forwarding_x_STB_itemdesc#>",
-							 "<#hwnat_desc#>",
+							 "<#hwnat_desc#>",	//21
 							 "<#IPConnection_UPnP_itemdesc#>",
 							 "<#IPConnection_PortRange_itemdesc#>",
 							 "<#IPConnection_LocalIP_itemdesc#>",
@@ -145,7 +148,7 @@ helpcontent[11] = new Array("",
 							"<#LANHostConfig_x_ServerLogEnable_itemdesc#>",
 							"<#LANHostConfig_x_TimeZone_itemdesc#>",
 							"<#LANHostConfig_x_NTPServer_itemdesc#>",
-							"<#LANHostConfig_x_Password_itemdesc#>");
+							"<#QIS_pass_desc2#> <#LANHostConfig_x_Password_itemdesc#>");
 //Log
 helpcontent[12] = new Array("",
 							"<#General_x_SystemUpTime_itemdesc#>",
@@ -245,3 +248,11 @@ helpcontent[24] = new Array("",
 helpcontent[25] = new Array("",
 							"<#DSL_Stab_Adjustment#>",			//Stability Adjustment
 							"<#DSL_SRA_itemdesc#>");		//SRA(Seamless Rate Adaptation)
+							
+//DualWAN
+helpcontent[26] = new Array("",
+							"<#dualwan_pingtime_desc#>",
+							"<#dualwan_pingtime_target#>",
+							"<#dualwan_pingtime_interval#>",
+							"<#dualwan_pingtime_delay#>",
+							"<#dualwan_pingtime_upper#>");

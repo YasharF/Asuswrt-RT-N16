@@ -1583,26 +1583,29 @@ int kill_pidfile_s(char *pidfile, int sig)
 	return errno;
 }
 
+int kill_pidfile_s_rm(char *pidfile, int sig)
+{
+	FILE *fp;
+	char buf[256];
+
+	if ((fp = fopen(pidfile, "r")) != NULL) {
+		if (fgets(buf, sizeof(buf), fp)) {
+			pid_t pid = strtoul(buf, NULL, 0);
+			fclose(fp);
+			unlink(pidfile);
+			return kill(pid, sig);
+		}
+		fclose(fp);
+	}
+	return errno;
+}
+
 long uptime(void)
 {
 	struct sysinfo info;
 	sysinfo(&info);
 	
 	return info.uptime;
-}
-
-int is_hwnat_loaded(void)
-{
-	DIR *dir_to_open = NULL;
-
-	dir_to_open = opendir("/sys/module/hw_nat");
-	if (dir_to_open)
-	{
-		closedir(dir_to_open);
-		return 1;
-	}
-
-	return 0;
 }
 
 int _vstrsep(char *buf, const char *sep, ...)

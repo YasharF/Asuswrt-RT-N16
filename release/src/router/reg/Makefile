@@ -1,11 +1,7 @@
 EXEC = reg
-OBJS = reg.o
-CFLAGS += -I$(LINUXDIR)/drivers/net/rt_rdm -I$(LINUXDIR)/include
 
-all: $(EXEC)
-
-$(EXEC): $(OBJS)
-	$(CC) $(LDFLAGS) -o $@ $(OBJS)
+all:
+	- cp prebuild/reg reg
 
 install: all
 	install -D $(EXEC) $(INSTALLDIR)/bin/$(EXEC)

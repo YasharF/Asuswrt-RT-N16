@@ -71,13 +71,14 @@ if(isMobile() && sw_mode != 2 && qisFlag != "sitesurvey" && qisFlag != "sitesurv
 var parent_macaddr = '<% nvram_get("et0macaddr"); %>';
 var wireless = [<% wl_auth_list(); %>];	// [[MAC, associated, authorized], ...]
 
+var isRepeater = true;
 var reduced_internet_type = "disable";
 var targeturl = "/index.htm";
 var firmver = '<% nvram_get("firmver"); %>';
 var w_Setting_tmp = '<% nvram_get("w_Setting"); %>';
 var return_btn = 0;
 var flag_manual = 0;
-var issubmit = 0;
+var isSubmit = false;
 var isrescan = 0;
 var getBand = '<% get_parameter("band"); %>';
 var isFirst = ('<% nvram_get("x_Setting"); %>' == '1') ? false : true;;
@@ -109,7 +110,7 @@ function detect_firmware(){
 				setTimeout("detect_firmware();", 1000);
 		},
  		success: function(){
-			if(retry > 20){
+			if(retry > 10){
 				liveUpdateFinish = true;					
 			}
 			else if(webs_state_update==0){
@@ -119,18 +120,18 @@ function detect_firmware(){
 			else{
 				if(webs_state_error != 1){
 					var Latest_firmver = webs_state_info.split("_");
-					var Latest_firm = Latest_firmver[0];
-					var Latest_buildno = Latest_firmver[1];
+					var Latest_firm = parseInt(Latest_firmver[0]);
+					var Latest_buildno = parseInt(Latest_firmver[1]);
 					var Latest_extendno = Latest_firmver[2];
 					var Latest_extendno_split = Latest_extendno.split("-g");
-	      	var Latest_extendno_comp = Latest_extendno_split[0];
+	      			var Latest_extendno_comp = parseInt(Latest_extendno_split[0]);
 
 					if(Latest_firm && Latest_buildno && Latest_extendno){	//match model FW
 						current_firm = parseInt(exist_firmver.replace(/[.]/gi,""));
-      			current_buildno = parseInt("<% nvram_get("buildno"); %>");
-      			current_extendno = "<% nvram_get("extendno"); %>";
-      			current_extendno_split = current_extendno.split("-g");
-      			current_extendno_comp = current_extendno_split[0];
+      					current_buildno = parseInt("<% nvram_get("buildno"); %>");
+      					current_extendno = "<% nvram_get("extendno"); %>";
+      					current_extendno_split = current_extendno.split("-g");
+      					current_extendno_comp = parseInt(current_extendno_split[0]);
 
 						if((current_buildno < Latest_buildno) || 
       					(current_firm < Latest_firm && current_buildno == Latest_buildno) ||
@@ -148,9 +149,11 @@ function detect_firmware(){
 
 function detect_update(){
 	if(isFirst)
-		var _action_wait = 10000;
+		var _action_wait = 7000;
 	else
-		var _action_wait = 5000;
+		var _action_wait = 4000;
+		
+	document.start_update.action_script.value="restart_time;start_webs_update";	//for detect time zone	
 	setTimeout("document.start_update.submit();", _action_wait);	//delay after restart_time
 }
 
@@ -239,7 +242,13 @@ function QIS_load_body(){
 				document.QKform.wan_proto.value = "pptp";
 				action = "/qis/QIS_internet_account.htm";
 				submit();
-				break;				
+				break;
+			case "sitesurvey_mb":
+				localAP_support = false;
+				isRepeater = false;
+				action = "/qis/QIS_sitesurvey.htm";
+				submit();
+				break;
 			default:
 				if(showCase.split("?").length == 1)
 					action = "/qis/QIS_" + showCase + ".htm";
@@ -441,7 +450,8 @@ function check_DUT(){
 <table width="998px"  border="0" align="center" cellpadding="0" cellspacing="0" background="/images/New_ui/middown_bg.png">
   <tr>
 		<td style="width:218px;*width:263px;" valign="top">
-			<div class="lefttabhead" style="margin-left:15px;margin-top:-130px;" id="option0"><table width="192px" height="37px"><tbody><tr><td><#QIS_title#></td></tr></tbody></table></div>
+			<div class="m_qis_r" style="margin-left: 15px;margin-top: -160px;cursor:pointer;" onclick="gotoIndex();"><table><tbody><tr><td><div id="index_img1"></div></td><td><div><#CTL_Setting#></div></td></tr></tbody></table></div>
+			<div class="lefttabhead" style="margin-left:15px;" id="option0"><table width="192px" height="37px"><tbody><tr><td><#QIS_title#></td></tr></tbody></table></div>
 			<div class="lefttabmid" id="t1" style="margin-left:15px;"><table height="52px"><tbody><tr><td><img style="margin-left:3px;" border="0" src="/images/qis/qisStep1.png"></td><td><div class="qismenu"><#QIS_step2#></div></td></tr></tbody></table></div>
 			<div class="lefttabmid" id="t2" style="margin-left:15px;"><table height="52px"><tbody><tr><td><img style="margin-left:3px;" border="0" src="/images/qis/qisStep2.png"></td><td><div class="qismenu"><#QIS_step3#></div></td></tr></tbody></table></div>
 			<div class="lefttabmid" id="t3" style="margin-left:15px;"><table height="52px"><tbody><tr><td><img style="margin-left:3px;" border="0" src="/images/qis/qisStep3.png"></td><td><div class="qismenu"><#QIS_step4#></div></td></tr></tbody></table></div>
@@ -540,6 +550,7 @@ function check_DUT(){
 	<input type="hidden" name="action_mode" value="apply">
 	<input type="hidden" name="action_script" value="start_webs_update">
 	<input type="hidden" name="action_wait" value="12">
+	<input type="hidden" name="x_Setting" value="1">
 </form>
 <iframe name="hidden_frame" id="hidden_frame" src="" width="0" height="0" frameborder="0"></iframe>
 </body>

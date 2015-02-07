@@ -28,6 +28,7 @@ LDFLAGS = -L$(TOP)/nvram${BCMEX} -lnvram -L$(TOP)/shared -lshared -lcrypt -L$(TO
 
 ifeq ($(RTCONFIG_BCMARM),y)
 CFLAGS += -I$(SRCBASE)/shared/bcmwifi/include -DHAVE_TYPE_FLOAT
+CFLAGS += -I$(SRCBASE)/common/include
 LDFLAGS += -L$(TOP)/libbcm -lbcm
 LDFLAGS += -lgcc_s
 endif
@@ -44,6 +45,11 @@ ifeq ($(RTCONFIG_USB),y)
 CFLAGS += -I$(TOP)/libdisk
 CFLAGS += -DU2EC
 LDFLAGS += -L$(TOP)/libdisk -ldisk
+endif
+
+ifeq ($(RTCONFIG_EMAIL),y)
+CFLAGS += -I$(TOP)/push_log
+LDFLAGS += -L$(TOP)/push_log -lpush_log
 endif
 
 ifeq ($(RTAC66U), y)
@@ -94,7 +100,7 @@ OBJS += bcmutils.o
 endif
 
 ifeq ($(RTCONFIG_RALINK),y)
-OBJS += init-ralink.o wps-ralink.o ralink.o wpsfix.o
+OBJS += init-ralink.o wps-ralink.o ralink.o
 ifeq ($(RTCONFIG_DSL),y)
 OBJS += init-ralink-dsl.o 
 endif
@@ -218,7 +224,6 @@ endif
 	@cd $(INSTALLDIR)/sbin && ln -sf rc mtd-unlock
 	@cd $(INSTALLDIR)/sbin && ln -sf rc ots
 	@cd $(INSTALLDIR)/sbin && ln -sf rc watchdog
-	@cd $(INSTALLDIR)/sbin && ln -sf rc wpsfix
 ifeq ($(RTCONFIG_FANCTRL),y)
 	@cd $(INSTALLDIR)/sbin && ln -sf rc phy_tempsense
 endif
@@ -315,6 +320,7 @@ endif
 	@cd $(INSTALLDIR)/sbin && ln -sf rc get_phy_status
 	@cd $(INSTALLDIR)/sbin && ln -sf rc get_phy_speed
 	@cd $(INSTALLDIR)/sbin && ln -sf rc firmware_check
+
 clean:
 	rm -f rc *.o .*.depend
 

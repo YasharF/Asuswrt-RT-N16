@@ -6,7 +6,6 @@
 	DM_DisableHint: "You cannot use Download Master because Download Master is disabled!", 
 	the_array_is_end : "end here.",
 	ddns_home_link: "Get started",
-	go_to_wan_setting : "Go to WAN setting", // need to replace string manually in device-map/internet.asp
 	select_wireless_MAC : "Select the MAC address of Wireless Clients.",
 	select_AP : "Select the Access Point",
 	select_MAC : "Select the MAC address of DHCP clients.",
@@ -16,7 +15,12 @@
 	select_service : "Select the service name.",
 	select_client : "Select the client of DHCP clients.",
 	select_APN_service : "Select the APN service.",
-	Guest_Network_enable_ACL : "You must go to enable MAC filter"
+	Guest_Network_enable_ACL : "You must go to enable MAC filter",
+	WLANConfig11b_Channel_HighPower_desc1 : "To ensure the best wireless signal, we suggest to set the router channel with channel 2. If agree to access Channel 2, please click 'OK'. If disagree, please click 'Cancel'",
+	WLANConfig11b_Channel_HighPower_desc2 : "Due to local regulator limitation, Channel 1 can’t provide the best wireless coverage. If you insist to access Channel 1, please click 'OK'. If not, it will set to channel 2. Please click 'Cancel'",
+	WLANConfig11b_Channel_HighPower_desc3 : "To ensure the best wireless signal, we suggest to set the router channel with channel 10. If agree to access Channel 10, please click 'OK'. If disagree, please click 'Cancel'",
+	WLANConfig11b_Channel_HighPower_desc4 : "Due to local regulator limitation, Channel 11 can’t provide the best wireless coverage. If you insist to access Channel 11, please click 'OK'. If not, it will set to channel 10. Please click 'Cancel'",
+	WLANConfig11b_WDS_sectiondesc4 : "4. To get best performance, please go to advanced settings -> wireless -> general and make sure that every router in the network has the same channel bandwidth, control channel and extension channel."
 };
 var clicked_help_string = "<#Help_init_word1#> <a class=\"hintstyle\" style=\"background-color:#7aa3bd\"><#Help_init_word2#></a> <#Help_init_word3#>";
 
@@ -28,6 +32,8 @@ function addNewScript_help(scriptName){
 	document.getElementsByTagName("head")[0].appendChild(script);
 }
 function isMobile_help(){
+	return false; //disable mobile QIS temporary, Jieming added at 2013.08.12
+	
 	if(screen.width < 640 || screen.height < 640){
 		return true;
 	}
@@ -193,8 +199,12 @@ function overHint(itemNum){
 					var expire_min = Math.floor((gn_array_2g[i][13]%3600)/60);
 					if(expire_hr > 0)
 						statusmenu += '<b id="expire_hr_'+i+'">'+ expire_hr + '</b> Hr <b id="expire_min_'+i+'">' + expire_min +'</b> Min';
-					else
-						statusmenu += '<b id="expire_min_'+i+'">' + expire_min +'</b> Min';
+					else{
+						if(expire_min > 0)
+								statusmenu += '<b id="expire_min_'+i+'">' + expire_min +'</b> Min';
+						else	
+								statusmenu += '<b id="expire_min_'+i+'">< 1</b> Min';
+					}
 				}
 
 				statusmenu += " left)</span><br>";
@@ -222,8 +232,12 @@ function overHint(itemNum){
 						var expire_min = Math.floor((gn_array_5g[i][13]%3600)/60);
 						if(expire_hr > 0)
 							statusmenu += '<b id="expire_hr_'+i+'">'+ expire_hr + '</b> Hr <b id="expire_min_'+i+'">' + expire_min +'</b> Min';
-						else
-							statusmenu += '<b id="expire_min_'+i+'">' + expire_min +'</b> Min';
+						else{
+							if(expire_min > 0)
+								statusmenu += '<b id="expire_min_'+i+'">' + expire_min +'</b> Min';
+							else	
+								statusmenu += '<b id="expire_min_'+i+'">< 1</b> Min';
+						}
 					}
 
 					statusmenu += " left)</span><br>";
@@ -242,19 +256,19 @@ function overHint(itemNum){
 		}
 		else{
 			if(sw_mode == 1){
-				if(link_auxstatus == 1)
+				if(link_auxstatus == "1")
 					statusmenu = "<span class='StatusHint'><#QKSet_detect_wanconnfault#></span>";
-				else if(link_sbstatus == 1)
+				else if(link_sbstatus == "1")
 					statusmenu = "<span class='StatusHint'><#web_redirect_reason3_2#></span>";
-				else if(link_sbstatus == 2)
+				else if(link_sbstatus == "2")
 					statusmenu = "<span class='StatusHint'><#QKSet_Internet_Setup_fail_reason2#></span>";
-				else if(link_sbstatus == 3)
+				else if(link_sbstatus == "3")
 					statusmenu = "<span class='StatusHint'><#QKSet_Internet_Setup_fail_reason1#></span>";
-				else if(link_sbstatus == 4)
+				else if(link_sbstatus == "4")
 					statusmenu = "<span class='StatusHint'><#web_redirect_reason5_2#></span>";
-				else if(link_sbstatus == 5)
+				else if(link_sbstatus == "5")
 					statusmenu = "<span class='StatusHint'><#web_redirect_reason5_1#></span>";
-				else if(link_sbstatus == 6)
+				else if(link_sbstatus == "6")
 					statusmenu = "<span class='StatusHint'>WAN_STOPPED_SYSTEM_ERROR</span>";
 				else
 					statusmenu = "<span class='StatusHint'><#web_redirect_reason2_2#></span>";
@@ -347,25 +361,35 @@ function openHint(hint_array_id, hint_show_id, flag){
 			_caption = "Guest Network";
 		}
 		else if(hint_show_id == 3){
-			if(sw_mode == 1){
-				if((link_status == "2" && link_auxstatus == "0") || (link_status == "2" && link_auxstatus == "2"))
-					statusmenu = "<span class='StatusClickHint' onclick='suspendconn(0);' onmouseout='this.className=\"StatusClickHint\"' onmouseover='this.className=\"StatusClickHint_mouseover\"'><#disconnect_internet#></span>";
-				else if(link_status == 5)
+			if(sw_mode == 1){				
+				if(!dualWAN_support && 
+						((link_status == "2" && link_auxstatus == "0") || (link_status == "2" && link_auxstatus == "2"))
+				)
+					statusmenu = "<span class='StatusClickHint' onclick='suspendconn(0);' onmouseout='this.className=\"StatusClickHint\"' onmouseover='this.className=\"StatusClickHint_mouseover\"'><#disconnect_internet#></span>";	
+				else if(dualWAN_support && 
+						((link_status == "2" && link_auxstatus == "0") || (link_status == "2" && link_auxstatus == "2"))
+				){
+					if(wans_dualwan_orig.search("none")<0)					
+						statusmenu = "<span class='StatusClickHint' onclick='goToWAN();' onmouseout='this.className=\"StatusClickHint\"' onmouseover='this.className=\"StatusClickHint_mouseover\"'><#btn_to_WAN#></span>";
+					else
+						statusmenu = "<span class='StatusClickHint' onclick='suspendconn(0);' onmouseout='this.className=\"StatusClickHint\"' onmouseover='this.className=\"StatusClickHint_mouseover\"'><#disconnect_internet#></span>";		
+				}					
+				else if(link_status == "5")
 					statusmenu = "<span class='StatusClickHint' onclick='suspendconn(1);' onmouseout='this.className=\"StatusClickHint\"' onmouseover='this.className=\"StatusClickHint_mouseover\"'>Resume internet</span>";
 				else{
-					if(link_auxstatus == 1)
+					if(link_auxstatus == "1")
 						statusmenu = "<span class='StatusHint'><#QKSet_detect_wanconnfault#></span>";
-					else if(link_sbstatus == 1)
+					else if(link_sbstatus == "1")
 						statusmenu = "<span class='StatusHint'><#web_redirect_reason3_2#></span>";
-					else if(link_sbstatus == 2)
+					else if(link_sbstatus == "2")
 						statusmenu = "<span class='StatusHint'><#QKSet_Internet_Setup_fail_reason2#></span>";
-					else if(link_sbstatus == 3)
+					else if(link_sbstatus == "3")
 						statusmenu = "<span class='StatusHint'><#QKSet_Internet_Setup_fail_reason1#></span>";
-					else if(link_sbstatus == 4)
+					else if(link_sbstatus == "4")
 						statusmenu = "<span class='StatusHint'><#web_redirect_reason5_2#></span>";
-					else if(link_sbstatus == 5)
+					else if(link_sbstatus == "5")
 						statusmenu = "<span class='StatusHint'><#web_redirect_reason5_1#></span>";
-					else if(link_sbstatus == 6)
+					else if(link_sbstatus == "6")
 						statusmenu = "<span class='StatusHint'>WAN_STOPPED_SYSTEM_ERROR</span>";
 					else
 						statusmenu = "<span class='StatusHint'><#web_redirect_reason2_2#></span>";
@@ -1952,7 +1976,7 @@ function chkPass(pwd, flag) {
 	var orig_pwd = "";
 	var oScorebar = $("scorebar");
 	var oScore = $("score");
-	var oComplexity = $("complexity");
+
 	// Simultaneous variable declaration and value assignment aren't supported in IE apparently
 	// so I'm forced to assign the same value individually per var to support a crappy browser *sigh* 
 	var nScore=0, nLength=0, nAlphaUC=0, nAlphaLC=0, nNumber=0, nSymbol=0, nMidChar=0, nRequirements=0, nAlphasOnly=0, nNumbersOnly=0, nUnqChar=0, nRepChar=0, nRepInc=0, nConsecAlphaUC=0, nConsecAlphaLC=0, nConsecNumber=0, nConsecSymbol=0, nConsecCharType=0, nSeqAlpha=0, nSeqNumber=0, nSeqSymbol=0, nSeqChar=0, nReqChar=0, nMultConsecCharType=0;
@@ -2207,3 +2231,10 @@ String.prototype.strReverse = function() {
 };
 
 // ---------- Viz add for pwd strength check [End] 2012.12 -----
+
+function goToWAN(){
+	if(dualWAN_support)
+		parent.location.href = '/Advanced_WANPort_Content.asp';
+	else	
+		parent.location.href = '/Advanced_WAN_Content.asp';
+}
