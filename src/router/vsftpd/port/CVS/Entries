@@ -1,9 +1,0 @@
-/aix_bogons.h/1.1.1.1/Mon Jul 21 09:20:26 2008//
-/cmsg_extras.h/1.1.1.1/Mon Jul 21 09:20:26 2008//
-/dirfd_extras.h/1.1.1.1/Mon Jul 21 09:20:26 2008//
-/hpux_bogons.h/1.1.1.1/Mon Jul 21 09:20:26 2008//
-/irix_bogons.h/1.1.1.1/Mon Jul 21 09:20:26 2008//
-/porting_junk.h/1.1.1.1/Mon Jul 21 09:20:26 2008//
-/solaris_bogons.h/1.1.1.1/Mon Jul 21 09:20:26 2008//
-/tru64_bogons.h/1.1.1.1/Mon Jul 21 09:20:26 2008//
-D

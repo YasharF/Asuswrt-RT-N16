@@ -1,1 +1,0 @@
-cmd_networking/lib.a := rm -f networking/lib.a; mipsel-uclibc-ar  rcs networking/lib.a networking/arp.o networking/ifconfig.o networking/interface.o networking/netstat.o networking/ping.o networking/route.o networking/telnet.o networking/telnetd.o networking/traceroute.o networking/wget.o
