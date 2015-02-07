@@ -1,0 +1,550 @@
+3c3
+< PASS_LANG=語言選項：
+---
+> PASS_LANG=語言選項
+8d7
+< LANG_KR=한국어
+14,17c13,21
+< WLANConfig11n_nmode_limition_hint=[n Only]模式下，原WEP或TKIP加密設定將自動調整為AES加密，以取得正確的連線。
+< WLANConfig11n_automode_limition_hint=Auto模式下使用WEP或TKIP加密時，無線網路最多支援54Mbps的傳輸速率。
+< WhiteList=白名單
+< BlackList=黑名單
+---
+> LANG_TR=Türkçe
+> LANG_TH=ไทย
+> LANG_MS=Malaysia
+> [RT-N1X new item]
+> MSSID_profile=內建SSID組合
+> mssid_guest=訪客
+> mssid_customize=自訂
+> mssid_network_access=網路使用權限
+> mssid_qos_priority=頻寬使用優先權
+28c32
+< ShareNode_Seeding_itemdesc=啟用允許作種，RT-N16 會在下載完成後維持種子，提供他人下載。
+---
+> ShareNode_Seeding_itemdesc=啟用允許作種，RT-N12 會在下載完成後維持種子，提供他人下載。
+31,46c35,85
+< menu5_6_5=外掛管理
+< menu5_6_6=帳號管理
+< WLANConfig11b_ChannelBW_itemname=頻道頻寬
+< WLANConfig11b_ChannelBW_itemdesc=選擇較寬的頻道頻寬以獲得較高的傳輸速率。
+< WLANConfig11b_EChannel_itemname=延伸頻道
+< WLANConfig11b_EChannel_itemdesc=選擇在20/40 MHz頻道頻寬模式下所使用的延伸頻道。802.11n使用延伸頻道來獲得額外頻寬及較高的傳輸速率。
+< WLANConfig11b_x_TxBurst_itemname=啟用TX Burst功能
+< WLANConfig11b_x_TxBurst_itemdesc=選擇「啟用」，可啟用TX Burst功能以增進效能。
+< WLANConfig11b_x_PktAggregate_itemname=啟用Packet Aggregation功能
+< WLANConfig11b_x_PktAggregate_itemdesc=選擇「啟用」，可啟用Packet Aggregation功能以增進效能。
+< WLANConfig11b_x_HT_OpMode_itemname=啟用Greenfield
+< WLANConfig11b_x_HT_OpMode_itemdesc=選擇「啟用」，可啟用Greenfield以增進高吞吐量封包的傳輸效率。
+< WLANConfig11b_x_APSD_itemname=啟用WMM APSD
+< WLANConfig11b_x_APSD_itemdesc=此選項讓您能夠啟用或關閉WMM APSD (Automatic Power Save Delivery)。
+< WLANConfig11b_x_DLS_itemname=啟用WMM DLS
+< WLANConfig11b_x_DLS_itemdesc=此選項讓您能夠啟動或關閉WMM DLS (Direct Link Setup)。
+---
+> [New item]
+> APSurvey_msg_connected=您已經連上此基地台。
+> APSurvey_msg_connect_suggest1=建議您使用「<span style="font-weight:bold; font-size:16px;">有線</span>」方式連接RT-N12進行設定，以獲得穩定的設定過程與使用體驗。
+> APSurvey_msg_connect_suggest2=按下「<span style="font-weight:bold; font-size:16px;">確定</span>」繼續進行設定，設定過程可能產生連線中斷，且無法保證RT-N12是否連上遠端無線基地台。
+> APSurvey_msg_connect_suggest3=按下「<span style="font-weight:bold; font-size:16px;">登出</span>」離開設定頁面，改以有線連接後登入。
+> QKSet_finish_moveto9=請關閉視窗以完成設定，建議開啟新視窗連上網際網路。
+> APSurvey_action_search_again_hint1=重新選擇
+> APSurvey_action_search_again_hint2=變更RT-N12所連線的無線網路基地台。
+> Browser_action_addfavorite_hint1=由於RT-N12的位址已改變為
+> Browser_action_addfavorite_hint2=提醒您加入我的最愛，方便下次進入設定頁面。
+> Browser_action_addfavorite=加入我的最愛
+> Browser_action_not_support_addfavorite=很抱歉，您的瀏覽器不支援這個操作。
+> page_not_support_mode_hint=目前的運作模式不支援此頁面。
+> ajax_disconnect=與RT-N12失去連線，請檢查您與RT-N12的IP設定。
+> APSurvey_action_ConnectingStatus0=連線失敗！該基地台可能已不存在。請重新選擇。
+> APSurvey_action_ConnectingStatus1=連線失敗，請重新輸入金鑰或按 [取消] 選擇其他基地台。
+> APSurvey_action_ConnectingStatus24=無線網路連線成功
+> APSurvey_action_ConnectingStatus35=WPA金鑰認證失敗，請重新輸入。
+> APSurvey_action_renew_IP=RT-N12已取得新的IP：
+> APSurvey_action_renewing=IP設定更新中...
+> APSurvey_action_renew_success=IP設定更新成功，即將為您導回設定頁面。
+> APSurvey_action_searching_noresult=偵測不到任何基地台
+> APSurvey_action_hidden_key=隱藏我的金鑰
+> APSurvey_action_searching_AP=正在搜尋範圍內的無線網路...
+> APSurvey_msg_renew_fail=RT-N12無法取得IP，請重新選擇。
+> APSurvey_msg_renew_fail_hint1=若您的電腦仍無法進行連線，請檢查IP是否為手動設定。<br/>若您已恢復連線，
+> APSurvey_msg_renew_fail_hint2=按此回到設定頁面。
+> APSurvey_msg_connect_open_wlan=您正在連線到不安全的網路。\n在這個網路上傳遞的資訊沒有加密。
+> APSurvey_msg_renew_IP=請稍後，正在重新取得IP位址。
+> APSurvey_msg_ask_to_input1=這個無線網路要求輸入
+> APSurvey_msg_ask_to_input2=網路名稱及
+> APSurvey_msg_waiting_to_connect=請稍後，RT-N12正在連線到
+> APSurvey_Validate_ssid_blank=請輸入正確的網路名稱。
+> APSurvey_Validate_key_blank=請輸入正確的網路金鑰。
+> APSurvey_main_title=選擇一組基地台後，按下[建立連線]。
+> Input_some_value=輸入
+> Network_key=網路金鑰
+> Security=安全性設定
+> Radio=訊號
+> AP_fail_get_IPaddr=無法取得IP位址資訊
+> AP_Remote_IP=基地台IP位址
+> AP_survey=基地台搜尋
+> statusTitle_AP=遠端基地台狀態
+> OP_switch_button_hint1=模式切換鈕位於RT-N12後方，
+> OP_switch_button_hint2=按我觀看
+> OP_RT_item=路由模式
+> OP_RT_desc1=在路由模式下，RT-N12可使用PPPoE、PPTP、L2TP、自動取得IP或固定IP的方式由WAN端進行網際網路連線。同時在區域網路中提供無線網路、NAT及IP分享功能。
+> OP_RE_item=中繼模式
+> OP_RE_desc1=在中繼模式下，RT-N12可延長您無線區域網路內其他基地台的訊號，以提供區網內的無線用戶更好的訊號品質。在此模式下，RT-N12主動關閉NAT、防火牆及IP分享功能。
+> OP_AP_item=無線基地台模式
+> OP_AP_desc1=在基地台模式下，RT-N12以有線網路連接路由器或數據機，取得IP並進行網際網路連線。此時RT-N12主要功能在提供無線網路訊號，但關閉NAT、防火牆及IP分享功能。
+83,84c122,123
+< DrSurf_Alert11=有無線使用者嘗試連上RT-N16。
+< DrSurf_Alert12=有無線使用者離開RT-N16。
+---
+> DrSurf_Alert11=有無線使用者嘗試連上RT-N12。
+> DrSurf_Alert12=有無線使用者離開RT-N12。
+90c129
+< QIS_internet_vpn_type=VPN的類型：
+---
+> QIS_internet_vpn_type=VPN的類型
+111c150
+< DrSurf_Alert21=RT-N16上的USB磁碟已被掛載上系統，並已可使用。
+---
+> DrSurf_Alert21=RT-N12上的USB磁碟已被掛載上系統，並已可使用。
+114c153
+< not_support_script=很抱歉，您的瀏覽器不支援Java Script。<p>請選擇支援JavaScript的瀏覽器或開啟JavaScript功能，以體驗ASUS RT-N16各種軟體功能。
+---
+> not_support_script=很抱歉，您的瀏覽器不支援Java Script。<p>請選擇支援JavaScript的瀏覽器或開啟JavaScript功能，以體驗ASUS RT-N12各種軟體功能。
+126,129c165,168
+< DrSurf_Alert10=有無線使用者嘗試連上或離開RT-N16。
+< DrSurf_Alert20=RT-N16上的USB磁碟狀態有異動。
+< DrSurf_Alert30=RT-N16上的USB印表機狀態有異動。
+< DrSurf_Alert40=RT-N16無法偵測您的上傳頻寬，您必須手動指定上傳頻寬，以順利啟動頻寬管理功能。
+---
+> DrSurf_Alert10=有無線使用者嘗試連上或離開RT-N12。
+> DrSurf_Alert20=RT-N12上的USB磁碟狀態有異動。
+> DrSurf_Alert30=RT-N12上的USB印表機狀態有異動。
+> DrSurf_Alert40=已啟動頻寬管理，但系統無法偵測遠端上傳頻寬，請手動指定上傳頻寬。
+133c172
+< DrSurf_sweet_advise3=切換成無線網路基地台模式後，將取消RT-N16的DHCP功能，如此可能導致您無法連上設定頁面。<p>建議您可使用華碩共用程式的 Device Discovery 搜尋基地台的網路位址，以重新進入設定頁面。</p>
+---
+> DrSurf_sweet_advise3=切換成無線網路基地台模式後，將取消RT-N12的DHCP功能，如此可能導致您無法連上設定頁面。<p>建議您可使用華碩共用程式的 Device Discovery 搜尋基地台的網路位址，以重新進入設定頁面。</p>
+241c280,281
+< menu5_6_1=操作模式
+---
+> menu5_6_1=運作模式
+> menu5_6_1_title=運作模式
+252,257c292,297
+< menu5_2_desc=管理RT-N16的內部網路：包括IP位址的分配與路由設定。
+< menu5_3_desc=管理RT-N16與網際網路的連線、頻寬管理以及架設伺服器等設定。
+< menu5_4_desc=管理RT-N16上的USB裝置，分享外接磁碟。
+< menu5_5_desc=設定防火牆與過濾機制來提高RT-N16所在的網路安全性。
+< menu5_6_desc=管理RT-N16的系統與韌體。
+< menu5_7_desc=監控RT-N16的狀態與各種類型的紀錄檔。
+---
+> menu5_2_desc=管理RT-N12的內部網路：包括IP位址的分配與路由設定。
+> menu5_3_desc=管理RT-N12與網際網路的連線、頻寬管理以及架設伺服器等設定。
+> menu5_4_desc=管理RT-N12上的USB裝置，分享外接磁碟。
+> menu5_5_desc=設定防火牆與過濾機制來提高RT-N12所在的網路安全性。
+> menu5_6_desc=管理RT-N12的系統與韌體。
+> menu5_7_desc=監控RT-N12的狀態與各種類型的紀錄檔。
+259c299
+< statusTitle_System=ASUS RT-N16
+---
+> statusTitle_System=ASUS RT-N12
+266,267c306,307
+< Wired_Clients=有線使用者
+< Wireless_Clients=無線使用者
+---
+> Wired_Clients=有線用戶
+> Wireless_Clients=無線用戶
+312c352
+< block_Comfirm2=封鎖後該使用者將會無法透過RT-N16連接上網。
+---
+> block_Comfirm2=封鎖後該使用者將會無法透過RT-N12連接上網。
+321c361
+< UPnPMediaServer_Help=RT-N16支援UPnP標準，可與支援UPnP的裝置，如：PS3遊戲機或其他數位影音播放器，分享您USB外接磁碟上的檔案。
+---
+> UPnPMediaServer_Help=RT-N12支援UPnP標準，可與支援UPnP的裝置，如：PS3遊戲機或其他數位影音播放器，分享您USB外接磁碟上的檔案。
+338c378
+< P2P_Bandwidth2=P2P可用頻寬
+---
+> P2P_Bandwidth2=可用頻寬
+347c387
+< Hour=時
+---
+> Hour=小時
+365c405
+< AiDisk_Step3_help=<a href='../Advanced_AiDisk_samba.asp' target='_top'>以網芳分享磁碟</a>： 更多專業的網路芳鄰分享設定。<br/><a href='../Advanced_AiDisk_ftp.asp' target='_top'>以FTP分享磁碟</a>: 更多專業的FTP伺服器設定。
+---
+> AiDisk_Step3_help=以網芳分享磁碟：更多專業的網路芳鄰分享設定。以FTP分享磁碟：更多專業的FTP伺服器設定。
+408c448
+< WLANConfig11b_x_WPSPIN_itemdesc=由用戶端電腦的工具軟體所產生，用於與RT-N16建立WPS無線安全連線的8位數號碼。請將之輸入後按下「建立連線」。
+---
+> WLANConfig11b_x_WPSPIN_itemdesc=由用戶端電腦的工具軟體所產生，用於與RT-N12建立WPS無線安全連線的8位數號碼。請將之輸入後按下「建立連線」。
+442c482
+< DM_reason1=不支援第一個分割磁區的格式 (目前支援格式為FAT32, MS-DOS, NTFS及ext2/3)。
+---
+> DM_reason1=不支援第一個分割磁區的格式 (目前支援格式為FAT32, MS-DOS及ext2/3)。
+497c537
+< Web_Title=RT-N16
+---
+> Web_Title=RT-N12
+502c542
+< QKSet_detect_APdesc=RT-N16的目前是\"AP\"模式，開始設定....
+---
+> QKSet_detect_APdesc=RT-N12的目前是\"AP\"模式，開始設定....
+510c550
+< QKSet_finishpre_webtitle=您已完成快速設定所有步驟，按下完成後 RT-N16 會進行連線並轉往瀏覽器的預設首頁。或是按上一步回到快速設定。
+---
+> QKSet_finishpre_webtitle=您已完成快速設定所有步驟，按下完成後 RT-N12 會進行連線並轉往瀏覽器的預設首頁。或是按上一步回到快速設定。
+516c556
+< PPPConnection_UserName_itemdesc=您的ISP所提供的用戶名稱，適用於PPP系列的連線類型(如：PPPoE、PPTP或L2TP)。
+---
+> PPPConnection_UserName_itemdesc=ISP提供的用戶名稱。
+519c559
+< QKSet_account_passwd=由您的ISP所提供，此用戶名稱的密碼。
+---
+> QKSet_account_passwd=此用戶名稱的密碼。
+524c564
+< IPConnection_ExternalIPAddress_itemdesc=外部網路所見RT-N16的IP位址。若您的連線類型為固定IP時，此欄為必填，請參考您的網路服務提供者所提供的資訊填入。
+---
+> IPConnection_ExternalIPAddress_itemdesc=外部網路所見RT-N12的IP位址。若您的連線類型為固定IP時，此欄為必填，請參考您的網路服務提供者所提供的資訊填入。
+528c568
+< IPConnection_x_ExternalGateway_itemdesc=預設閘道器(Gateway)的IP位址，可使RT-N16與外部網路或主機之間相互連繫。
+---
+> IPConnection_x_ExternalGateway_itemdesc=預設閘道器(Gateway)的IP位址，可使RT-N12與外部網路或主機之間相互連繫。
+531,533c571,573
+< IPConnection_x_DNSServerEnable_itemname=自動接上DNS伺服器？
+< IPConnection_x_DNSServerEnable_itemdesc=啟用此服務，可讓RT-N16自動向外部網路取得DNS伺服器的IP位置。
+< IPConnection_x_DNSServer1_itemdesc=設定RT-N16第一組DNS的IP位址。
+---
+> IPConnection_x_DNSServerEnable_itemname=自動接上DNS伺服器
+> IPConnection_x_DNSServerEnable_itemdesc=啟用此服務，可讓RT-N12自動向外部網路取得DNS伺服器的IP位置。
+> IPConnection_x_DNSServer1_itemdesc=設定RT-N12第一組DNS的IP位址。
+537c577
+< IPConnection_warning_WANIPEQUALGatewayIP=你已將網際網路IP設置為閘道器IP，RT-N16 也許因此無法正確的連接到網際網路，請重新設定正確的閘道器IP。
+---
+> IPConnection_warning_WANIPEQUALGatewayIP=你已將網際網路IP設置為閘道器IP，RT-N12 也許因此無法正確的連接到網際網路，請重新設定正確的閘道器IP。
+539c579
+< BOP_isp_host_desc=本欄可讓您提供RT-N16所使用的主機名稱。通常是您ISP業者要求的名稱。
+---
+> BOP_isp_host_desc=本欄可讓您提供RT-N12所使用的主機名稱。通常是您ISP業者要求的名稱。
+541c581
+< PPPConnection_x_MacAddressForISP_itemdesc=本欄可讓您提供 RT-N16 連接網際網路所使用的特有MAC位址。通常是您ISP業者要求的位址。
+---
+> PPPConnection_x_MacAddressForISP_itemdesc=本欄可讓您提供 RT-N12 連接網際網路所使用的特有MAC位址。通常是您ISP業者要求的位址。
+554,555c594,595
+< QKSet_finish_moveto1=前往我的首頁
+< QKSet_finish_moveto2=套用設定，並前往你的瀏覽器預設首頁。
+---
+> QKSet_finish_moveto1=瀏覽網際網路
+> QKSet_finish_moveto2=套用設定，並瀏覽網際網路。
+591c631
+< web_redirect_suggestion1=請檢查RT-N16的WAN埠與網際網路之間的網路線，是否已正確接上。
+---
+> web_redirect_suggestion1=請檢查RT-N12的WAN埠與網際網路之間的網路線，是否已正確接上。
+594c634
+< web_redirect_suggestion2_2_desc=，讓RT-N16為您重新偵測您的網路連線模式。
+---
+> web_redirect_suggestion2_2_desc=，讓RT-N12為您重新偵測您的網路連線模式。
+596c636
+< web_redirect_suggestion4=請重新設定您的 RT-N16 的區域網路位址，並確定他與您ISP閘道器的位址不同。
+---
+> web_redirect_suggestion4=請重新設定您的 RT-N12 的區域網路位址，並確定他與您ISP閘道器的位址不同。
+599c639
+< web_redirect_suggestion6=請重新設定您的 RT-N16 的近端網路位址，並確定它與您遠端的閘道器位址不同。如：192.168.X.X，X為2至254間之一數字。
+---
+> web_redirect_suggestion6=請重新設定您的 RT-N12 的近端網路位址，並確定它與您遠端的閘道器位址不同。如：192.168.X.X，X為2至254間之一數字。
+602c642
+< web_redirect_suggestion_etc=前往「RT-N16 的設定頁面」
+---
+> web_redirect_suggestion_etc=前往「RT-N12 的設定頁面」
+611c651
+< web_redirect_reason4=您的 RT-N16 的位址和閘道器的位址相同，這導致您的網路封包無法正常發送。
+---
+> web_redirect_reason4=您的 RT-N12 的位址和閘道器的位址相同，這導致您的網路封包無法正常發送。
+613,614c653,654
+< web_redirect_reason5_2=您為 RT-N16 設定的動態或靜態IP資訊不正確。
+< web_redirect_reason6=RT-N16的子網路位址（subnet ID）和遠端的子網路位址（subnet ID）一樣。
+---
+> web_redirect_reason5_2=您為 RT-N12 設定的動態或靜態IP資訊不正確。
+> web_redirect_reason6=RT-N12的近端IP位址和遠端的閘道器IP位址一樣。
+641c681
+< Main_content_Login_Item7=重新啟動 RT-N16 可能會耗費您約30秒的時間，您確定要現在重新啟動嗎?
+---
+> Main_content_Login_Item7=重新啟動 RT-N12 可能會耗費您約30秒的時間，您確定要現在重新啟動嗎?
+665,674c705
+< OP_desc1=RT-N16 支援三種可滿足不同需求的操作模式。請選擇能符合您現況的模式。
+< OP_GW_item=IP分享器
+< OP_GW_desc1=在「IP分享」模式下，RT-N16可使用PPPoE、PPTP、L2TP、自動取得IP或固定IP的方式由WAN端進行網際網路連線。
+< OP_GW_desc2=並且提供無線網路、網路位址轉換（NAT - Network Address Translation）及DHCP以建構一個區域網路（LAN）讓用戶可以分享IP。另外，也支援一些對家庭用戶相當有用的功能，像是通用隨插即用（UPnP）及動態DNS（DDNS）。
+< OP_RT_item=路由器
+< OP_RT_desc1=在「路由器」模式下，您可能已經建構了一個區域網路（LAN），建議您將RT-N16的廣域網路（WAN）連接埠以網路線連接到您的區域網路，並選擇適當的網際網路設定以建立連線。
+< OP_RT_desc2=路由器模式主要目的在延伸你的區域網路，並允許設定靜態路由通訊協定，但關閉網路位址轉換（NAT）以允許RT-N16下的用戶與原本區域網路的用戶互相通訊與共享服務 (<span style='color:#EE0000'>注意：必須在原本的路由器上加入靜態路由規則</span>)。
+< OP_AP_item=無線網路基地台
+< OP_AP_desc1=在「無線網路基地台」模式下，建議您以網路線將RT-N16的任何一個連接埠連接到您的區域網路，取得IP並進行連線。此時，四組區域網路（LAN）連接埠與廣域網路（WAN）連接埠及無線網路橋接在一起。
+< OP_AP_desc2=基地台模式主要在提供無線網路訊號，但關閉IP分享功能、防火牆與網路位址轉換（NAT）。
+---
+> OP_desc1=RT-N12 支援三種可滿足不同需求的運作模式。請選擇能符合您現況的模式。
+679c710
+< FW_desc2=請至<a href="http://support.asus.com/download/download.aspx?SLanguage=zh-tw&product=11&model=RT-N16" target="blank">華碩網站</a>查看是否有提供新版的韌體。
+---
+> FW_desc2=請至<a href="http://support.asus.com.tw/download/download.aspx?product=11&model=RT-N12&SLanguage=zh-tw" target="blank">華碩網站</a>查看是否有提供新版的韌體。
+682,683c713,714
+< FW_desc5=點選「上傳」將檔案上傳至 RT-N16。整個過程需時約3分鐘。
+< FW_desc6=在收到正確的韌體檔案後，RT-N16 即自動開始升級的過程。整個過程需要一些時間來完成，接著系統將會重新開機。
+---
+> FW_desc5=點選「上傳」將檔案上傳至 RT-N12。整個過程需時約3分鐘。
+> FW_desc6=在收到正確的韌體檔案後，RT-N12 即自動開始升級的過程。整個過程需要一些時間來完成，接著系統將會重新開機。              		
+691c722
+< FW_n2=當升級過程失敗，RT-N16 會自動進入緊急模式。而 RT-N16 正面上的LED信號即會指示此種情況。請使用光碟上的「韌體修復」（Firmware Restoration）公用程式進行系統還原作業。
+---
+> FW_n2=當升級過程失敗，RT-N12 會自動進入緊急模式。而 RT-N12 正面上的LED信號即會指示此種情況。請使用光碟上的「韌體修復」（Firmware Restoration）公用程式進行系統還原作業。
+694,695c725,726
+< FIRM_fail_desc=韌體升級失敗。原因可能出自影像不實或傳輸出錯。請確認韌體版本後再做嘗試。
+< Setting_save_upload_desc=本頁主要提供關於系統設定值的管理。您可將RT-N16設定還原為原廠預設值。或者將目前設定值存成檔案，當需要時便可重新載入您的設定值。
+---
+> FIRM_fail_desc=韌體升級失敗。原因可能出自檔案不正確或傳輸出錯。請確認韌體版本後再做嘗試。
+> Setting_save_upload_desc=本頁主要提供關於系統設定值的管理。您可將RT-N12設定還原為原廠預設值。或者將目前設定值存成檔案，當需要時便可重新載入您的設定值。
+699,701c730,732
+< Setting_factorydefault_itemdesc=點選「還原」鍵將清除目前的設定值並還原成原廠預設值。接著，請等待 RT-N16 重新開機。
+< Setting_save_itemdesc=點選「儲存」，將目前 RT-N16 的設定值另存成檔案。（註：在您將目前的設定值存成檔案時，亦同樣會存入快閃記憶體內。）
+< Setting_upload_itemdesc=請將設定檔的路徑及名稱指定到此欄位，然後點選「上傳」將檔案寫入到 RT-N16 上。請等候約30秒的時間直到系統重新開機完畢。
+---
+> Setting_factorydefault_itemdesc=點選「還原」鍵將清除目前的設定值並還原成原廠預設值。接著，請等待 RT-N12 重新開機。
+> Setting_save_itemdesc=點選「儲存」，將目前 RT-N12 的設定值另存成檔案。（註：在您將目前的設定值存成檔案時，亦同樣會存入快閃記憶體內。）
+> Setting_upload_itemdesc=請將設定檔的路徑及名稱指定到此欄位，然後點選「上傳」將檔案寫入到 RT-N12 上。請等候約30秒的時間直到系統重新開機完畢。
+714c745
+< SAVE_restart_desc=系統正在重新啟動中！請稍候，我們將為您導至RT-N16的首頁。
+---
+> SAVE_restart_desc=系統正在重新啟動中！請稍候，我們將為您導至RT-N12的首頁。
+744c775
+< t2OP=操作模式
+---
+> t2OP=運作模式
+761c792
+< Layer3Forwarding_x_ConnectionType_sectiondesc=RT-N16 可支援數種連結WAN的連線類型。這些類型可從WAN連線類型旁的下拉式選單中選取。設定欄位會視您是選取那種連線類型而定。
+---
+> Layer3Forwarding_x_ConnectionType_sectiondesc=RT-N12 可支援數種連結WAN的連線類型。這些類型可從WAN連線類型旁的下拉式選單中選取。設定欄位會視您是選取那種連線類型而定。
+770c801
+< IPConnection_autofwEnable_sectiondesc=「通訊埠觸發程式」功能讓您可以開啟特定的TCP或UDP通訊埠來與連接 RT-N16 的電腦進行通訊。而藉由指定觸發程式通訊埠及內傳通訊埠的方式即可完成此一操作。一旦偵測到觸發程式通訊埠，送往指定內傳通訊埠號的上傳封包便會轉向您的電腦。
+---
+> IPConnection_autofwEnable_sectiondesc=「通訊埠觸發程式」功能讓您可以開啟特定的TCP或UDP通訊埠來與連接 RT-N12 的電腦進行通訊。而藉由指定觸發程式通訊埠及內傳通訊埠的方式即可完成此一操作。一旦偵測到觸發程式通訊埠，送往指定內傳通訊埠號的上傳封包便會轉向您的電腦。
+786c817
+< PPPConnection_IdleDisconnectTime_itemdesc=設定在一特定時間間隔之後終止您和ISP間的連線。數值0表示允許無限延長間置時間。如果勾選「Tx Only」，那麼來自網際網路的資料將會跳過以便繼續計算間置的時間。
+---
+> PPPConnection_IdleDisconnectTime_itemdesc=設定在一特定時間間隔之後終止您和ISP間的連線。數值0表示允許無限延長間置時間。如果僅勾選Tx，那麼來自網際網路的資料將會跳過以便繼續計算間置的時間。
+803c834
+< PPPConnection_x_HostNameForISP_itemdesc=本欄可讓您提供 RT-N16 所使用的主機名稱。通常是您ISP業者要求的名稱。
+---
+> PPPConnection_x_HostNameForISP_itemdesc=本欄可讓您提供 RT-N12 所使用的主機名稱。通常是您ISP業者要求的名稱。
+811,812c842,843
+< FirewallConfig_display1_sectiondesc=封包過濾功能讓您封鎖內部網路與外部網路之間的指定封包。舉例來說：若你需要在週一至週五的08:00~23:59禁止用戶瀏覽網頁，你可以勾選週一到五的選項，填入08:00~23:59的時間，並將過濾方式選為「黑名單」，最後新增一筆目的通訊埠範圍為80的規則，再套用設定。
+< FirewallConfig_LanWanActiveDate_itemname=封包過濾程式啟用日期
+---
+> FirewallConfig_display1_sectiondesc=封包過濾功能讓您封鎖內部網路與外部網路之間的指定封包。舉例來說：若你需要在週一至週五的08:00~23:59禁止用戶瀏覽網頁，你可以勾選週一到五的選項，填入08:00~23:59的時間，並將過濾方式選為「ACCEPT」，最後新增一筆目的通訊埠範圍為80的規則，再套用設定。
+> FirewallConfig_LanWanActiveDate_itemname=封包過濾規則生效日期
+814,815c845,846
+< FirewallConfig_LanWanActiveTime_itemname=封包過濾程式啟用時間
+< FirewallConfig_LanWanActiveTime_itemdesc=指定封包過濾程式啟用當日的時間。
+---
+> FirewallConfig_LanWanActiveTime_itemname=封包過濾規則生效時間
+> FirewallConfig_LanWanActiveTime_itemdesc=指定封包過濾規則生效當日的時間。
+817c848
+< FirewallConfig_LanWanDefaultAct_itemdesc=選擇「黑名單」，符合列表規則的封包會被封鎖，規則以外的封包則允許通過。選擇「白名單」，符合列表規則的封包會允許通過，規則以外的封包會被封鎖。
+---
+> FirewallConfig_LanWanDefaultAct_itemdesc=若封包不符合列表中規則，RT-N12處理封包的方式。選擇「ACCEPT」，符合列表規則的封包會被封鎖，規則以外的封包則允許通過。選擇「DROP」，符合列表規則的封包會允許通過，規則以外的封包會被封鎖。
+819c850
+< FirewallConfig_LanWanICMP_itemdesc=本欄位定義了一組將被過濾的 LAN 至 WAN ICMP 封包類型清單。例如：若您想要過濾 Echo (type 8) 與 Echo Reply (type 0) ICMP 封包，您需要輸入一組由數字構成的字串，中間用空格隔開，如：0 8。
+---
+> FirewallConfig_LanWanICMP_itemdesc=本欄位定義了一組將被過濾的 LAN 至 WAN ICMP 封包類型清單。例如：若您想要過濾 Echo (type 8) 與 Echo Reply (type 0) ICMP 封包，您需要輸入一組由數字構成的字串，中間用空格隔開，如：[0 8]。
+825a857,863
+> FirewallConfig_UrlFilterEnable_itemname=啟用網址過濾程式
+> FirewallConfig_URLActiveDate_itemname=網址過濾程式啟用日期
+> FirewallConfig_URLActiveDate_itemdesc=指定每週當中網址過濾器開啟的日期。
+> FirewallConfig_URLActiveTime_itemname=網址過濾程式啟用當日時間
+> FirewallConfig_URLActiveTime_itemdesc=指定網址過濾程式啟用當日的時間。請設定不同的開始與結束時間。若開始時間大於結束時間，則此程式會忽略日期設定，進行跨日的運作。
+> FirewallConfig_URLActiveTime_itemhint=您所設定的開始時間大於結束時間，此功能將會忽略日期設定跨日運作。\n您確定要繼續嗎？
+> FirewallConfig_URLActiveTime_itemhint2=不正確的時間格式。
+828c866
+< RouterConfig_GWStaticEnable_sectiondesc=本項功能可讓您將路由規則加到 RT-N16 之中。這對於如果您是連接在 RT-N16 之後的數個路由器以便分享同一條網際網路連線上來說，是相當有用的。
+---
+> RouterConfig_GWStaticEnable_sectiondesc=本項功能可讓您將路由規則加到 RT-N12 之中。這對於如果您是連接在 RT-N12 之後的數個路由器以便分享同一條網際網路連線上來說，是相當有用的。
+836,837c874,875
+< LANHostConfig_display1_sectiondesc=設定RT-N16的內部網路位址。當您改變內部網路位址時，DHCP伺服器也會隨著調整位址範圍。
+< LANHostConfig_lanipaddr_changed_hint=更改內部網路IP後，RT-N16將重新啟動。\n若稍後無法連上此設定畫面，請檢查您電腦的IP設定是否與RT-N16於相同網段下。
+---
+> LANHostConfig_display1_sectiondesc=設定RT-N12的內部網路位址。當您改變內部網路位址時，DHCP伺服器也會隨著調整位址範圍。
+> LANHostConfig_lanipaddr_changed_hint=更改內部網路IP後，RT-N12將重新啟動。\n若稍後無法連上此設定畫面，請檢查您電腦的IP設定是否與RT-N12於相同網段下。
+840c878
+< LANHostConfig_IPRouters_itemdesc=RT-N16在內部網路的 IP位址，預設為192.168.1.1。
+---
+> LANHostConfig_IPRouters_itemdesc=RT-N12在內部網路的 IP位址，預設為192.168.1.1。
+842c880
+< LANHostConfig_SubnetMask_itemdesc=RT-N16在內部網路的子網路遮罩，預設為255.255.255.0。
+---
+> LANHostConfig_SubnetMask_itemdesc=RT-N12在內部網路的子網路遮罩，預設為255.255.255.0。
+847c885
+< LANHostConfig_x_HostName_itemdesc=此一 RT-N16 的主機名稱與您在內部網路中所見相同。
+---
+> LANHostConfig_x_HostName_itemdesc=此一 RT-N12 的主機名稱與您在內部網路中所見相同。
+850c888
+< LANHostConfig_DHCPServerConfigurable_sectiondesc=RT-N16 提供多達253個IP位址讓您的內部網路設備使用。若您的內部網路設備設定為自動取得IP，即可由RT-N16自動取得IP位址。
+---
+> LANHostConfig_DHCPServerConfigurable_sectiondesc=RT-N12 提供多達253個IP位址讓您的內部網路設備使用。若您的內部網路設備設定為自動取得IP，即可由RT-N12自動取得IP位址。
+853c891
+< LANHostConfig_DomainName_itemname=RT-N16 的網域名稱
+---
+> LANHostConfig_DomainName_itemname=RT-N12 的網域名稱
+856c894
+< LANHostConfig_MinAddress_itemdesc=RT-N16分配給內部網路的第一個IP位址。
+---
+> LANHostConfig_MinAddress_itemdesc=RT-N12分配給內部網路的第一個IP位址。
+858c896
+< LANHostConfig_MaxAddress_itemdesc=RT-N16分配給內部網路的最後一個IP位址。
+---
+> LANHostConfig_MaxAddress_itemdesc=RT-N12分配給內部網路的最後一個IP位址。
+870c908
+< LANHostConfig_x_ServerLogEnable_itemdesc=本項功能為讓您指定一遠端伺服器來記載與RT-N16有關的記錄訊息。如果空著不填，系統僅會在RT-N16上記載最多為1024道的訊息。
+---
+> LANHostConfig_x_ServerLogEnable_itemdesc=本項功能為讓您指定一遠端伺服器來記載與RT-N12有關的記錄訊息。如果空著不填，系統僅會在RT-N12上記載最多為1024道的訊息。
+960c998
+< LANHostConfig_x_NTPServer_itemdesc=RT-N16可與NTP伺服器同步，維持系統時間的正確。
+---
+> LANHostConfig_x_NTPServer_itemdesc=RT-N12可與NTP伺服器同步，維持系統時間的正確。
+962c1000
+< LANHostConfig_x_DDNSEnable_sectiondesc=動態DNS（DDNS）讓您即使在沒有靜態IP位址的情況下，仍可將伺服器連同特有名稱一併匯出至網際網路上。目前，在 RT-N16 之中已有數台嵌入的DDNS客戶端。您可點選下方的「免費試用」，來啟用一個免費試用帳號。
+---
+> LANHostConfig_x_DDNSEnable_sectiondesc=動態DNS（DDNS）讓您即使在沒有靜態IP位址的情況下，仍可將伺服器連同特有名稱一併匯出至網際網路上。目前，在 RT-N12 之中已有數台嵌入的DDNS客戶端。您可點選下方的「免費試用」，來啟用一個免費試用帳號。
+976,977c1014,1015
+< DeviceSecurity11a_display1_sectiondesc=此功能能夠控制RT-N16無線區域網路中，特定網路卡實體位址（MAC Address）的存取。
+< WLANAuthentication11a_display1_sectiondesc=本章讓您可設定有關透過RADIUS伺服器對無線客戶端授權所使用的其他參數。當您將「無線網路 – 一般設定」中的「授權方式」選為「WPA-ENTERPRISE/WPA2-ENTERPRISE」或「Radius with 802.1x」，便需進行此一設定。
+---
+> DeviceSecurity11a_display1_sectiondesc=此功能能夠控制RT-N12無線區域網路中，特定網路卡實體位址（MAC Address）的存取。
+> WLANAuthentication11a_display1_sectiondesc=本頁讓您可設定有關透過RADIUS伺服器對無線客戶端授權所使用的其他參數。當您將「無線網路 – 一般設定」中的「授權方式」選為「WPA-Enterprise/WPA2-Enterprise」，便需進行此一設定。
+984c1022
+< WLANConfig11b_display3_sectiondesc=無線橋接（亦稱作「無線分散系統」或WDS）功能讓您可透過無線網路連接多個基地台。啟用此功能時，提醒您注意以下事項：
+---
+> WLANConfig11b_display3_sectiondesc=無線橋接（亦稱作「無線分散系統」或WDS）功能讓您可透過無線網路連接基地台。啟用此功能時，提醒您注意以下事項：
+989c1027
+< WLANConfig11b_x_APMode_itemdesc=選擇「AP Only」時，無線橋接的功能會被關閉。選擇「WDS Only」時，無線橋接功能會被啟動，但系統不提供無線網路服務。選擇「Hybrid」時，無線橋接的功能會被啟動，同時您也可以透過無線網路連接到RT-N16。
+---
+> WLANConfig11b_x_APMode_itemdesc=選擇「AP Only」時，無線橋接的功能會被關閉。選擇「WDS Only」時，無線橋接功能會被啟動，但系統不提供無線網路服務。選擇「Hybrid」時，無線橋接的功能會被啟動，同時您也可以透過無線網路連接到RT-N12。
+993c1031
+< WLANConfig11b_x_BRApply_itemdesc=選擇「是」時，您的RT-N16將能夠連結至其他列在遠端基地台清單中的無線存取點。
+---
+> WLANConfig11b_x_BRApply_itemdesc=選擇「是」時，您的RT-N12將能夠連結至其他列在遠端基地台清單中的無線存取點。
+1001c1039,1043
+< WLANConfig11b_x_Mode11g_itemdesc=本欄為指出802.11n介面所使用的模式。<p>選擇「Auto」時，可允許802.11n，802.11g及802.11b連接至RT-N16。</p><p>選擇「b/g Mixed」則切換為b與g混合模式，接受802.11b/g/n的用戶端連上，但n的用戶端速率最多只能達54Mbps。</p><p>選擇「n Only」，可使效能達至最大，但802.11g及802.11b用戶端卻不得連接至您的裝置。<p>如果勾選「b/g Protection」，11n流量的保護便會針對11b及11g流量的現況而自動啟用。</p>
+---
+> WLANConfig11b_x_Mode11g_itemdesc=本欄為指出802.11n介面所使用的模式。<p>選擇「Auto」時，可允許802.11n，802.11g及802.11b連接至RT-N12。</p><p>選擇「b/g Mixed」則切換為b與g混合模式，接受802.11b/g/n的用戶端連上，但n的用戶端速率最多只能達54Mbps。</p><p>選擇「n Only」，可使效能達至最大，但802.11g及802.11b用戶端卻不得連接至您的裝置。<p>如果勾選「b/g Protection」，11n流量的保護便會針對11b及11g流量的現況而自動啟用。</p>
+> WLANConfig11b_ChannelBW_itemname=頻道頻寬
+> WLANConfig11b_ChannelBW_itemdesc=選擇一個較寬的頻道頻寬以獲得較高的傳輸速率。
+> WLANConfig11b_EChannel_itemname=延伸頻道
+> WLANConfig11b_EChannel_itemdesc=選擇在20/40 MHz頻道頻寬模式下所使用的延伸頻道。802.11n使用延伸頻道來獲得額外頻寬及較高的傳輸速率。
+1022c1064
+< WLANConfig11b_x_BlockBCSSID_itemdesc=選擇「是」，會隱藏RT-N16的SSID以避免惡意用戶端查知SSID並盜用連線。開啟此功能後，使用者則必須事先知道您基地台的SSID，才能建立無線連線。
+---
+> WLANConfig11b_x_BlockBCSSID_itemdesc=選擇「是」，會隱藏RT-N12的SSID以避免惡意用戶端查知SSID並盜用連線。開啟此功能後，使用者則必須事先知道您基地台的SSID，才能建立無線連線。
+1032c1074,1084
+< WLANConfig11b_x_FrameBurst_itemdesc=選擇「是」，可啟用FrameBurst功能以增進效能。
+---
+> WLANConfig11b_x_FrameBurst_itemdesc=選擇「啟用」，可啟用FrameBurst功能以增進效能。
+> WLANConfig11b_x_TxBurst_itemname=啟用TX Burst功能
+> WLANConfig11b_x_TxBurst_itemdesc=選擇「啟用」，可啟用TX Burst功能以增進 g/n 裝置的傳輸速度（從 AP 到用戶端）。
+> WLANConfig11b_x_PktAggregate_itemname=啟用Packet Aggregation功能
+> WLANConfig11b_x_PktAggregate_itemdesc=選擇「啟用」，可啟用Packet Aggregation功能以增進網路的傳輸頻寬。
+> WLANConfig11b_x_HT_OpMode_itemname=啟用Greenfield
+> WLANConfig11b_x_HT_OpMode_itemdesc=選擇「Green Field」，可啟用Greenfield功能，允許網路忽略早期標準。
+> WLANConfig11b_x_APSD_itemname=啟用WMM APSD
+> WLANConfig11b_x_APSD_itemdesc=此選項讓您能夠啟用或關閉WMM APSD (Automatic Power Save Delivery)。
+> WLANConfig11b_x_DLS_itemname=啟用WMM DLS
+> WLANConfig11b_x_DLS_itemdesc=此選項讓您能夠啟動或關閉WMM DLS (Direct Link Setup)。
+1044c1096
+< PrinterStatus_x_PrinterModel_itemdesc=連接至 RT-N16 的印表機型號。
+---
+> PrinterStatus_x_PrinterModel_itemdesc=連接至 RT-N12 的印表機型號。
+1078,1079c1130,1131
+< JS_badconnection=您與RT-N16之間的連線有誤。\n要繼續嘗試連線嗎？
+< CTL_ok=確認
+---
+> JS_badconnection=您與RT-N12之間的連線有誤。\n要繼續嘗試連線嗎？
+> CTL_ok=確定
+1111c1163
+< FirewallConfig_display2_sectiondesc=「啟用防火牆」功能可為 RT-N16 及在其之後的裝置提供基本的保護。
+---
+> FirewallConfig_display2_sectiondesc=「啟用防火牆」功能可為 RT-N12 及在其之後的裝置提供基本的保護。如果您要過濾出一些特定的封包，請採用在次頁中所述的LAN及WAN過濾功能。
+1113c1165
+< FirewallConfig_LanWanFirewallEnable_itemdesc=本功能可讓您透過指定 IP 或通訊埠號碼,來決定哪些入埠與出埠流量將被允許。
+---
+> FirewallConfig_LanWanFirewallEnable_itemdesc=選擇「是」啟用封包過濾功能，RT-N12將會依封包過濾方式來處理封包，符合時間條件與列表中規則的封包將會被特別處理。
+1115c1167
+< FirewallConfig_FirewallEnable_itemdesc=關閉防火牆功能的同時，也將關閉以下相關的功能。例如由網際網路設定的功能。
+---
+> FirewallConfig_FirewallEnable_itemdesc=關閉防火牆功能的同時，也將關閉以下相關的功能。例如：由網際網路設定的功能。
+1117,1118c1169,1170
+< FirewallConfig_x_WanWebEnable_itemname=從網際網路設定 RT-N16
+< FirewallConfig_x_WanWebEnable_itemdesc=本項功能讓您可透過網際網路來管理 RT-N16。如果RT-N16設定為「家用閘道器」的模式，請透過預設的8080埠（例如http://Your WAN IP:8080）來存取 RT-N16。
+---
+> FirewallConfig_x_WanWebEnable_itemname=從網際網路設定 RT-N12
+> FirewallConfig_x_WanWebEnable_itemdesc=本項功能讓您可透過網際網路來管理 RT-N12。如果RT-N12設定為「家用閘道器」的模式，請透過預設的8080埠（例如http://Your WAN IP:8080）來存取 RT-N12。
+1120c1172
+< FirewallConfig_x_WanWebPort_itemdesc=指定透過網際網路設定 RT-N16 所使用的通訊埠，預設為8080。
+---
+> FirewallConfig_x_WanWebPort_itemdesc=指定透過網際網路設定 RT-N12 所使用的通訊埠，預設為8080。
+1122c1174
+< FirewallConfig_x_WanLPREnable_itemdesc=允許RT-N16回應來自外部網路的 LPR 要求（LPR request）。
+---
+> FirewallConfig_x_WanLPREnable_itemdesc=允許RT-N12回應來自外部網路的 LPR 要求（LPR request）。
+1128c1180
+< FirewallConfig_x_WanPingEnable_itemdesc=允許RT-N16回應來自外部網路的 Ping 要求（Ping request）。
+---
+> FirewallConfig_x_WanPingEnable_itemdesc=允許RT-N12回應來自外部網路的 Ping 要求（Ping request）。
+1131c1183
+< IPConnection_BattleNet_sectiondesc=某些應用程式需要特殊的處理程式來穿越IP分享器。預設是關閉。
+---
+> IPConnection_BattleNet_sectiondesc=某些應用程式需要特殊的處理程式來穿越IP分享器。
+1135c1187
+< JS_logout=確定要登出嗎
+---
+> JS_logout=確定要登出嗎？
+1140c1192
+< FirewallConfig_display5_sectiondesc=此功能能夠控制RT-N16有線及無線區域網路中，特定網路卡實體位址（MAC Address）的存取。
+---
+> FirewallConfig_display5_sectiondesc=此功能能夠控制RT-N12有線及無線區域網路中，特定網路卡實體位址（MAC Address）的存取。
+1142c1194
+< FirewallConfig_MFMethod_itemdesc=在「允許模式」下，RT-N16僅允許控制名單中所列之網路卡的存取。在「拒絕模式」下，則會封鎖控制名單中之網路卡的存取。
+---
+> FirewallConfig_MFMethod_itemdesc=在「允許模式」下，RT-N12僅允許控制名單中所列之網路卡的存取。在「拒絕模式」下，則會封鎖控制名單中之網路卡的存取。
+1181c1233
+< BM_UserList2=來源IP位址
+---
+> BM_UserList2=來源 IP 位址
+1184c1236
+< BM_FTP_desc=FTP伺服器模式被啟動了！你可以透過移動橫條來保留更多上傳頻寬給 RT-N16 的FTP伺服器，如果你設定0%，代表FTP伺服器只有高優先權，但是沒有保留任何頻寬給FTP伺服器
+---
+> BM_FTP_desc=FTP伺服器模式被啟動了！你可以透過移動橫條來保留更多上傳頻寬給 RT-N12 的FTP伺服器，如果你設定0%，代表FTP伺服器只有高優先權，但是沒有保留任何頻寬給FTP伺服器
+1189,1190c1241,1242
+< BM_pkt_size=封包大小：
+< BM_note=備註：
+---
+> BM_pkt_size=封包大小
+> BM_note=備註
+1198c1250
+< BM_desc4=將影音封包設為高優先權，以維持您使用IP電話或線上影片的品質。在開啟P2P的情況選擇此項，P2P應用程式的頻寬將被限制在10%左右。 選擇此項將會封鎖網路芳鄰間的影音串流封包。
+---
+> BM_desc4=將影音封包設為高優先權，以維持您使用IP電話或線上影片的品質。在開啟P2P的情況選擇此項，P2P應用程式的頻寬將被限制在10%左右。
+1202c1254
+< BM_FTPS=AiDisk
+---
+> BM_FTPS=FTP
+1211c1263
+< LANHostConfig_x_WCNEnable_itemdesc=如果您啟用了WCN-UFD，RT-N16將會從USB儲存裝置讀取無線設定檔案，並將設備設定檔案寫入USB儲存裝置。 
+---
+> LANHostConfig_x_WCNEnable_itemdesc=如果您啟用了WCN-UFD，RT-N12將會從USB儲存裝置讀取無線設定檔案，並將設備設定檔案寫入USB儲存裝置。 
+1231,1239d1282
+< FirewallConfig_URLActiveDate_itemname=網址過濾程式啟用日期：
+< FirewallConfig_URLActiveDate_itemdesc=指定每週當中網址過濾器開啟的日期。
+< FirewallConfig_URLActiveTime_itemname=網址過濾程式啟用當日時間
+< FirewallConfig_URLActiveTime_itemdesc=指定網址過濾程式啟用當日的時間。請設定不同的開始與結束時間。
+< FirewallConfig_URLActiveTime_itemhint=您所設定的開始時間晚於結束時間。
+< FirewallConfig_URLActiveTime_itemhint2=不正確的時間格式。
+< FirewallConfig_URLActiveTime_itemhint3=您所設定的開始時間大於結束時間，此功能將會忽略日期設定跨日運作。\n您確定要繼續嗎？
+< FirewallConfig_URLActiveTime_itemhint4=指定的時段不可重疊。
+< 

@@ -1,0 +1,874 @@
+///////////////////////////////////////////////////////////////////////////
+//                                                                       //
+// Filename : targets.def                                                //
+//                                                                       //
+// Purpose. : Provide file driven menu selection configuration data for  //
+//            CLICK and UTILS.                                           //
+//                                                                       //
+// Notice.. : This file contains settings for Windriver HSI emulator     //
+//            platforms. These settings should only be changed under     //
+//            the direction of HSI field or factory support personal.    //
+//                                                                       //
+// Style... : Characters after '//' on a line are ignored as comments    //
+//            Leading blank spaces and tabs are ignored                  //
+//            Blank lines are ignored                                    //
+//                                                                       //
+// Priority : The PRIORITY of the declarations here is as follows.       //
+//                                                                       //
+//               TARGET   SPECIFIC                                       //
+//               SUBGROUP SPECIFIC                                       //
+//               GROUP    SPECIFIC                                       //
+//               GLOBAL   ATTRIBUTES                                     //
+//                                                                       //
+//            So for example an attribute  which is defined in a GROUP   //
+//            definition takes precedence over the value in the GLOBAL   //
+//            definition.  An attribute defined in the TARGET SPECIFIC   //
+//            definition takes precedence over anything else.            //
+//                                                                       //
+//            The order of definitions in this file is the reverse  of   //
+//            the above.                                                 //
+//                                                                       //
+//               GLOBAL   ATTRIBUTES                                     //
+//               GROUP    SPECIFIC                                       //
+//               SUBGROUP SPECIFIC                                       //
+//               TARGET   SPECIFIC                                       //
+//                                                                       //
+//            So the order of definiton goes from LOWEST to HIGHEST as   //
+//            you traverse downward into the file.                       //
+//                                                                       //
+// History. :                                                            //
+//                                                                       //
+//  09/20/00 DaveM   - Version 1.1                                       //
+//  10/10/00 RandyR  - Added more comments and style consistency.        //
+//  10/15/00 GregJ   - added flags .AllowRegisterDownload,               //
+//                                 .AutoResyncRegFile                    //
+//  10/12/00 GregJ   - added MIPSIDT subgroup/targets                    //
+//                     uncommented SH3 subgroup/targets - GregJ.         //
+//  10/16/00 TriciaR - Added IBM405CR target.                            //
+//  10/16/00 RandyR  - Deleted NETSILICON and SAMSUNG... processors      //
+//  10/17/00 GregJ   - added flag .AutoGenerateVCFFile                   //
+//  10/18/00 RayG    - Deleted NETSILICON and SAMSUNG Again              //                                                  
+//  10/19/00 GregJ   - .AllowRegisterDownload = True for ARM only        //                                                  
+///////////////////////////////////////////////////////////////////////////
+//                                                                       //
+//   XXXXXX     XX    XXXXXX     XXXX   XXXXXXX   XXXXXX                 //
+//   X XX X    XXXX    XX  XX   XX  X    XX   X   X XX X                 //
+//     XX     XX  XX   XX  XX  XX        XX X       XX                   //
+//     XX     XX  XX   XXXXX   XX        XXXX       XX                   //
+//     XX     XXXXXX   XX XX   XX  XXX   XX X       XX                   //
+//     XX     XX  XX   XX  XX   XX  XX   XX   X     XX                   //
+//    XXXX    XX  XX  XXX  XX    XXX X  XXXXXXX    XXXX                  //
+//                                                                       //
+//   XXXX       XXXX    XXXXXX   XXXXXX                                  //
+//    XX         XX    XX    X   X XX X                                  //
+//    XX         XX    XX          XX                                    //
+//    XX         XX     XXXXX      XX                                    //
+//    XX         XX         XX     XX                                    //
+//    XX  XX     XX    X    XX     XX                                    //
+//   XXXXXXX    XXXX   XXXXXX     XXXX                                   //
+//                                                                       //
+///////////////////////////////////////////////////////////////////////////
+
+.TARGETGROUPS
+{
+    //
+    // PowerPC group
+    //
+
+    "PowerPC"
+    .SUBGROUPS
+    {
+        "MPC8xx"
+        .TARGETS
+        {
+            "MPC801"
+            "MPC821"
+            "MPC823"
+            "MPC823E"
+            "MPC850"
+            "MPC850SE"
+            "MPC850DC"
+            "MPC850DE"
+            "MPC850DH"
+            "MPC850DP"
+            "MPC850SAR"
+            "MPC850SE"
+            "MPC855T"
+            "MPC860"
+            "MPC860DC"
+            "MPC860DE"
+            "MPC860DH"
+            "MPC860EN"
+            "MPC860MH"
+            "MPC860P"
+            "MPC860SAR"
+            "MPC860T"
+        }
+
+        "MPC82xx"
+        .TARGETS
+        {
+            "MPC8240"
+            "MPC8260"
+        }
+             
+        "MPC5xx"
+        .TARGETS
+        {
+            "MPC505"
+            "MPC509"
+            "MPC555"
+            "MPC560"
+            "MPC565"
+        }
+
+        "MPC6xx"
+        .TARGETS
+        {
+            "MPC603P"
+            "MPC603R"
+            "MPC603E"
+            "MPCEC603E"
+        }
+
+        "MPC7xx"
+        .TARGETS
+        {
+            "MPC740"
+            "MPC750"
+            "MPC755"
+            "MPC7400"
+        }
+
+        "IBM40x"
+        .TARGETS
+        {
+            "403GCX"
+            "405GP"
+            "405CR"
+        }
+
+    } // end Subgroups for PowerPC
+
+
+    //
+    // CPU32 group
+    //
+
+    "68300"   // there are no subgroups, so just start with targets
+    .TARGETS
+    {
+        "68330"
+        "68331"
+        "68332"
+        "68333"
+        "68336"
+        "68338"
+        "68340"
+        "68341"
+        "68349"
+        "68360"
+        "68376"
+        "68396"
+    }
+
+    //
+    // ColdFire group
+    //
+
+    "ColdFire" // there are no subgroups, so just start with targets
+               // 08/2000: 5248, 5270, 5272, 5448 are not released yet, HPV4 is a private chip.
+    .TARGETS
+    {
+        "MCF5202"
+        "MCF5204"
+        "MCF5206"
+        "MCF5206E"
+//      "MCF5248"
+//      "MCF5270"
+//      "MCF5272"
+        "MCF5307"
+        "MCF5307A"
+        "MCF5407"
+//      "MCF5448_0"
+//      "MCF5448_1"
+//      "HPV4"
+    }
+    
+    //
+    // MIPS group
+    //
+
+    "MIPS"
+    .SUBGROUPS
+    {
+        "MIPS32"
+        .TARGETS
+        {
+            "4Kc"
+            "4Kp"
+            "4Km"
+
+        }
+
+        "MIPSIDT"
+        .TARGETS
+        {
+             "RC32332"
+             "RC32334"
+             "RC32355"
+             "RC32364"
+        }
+
+        "Philips"
+        .TARGETS
+        {
+             "PR3940"
+        }
+        "Broadcom"
+        .TARGETS
+        {
+             "BCM3350"
+             "BCM3352"
+             "BCM4710"
+        }    
+   }
+
+    //
+    // ARM group
+    //
+
+    "ARM"     
+    .SUBGROUPS
+    {
+        "ARM7"
+        .TARGETS
+        {
+            "ARM7DI"
+            "ARM7TDMI"
+            "TRISARM7TDMI"
+        }
+    }    
+
+    //
+    // HITACHI group
+    //
+
+    "HITACHI"
+    .SUBGROUPS
+    {
+        "SH3"
+        .TARGETS
+        {
+            "SH7729"
+            "SH7709A"
+        }
+
+        "SH4"
+        .TARGETS
+        {
+            "SH7750"  
+            "SH7751"
+        }
+    }    
+}
+
+///////////////////////////////////////////////////////////////////////////
+//                                                                       //
+//    XXXX   XXXX      XXXXX   XXXXXX      XX    XXXX                    //
+//   XX  X    XX      XX   XX   XX  XX    XXXX    XX                     //
+//  XX        XX      XX   XX   XX  XX   XX  XX   XX                     //
+//  XX        XX      XX   XX   XXXXX    XX  XX   XX                     //
+//  XX  XXX   XX      XX   XX   XX  XX   XXXXXX   XX                     //
+//   XX  XX   XX  XX  XX   XX   XX  XX   XX  XX   XX  XX                 //
+//    XXX X  XXXXXXX   XXXXX   XXXXXX    XX  XX  XXXXXXX                 //
+//                                                                       //
+//    XX     XXXXXX   XXXXXX  XXXXXX     XXXX   XXXXXX                   //
+//   XXXX    X XX X   X XX X   XX  XX     XX     XX  XX                  //
+//  XX  XX     XX       XX     XX  XX     XX     XX  XX                  //
+//  XX  XX     XX       XX     XXXXX      XX     XXXXX                   //
+//  XXXXXX     XX       XX     XX XX      XX     XX  XX                  //
+//  XX  XX     XX       XX     XX  XX     XX     XX  XX                  //
+//  XX  XX    XXXX     XXXX   XXX  XX    XXXX   XXXXXX                   //
+//                                                                       //
+//  Comments : This section defines target attributes  which are to be   //
+//             applied at the highest level of the groups.  This group   //
+//             should show all flags or string arrays & default values   //
+//                                                                       //
+///////////////////////////////////////////////////////////////////////////
+
+.GlobalAttributes
+{
+    .AllowConvertWarning      = true  // enable warning dialog about .AB file convert version 
+    .AllowCPMSpy              = false // CPM Spy feature supported
+    .AllowEndianChange        = false // is CF LENDIAN supported 
+    .AllowEndianCheck         = false // enable warning dialog about .AB file versus CF LENDIAN 
+    .AllowFastTrace           = true  // fast trace upload supported
+    .AllowLogicAnalyzerTrace  = false // logic analyzer trace supported
+    .AllowRegisterDownload    = false  // enable register file download at each project activation
+    .AllowSoftwareBinaryTrace = false // target agent trace supported
+    .AllowSoftwareTrace       = true  // classic software trace supported
+    .AllowTracePort           = false // processor trace port supported
+    .AllowVisionEVENT         = true  // event system avaiable/supported
+    .AllowSoftwareMarks       = false // software marks supported
+    .AllowStatProfile         = false // statistical PFA supported
+    .AllowTerminalSync        = false // enable Click GUI updates on terminal prompt transitions 
+    .AutoGenRegBitmaps        = true  // can Click auto-create missing register button bitmaps
+    .AutoGenerateVCFFile      = false // can Click auto-create the VCF settings file
+    .AutoReSyncRegFile        = false // reg.ini file to be generated at each project activation
+    .HasCache                 = false // processor has cache
+    .HasMMU                   = false // processor has MMU
+    .IgnoreIncludeFiles       = false // do not display line numbers from include files 
+    .IsJTarget                = false // connection is JTAG(versus BDM)
+    .LittleEndian             = false // processor in LE mode
+    .MemoryBinaryRetrieval    = true  // binary memory access supported
+    .NumHardwareCodeBreaks    = 0     // number of CPU internal code BPs supported 
+    .NumHardwareDataBreaks    = 0     // number of CPU internal data BPs supported
+    .StackWindow              = true  // use external DLL for stack decoding
+
+    //
+    // Connectivity methods which are supported. If not supported they will
+    // be overwritten specifically.
+    //
+
+    .VEHICLELIST
+    {
+        "visionICE"
+        "visionPROBE"
+        "visionWARE"
+        "Instruction Set Simulator"
+        "VxWorks"
+        "PSOS"
+        "DIABSIM"
+    }
+
+    //
+    // RTOS support.
+    //
+
+    .RTOSLIST
+    {
+        "NONE"
+        "VxWorks"
+        "PSOS"
+        "OSE"
+        "ThreadX"
+        "Nucleus"
+        "RTXC"
+        "MQX"
+        "AMX"
+    }
+
+    //
+    // Trace collection mechanisms available.
+    //
+
+    .VISIONEVENTLIST
+    {
+        "None"
+        "visionEVENT"
+        "visionTRACE"
+//      "visionSWTRACE"
+//      "visionLATRACE"
+    }
+
+    //
+    // Processor speeds.
+    //
+
+    .FREQUENCYLIST
+    {
+        "25 MHz"
+        "33 MHz"
+        "40 MHz"
+        "50 MHz"
+        "66 MHz"
+    }
+
+    //
+    // Channel list
+    //
+
+    .DPMCHANNELLIST
+    {
+        "SCC1"
+        "SCC2"
+        "SCC3"
+        "SCC4"
+        "SMC1"
+        "SMC2"
+        "FEC"
+        "SPI"
+        "I2C"
+        "OTHER"
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////
+//                                                                       //
+//    XXXX   XXXXXX    XXXXX    XX  XX  XXXXXX                           //
+//   XX  X    XX  XX  XX   XX   XX  XX   XX  XX                          //
+//  XX        XX  XX  XX   XX   XX  XX   XX  XX                          //
+//  XX        XXXXX   XX   XX   XX  XX   XXXXX                           //
+//  XX  XXX   XX XX   XX   XX   XX  XX   XX                              //
+//   XX  XX   XX  XX  XX   XX   XX  XX   XX                              //
+//    XXX X  XXX  XX   XXXXX     XXXX   XXXX                             //
+//                                                                       //
+//   XXXXXX  XXXXXX   XXXXXXX    XXXX   XXXX  XXXXXXX  XXXX    XXXX      //
+//  XX    X   XX  XX   XX   X   XX  XX   XX    XX   X   XX    XX  XX     //
+//  XX        XX  XX   XX X    XX        XX    XX X     XX   XX          //
+//   XXXXX    XXXXX    XXXX    XX        XX    XXXX     XX   XX          //
+//       XX   XX       XX X    XX    X   XX    XX X     XX   XX    X     //
+//  X    XX   XX       XX   X   XX  XX   XX    XX       XX    XX  XX     //
+//  XXXXXX   XXXX     XXXXXXX    XXXX   XXXX  XXXX     XXXX    XXXX      //
+//                                                                       //
+//  Comments : These values specifically override the GLOBAL values      //
+//             for these processors.                                     //
+//                                                                       //
+///////////////////////////////////////////////////////////////////////////
+
+.GroupAttributes
+{
+    //
+    // PowerPC processors.
+    //
+
+    "PowerPC"
+    {
+        .AllowAsmPatch            = true
+        .AllowCPMSpy              = true
+        .AllowEndianCheck         = true
+        .AllowFastTrace           = true
+        .AllowLogicAnalyzerTrace  = false
+        .AllowSoftwareBinaryTrace = false
+        .AllowSoftwareTrace       = true
+        .AllowStatProfile         = true
+        .AllowTracePort           = false
+        .AllowVisionEVENT         = true
+        .HasCache                 = true
+        .HasMMU                   = true
+        .NumHardwareCodeBreaks    = 4
+        .NumHardwareDataBreaks    = 2
+        .PCRegName                = "PC"
+        .StackPtrRegName          = "R1"
+		.StackWindow              = false
+    }
+
+    //
+    // ColdFire processors.
+    //
+
+    "ColdFire"
+    {
+        .AllowTracePort  = true
+        .PCRegName       = "PC"
+        .StackPtrRegName = "A6"
+        .StackWindow     = false
+
+        .VEHICLELIST
+        {
+            "visionICE"
+            "visionPROBE"
+            "Instruction Set Simulator"
+        }
+
+        .VISIONEVENTLIST
+        {
+            "None"
+            "visionEVENT"
+            "visionTRACE"
+        }
+    }
+
+    //
+    // CPU32 processors.
+    //
+
+    "68300"
+    {
+        .AllowVisionEVENT = true
+        .PCRegName        = "PC"
+        .StackPtrRegName  = "A6"
+        .StackWindow      = false
+
+        .VEHICLELIST
+        {
+            "visionICE"
+            "visionPROBE"
+        }
+
+        .VISIONEVENTLIST
+        {
+            "None"
+            "visionEVENT"
+        }
+
+    }
+
+    //
+    // MIPS processors.
+    //
+
+    "MIPS"
+    {
+        .AllowAsmPatch            = true
+        .AllowEndianCheck         = true
+//      .AllowSoftwareBinaryTrace = true
+        .AllowSoftwareMarks       = false
+        .AutoGenerateVCFFile      = true  // can Click auto-create the VCF settings file
+        .IsJTarget                = true
+        .NumHardwareCodeBreaks    = 4
+        .NumHardwareDataBreaks    = 2
+        .PCRegName                = "PC"
+        .StackPtrRegName          = "SP"
+        .StackWindow              = true
+
+        .VEHICLELIST
+        {
+            "visionPROBE"
+            "visionICE"
+            "DIABSIM"
+        }
+     
+        .RTOSLIST
+        {
+            "VxWorks"
+            "Nucleus"
+            "NONE"
+        }
+
+        .VISIONEVENTLIST
+        {
+            "None"
+        }
+    }
+
+    //
+    // HITACHI processors.
+    //
+
+    "HITACHI"
+    {
+        .AllowAsmPatch         = true
+        .AllowCPMSpy           = false
+        .AllowEndianCheck      = true
+        .AllowFastTrace        = true
+        .AllowSoftwareTrace    = true
+        .AllowStatProfile      = true
+        .AllowTracePort        = false
+        .AllowVisionEVENT      = false
+        .AutoGenerateVCFFile   = true  // can Click auto-create the VCF settings file
+        .HasCache              = false
+        .HasMMU                = false
+        .IsJTarget             = true
+        .NumHardwareCodeBreaks = 1
+        .NumHardwareDataBreaks = 1
+        .PCRegName             = "PC"
+        .StackWindow           = true
+        .StackPtrRegName       = "R15"
+
+        .VEHICLELIST
+        {
+            "visionPROBE"
+            "visionICE"
+//          "DIABSIM"
+        }
+         
+        .RTOSLIST
+        {
+            "VxWorks"
+            "NONE"
+        }
+
+        .VISIONEVENTLIST
+        {
+             "None"
+        }
+    }
+
+    //
+    // ARM processors.
+    //
+
+    "ARM"
+    {
+        .AllowAsmPatch         = true
+        .AllowCPMSpy           = false
+        .AllowEndianCheck      = true
+        .AllowFastTrace        = true
+        .AllowRegisterDownload = true  // enable register file download at each project activation
+        .AllowSoftwareTrace    = true
+        .AllowStatProfile      = true
+        .AllowTracePort        = false
+        .AllowVisionEVENT      = false
+        .AutoReSyncRegFile     = true  // reg.ini file to be generated at each project activation
+        .AutoGenerateVCFFile   = true  // can Click auto-create the VCF settings file
+        .HasCache              = false
+        .HasMMU                = false
+        .IsJTarget             = true
+        .NumHardwareCodeBreaks = 1
+        .NumHardwareDataBreaks = 1
+        .PCRegName             = "PC"
+        .StackPtrRegName       = "R13"
+        .StackWindow           = true
+
+        .VEHICLELIST
+        {
+            "visionPROBE"
+            "visionICE"
+        }
+         
+        .RTOSLIST
+        {
+//          "VxWorks"
+            "NONE"
+        }
+
+
+        .VISIONEVENTLIST
+        {
+            "None"
+        }
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////
+//                                                                       //
+//   XXXXXX  XX  XX  XXXXXX     XXXX   XXXXXX    XXXXX   XX  XX  XXXXXX  //
+//  XX    X  XX  XX   XX  XX   XX  X    XX  XX  XX   XX  XX  XX   XX  XX //
+//  XX       XX  XX   XX  XX  XX        XX  XX  XX   XX  XX  XX   XX  XX //
+//   XXXXX   XX  XX   XXXXX   XX        XXXXX   XX   XX  XX  XX   XXXXX  //
+//       XX  XX  XX   XX  XX  XX  XXX   XX XX   XX   XX  XX  XX   XX     //
+//  X    XX  XX  XX   XX  XX   XX  XX   XX  XX  XX   XX  XX  XX   XX     //
+//  XXXXXX    XXXX   XXXXXX     XXX X  XXX  XX   XXXXX    XXXX   XXXX    //
+//                                                                       //
+//   XXXXXX  XXXXXX   XXXXXXX    XXXX   XXXX  XXXXXXX  XXXX    XXXX      //
+//  XX    X   XX  XX   XX   X   XX  XX   XX    XX   X   XX    XX  XX     //
+//  XX        XX  XX   XX X    XX        XX    XX X     XX   XX          //
+//   XXXXX    XXXXX    XXXX    XX        XX    XXXX     XX   XX          //
+//       XX   XX       XX X    XX    X   XX    XX X     XX   XX    X     //
+//  X    XX   XX       XX   X   XX  XX   XX    XX       XX    XX  XX     //
+//  XXXXXX   XXXX     XXXXXXX    XXXX   XXXX  XXXX     XXXX    XXXX      //
+//                                                                       //
+//  Comments : These values specifically override the attributes which   //
+//             are associated with a SUBGROUP.                           //
+//                                                                       //
+///////////////////////////////////////////////////////////////////////////
+
+.SubGroupAttributes
+{
+    //
+    // PowerPC 5xx processors.
+    //
+
+    "MPC5xx"
+    {
+        .AllowCPMSpy           = false
+        .AllowTracePort        = false
+        .HasCache              = false
+        .HasMMU                = false
+        .NumHardwareCodeBreaks = 1
+        .NumHardwareDataBreaks = 1
+    }
+
+    //
+    // PowerPC 6xx processors.
+    //
+
+    "MPC6xx"
+    {
+        .AllowCPMSpy           = false
+        .AllowEndianChange     = true
+        .AllowFastTrace        = true
+        .AllowSoftwareTrace    = true
+        .AllowStatProfile      = true
+        .AllowTracePort        = false
+        .IsJTarget             = true
+        .NumHardwareCodeBreaks = 1
+        .NumHardwareDataBreaks = 0
+    }
+
+    //
+    // PowerPC 7xx processors.
+    //
+
+    "MPC7xx"
+    {
+        .AllowCPMSpy           = false
+        .AllowEndianChange     = true
+        .AllowFastTrace        = true
+        .AllowSoftwareTrace    = true
+        .AllowStatProfile      = true
+        .AllowTracePort        = false
+        .IsJTarget             = true
+        .NumHardwareCodeBreaks = 2
+        .NumHardwareDataBreaks = 0
+    }
+
+    //
+    // PowerPC 8xx processors.
+    //
+
+    "MPC8xx"
+    {
+
+        .NumHardwareCodeBreaks = 4
+        .NumHardwareDataBreaks = 2
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////
+//                                                                       //
+//  XXXXXX     XX    XXXXXX     XXXX   XXXXXXX   XXXXXX                  //
+//  X XX X    XXXX    XX  XX   XX  X    XX   X   X XX X                  //
+//    XX     XX  XX   XX  XX  XX        XX X       XX                    //
+//    XX     XX  XX   XXXXX   XX        XXXX       XX                    //
+//    XX     XXXXXX   XX XX   XX  XXX   XX X       XX                    //
+//    XX     XX  XX   XX  XX   XX  XX   XX   X     XX                    //
+//   XXXX    XX  XX  XXX  XX    XXX X  XXXXXXX    XXXX                   //
+//                                                                       //
+//   XXXXXX  XXXXXX   XXXXXXX    XXXX   XXXX  XXXXXXX  XXXX    XXXX      //
+//  XX    X   XX  XX   XX   X   XX  XX   XX    XX   X   XX    XX  XX     //
+//  XX        XX  XX   XX X    XX        XX    XX X     XX   XX          //
+//   XXXXX    XXXXX    XXXX    XX        XX    XXXX     XX   XX          //
+//       XX   XX       XX X    XX    X   XX    XX X     XX   XX    X     //
+//  X    XX   XX       XX   X   XX  XX   XX    XX       XX    XX  XX     //
+//  XXXXXX   XXXX     XXXXXXX    XXXX   XXXX  XXXX     XXXX    XXXX      //
+//                                                                       //
+//  Comments : These values specifically override the attributes which   //
+//             are associated with a PROCESSOR.                          //
+//                                                                       //
+///////////////////////////////////////////////////////////////////////////
+
+.TargetAttributes
+{
+    //
+    // TARGET == MPC860
+    //
+
+    "MPC860"
+    {
+        .AllowCPMSpy              = true
+        .AllowFastTrace           = true
+//      .AllowSoftwareBinaryTrace = true
+        .AllowSoftwareTrace       = true
+        .AllowStatProfile         = true
+        .AllowTracePort           = false
+        .AllowVisionEVENT         = true
+        .HasMMU                   = true
+        .NumHardwareCodeBreaks    = 4
+        .NumHardwareDataBreaks    = 2
+        .RegDetailFile            = "MPC860.REG"
+        .RegHelpFile              = "MPC860.HLP"
+        .RegIniFile               = "MPC860.INI"
+        .VIVCFile                 = "MPC860.VCF"
+        .VPVCFFile                = "VPMPC860.VCF"
+    }
+
+    //
+    // TARGET == MPC750
+    //
+
+    "MPC750"
+    {
+        .NumHardwareCodeBreaks = 2
+        .NumHardwareDataBreaks = 0
+        .RegDetailFile         = "MPC750.REG"
+        .RegHelpFile           = "MPC750.HLP"
+        .RegIniFile            = "MPC750.REG"
+        .VIVCFile              = "MPC750.VCF"
+        .VPVCFFile             = "VPMPC750.VCF"
+
+    }
+
+    //
+    // TARGET == IBM403GCX
+    //
+
+    "403GCX"
+    {
+        .VEHICLELIST
+        {
+            "visionICE"
+            "visionPROBE"
+        }
+
+        .RTOSLIST
+        {
+            "VxWorks"
+            "PSOS"
+            "OSE"
+            "Nucleus"
+            "RTXC"
+            "MQX"
+            "AMX"
+            "ThreadX"
+            "NONE"
+        }
+    }
+
+    //
+    // TARGET == ARM7
+    //
+
+    "ARM7"
+    {
+        .RegIniFile = "ARM7.INI"
+
+        .VEHICLELIST
+        {
+            "visionICE"
+            "visionPROBE"
+        }
+
+        .RTOSLIST
+        {
+//          "VxWorks"
+            "NONE"
+        }
+    }
+
+    //
+    // TARGET == MPC8240
+    //
+
+    "MPC8240"
+    {
+        .IsJTarget = true
+        .NumHardwareCodeBreaks = 1
+        .NumHardwareDataBreaks = 0
+    }
+
+    //
+    // TARGET == MPC8240
+    //
+
+    "MPC8260"
+    {
+        .IsJTarget             = true
+        .NumHardwareCodeBreaks = 1
+        .NumHardwareDataBreaks = 0
+
+        .DPMCHANNEL
+        {
+            "SCC1"
+            "SCC2"
+            "SCC3"
+            "SCC4"
+            "SMC1"
+            "SMC2"
+            "FEC"
+            "SPI"
+            "I2C"
+            "FEC1"
+            "FEC2"
+            "OTHER"
+        }
+    }
+}
+
+/////////
+//     //
+// EOF //
+//     //
+/////////

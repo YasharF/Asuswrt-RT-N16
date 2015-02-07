@@ -1,0 +1,1 @@
+/root/RT-N1X/src/linux/linux-2.6/include/linux/autoconf.h

@@ -1,0 +1,12 @@
+prefix=
+exec_prefix=
+libdir=${pcfiledir}
+includedir=/root/RT-N1X/src/router/ffmpeg
+
+Name: libswscale
+Description: FFmpeg image rescaling library
+Version: 0.7.2
+Requires: libavutil = 50.5.1
+Conflicts:
+Libs: ${libdir}/libswscale.a 
+Cflags: -I${includedir}

@@ -1,0 +1,2 @@
+# event to be catched by udevmonitor
+RUN+="socket:/org/kernel/udev/monitor"

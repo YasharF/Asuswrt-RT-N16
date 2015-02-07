@@ -1,0 +1,464 @@
+802/.psnap.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+802/.p8022.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+802/.sysctl_net_802.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+8021q/.vlan.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+8021q/.vlan_dev.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+8021q/.vlanproc.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+appletalk/ddp.c:	/* Don't mangle buffer if shared */
+appletalk/ddp.c:		/* Don't mangle buffer if shared */
+bridge/.br_notify.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+bridge/.br_forward.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+bridge/.br_stp_bpdu.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+bridge/.br_stp.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+bridge/.br_if.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+bridge/.br_sysfs_if.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+bridge/.br.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+bridge/.br_netlink.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+bridge/.br_device.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+bridge/.br_sysfs_br.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+bridge/.br_input.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+bridge/netfilter/ebt_mark.c: * I believe adding a mangle table just for marking is total overkill.
+bridge/netfilter/.ebtables.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+bridge/.br_stp_timer.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+bridge/.br_fdb.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+bridge/.br_ioctl.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+bridge/.br_stp_if.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+二進位格式檔案 built-in.o 符合
+core/.skbuff.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+core/.iovec.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+core/.gen_estimator.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+core/.dev.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+core/.ethtool.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+core/.flow.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+core/.link_watch.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+core/.fib_rules.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+core/.scm.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+core/.dev_mcast.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+core/.utils.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+core/.netevent.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+core/.sysctl_net_core.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+core/.rtnetlink.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+core/.gen_stats.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+core/dev.c: * Invalidate hardware checksum when packet is to be mangled, and
+core/.sock.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+core/.request_sock.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+core/.dst.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+core/.datagram.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+core/.neighbour.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+core/.stream.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+core/.net-sysfs.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+core/.filter.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ethernet/.eth.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv4/.ipmr.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv4/ipvs/ip_vs_core.c: *      immediately. This can avoid that iptable_nat mangles the packets
+ipv4/ipvs/ip_vs_core.c:	/* mangle the packet */
+ipv4/ipvs/ip_vs_xmit.c:	/* mangle the packet */
+ipv4/ipvs/ip_vs_xmit.c:	 * mangle and send the packet here (only for VS/NAT)
+ipv4/.fib_semantics.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv4/.protocol.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv4/.ip_forward.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv4/.tcp_minisocks.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv4/.route.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv4/.inetpeer.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv4/.tcp_cubic.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv4/.arp.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv4/.ip_fragment.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+二進位格式檔案 ipv4/built-in.o 符合
+ipv4/.fib_rules.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv4/.xfrm4_state.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv4/.proc.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv4/.af_inet.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv4/.netfilter.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv4/.sysctl_net_ipv4.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv4/.ipip.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv4/arp.c: *	even if it exists. It is supposed that skb->dev was mangled
+ipv4/.ip_input.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv4/.raw.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv4/.xfrm4_input.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv4/netfilter.c:/* route_me_harder function, used by iptable_nat, iptable_mangle + ip_queue */
+ipv4/.ip_sockglue.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv4/.inet_hashtables.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv4/.icmp.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv4/.syncookies.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv4/.tcp_input.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv4/.tunnel4.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv4/.fib_hash.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv4/.xfrm4_output.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+二進位格式檔案 ipv4/netfilter/iptable_nat.o 符合
+ipv4/netfilter/nf_nat_sip.c:	if (!nf_nat_mangle_udp_packet(pskb, ct, ctinfo,
+ipv4/netfilter/nf_nat_sip.c:static unsigned int mangle_sip_packet(struct sk_buff **pskb,
+ipv4/netfilter/nf_nat_sip.c:	if (!nf_nat_mangle_udp_packet(pskb, ct, ctinfo,
+ipv4/netfilter/nf_nat_sip.c:static int mangle_content_len(struct sk_buff **pskb,
+ipv4/netfilter/nf_nat_sip.c:			return nf_nat_mangle_udp_packet(pskb, ct, ctinfo,
+ipv4/netfilter/nf_nat_sip.c:static unsigned int mangle_sdp(struct sk_buff **pskb,
+ipv4/netfilter/nf_nat_sip.c:	if (!mangle_sip_packet(pskb, ctinfo, ct, &dptr, (*pskb)->len - dataoff,
+ipv4/netfilter/nf_nat_sip.c:	if (!mangle_sip_packet(pskb, ctinfo, ct, &dptr, (*pskb)->len - dataoff,
+ipv4/netfilter/nf_nat_sip.c:	if (!mangle_sip_packet(pskb, ctinfo, ct, &dptr, (*pskb)->len - dataoff,
+ipv4/netfilter/nf_nat_sip.c:	return mangle_content_len(pskb, ctinfo, ct, dptr);
+ipv4/netfilter/nf_nat_sip.c:	if (!mangle_sdp(pskb, ctinfo, ct, newip, port, dptr)) {
+ipv4/netfilter/nf_nat_snmp_basic.c:static inline void mangle_address(unsigned char *begin,
+ipv4/netfilter/nf_nat_snmp_basic.c:static inline void mangle_address(unsigned char *begin,
+ipv4/netfilter/nf_nat_snmp_basic.c:	mangle_address(ctx->begin, ctx->pointer - 4, map, check);
+ipv4/netfilter/nf_nat_snmp_basic.c: * Parse and mangle SNMP message according to mapping.
+ipv4/netfilter/nf_nat_snmp_basic.c:static int snmp_parse_mangle(unsigned char *msg,
+ipv4/netfilter/nf_nat_snmp_basic.c:	 * Loop through objects, look for IP addresses to mangle.
+ipv4/netfilter/nf_nat_snmp_basic.c:			mangle_address(ctx.begin, ctx.pointer - 4 , map, check);
+ipv4/netfilter/nf_nat_snmp_basic.c:	if (!snmp_parse_mangle((unsigned char *)udph + sizeof(struct udphdr),
+ipv4/netfilter/nf_nat_snmp_basic.c:	/* SNMP replies and originating SNMP traps get mangled */
+ipv4/netfilter/.nf_nat_ftp.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv4/netfilter/nf_nat_rule.c:static void warn_if_extra_mangle(__be32 dstip, __be32 srcip)
+ipv4/netfilter/nf_nat_rule.c:		warn_if_extra_mangle(ip_hdr(*pskb)->daddr,
+ipv4/netfilter/nf_nat_rule.c:	   Use reply in case it's already been mangled (eg local packet).
+ipv4/netfilter/.ipt_iprange.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv4/netfilter/ipt_CLUSTERIP.c:arp_mangle(unsigned int hook,
+ipv4/netfilter/ipt_CLUSTERIP.c:	/* we only want to mangle arp requests and replies */
+ipv4/netfilter/ipt_CLUSTERIP.c:	 * source ip, we don't want to mangle it */
+ipv4/netfilter/ipt_CLUSTERIP.c:	/* mangle reply hardware address */
+ipv4/netfilter/ipt_CLUSTERIP.c:	DEBUGP(KERN_DEBUG "CLUSTERIP mangled arp reply: ");
+ipv4/netfilter/ipt_CLUSTERIP.c:	.hook = arp_mangle,
+ipv4/netfilter/.nf_conntrack_proto_icmp.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv4/netfilter/ipt_TOS.c:	.table		= "mangle",
+ipv4/netfilter/.iptable_mangle.o.cmd:cmd_net/ipv4/netfilter/iptable_mangle.o := mipsel-linux-gcc -Wp,-MD,net/ipv4/netfilter/.iptable_mangle.o.d  -nostdinc -isystem /root/toolchains/hndtools-mipsel-linux-uclibc-4.1.2-32/bin/../lib/gcc/mipsel-linux-uclibc/4.1.2/include -D__KERNEL__ -Iinclude  -include include/linux/autoconf.h -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -I../../include -DBCMDRIVER -Dlinux -O2  -mabi=32 -G 0 -mno-abicalls -fno-pic -pipe -msoft-float -ggdb -ffreestanding  -march=mips32 -Wa,-mips32 -Wa,--trap  -Iinclude/asm-mips/mach-generic -fomit-frame-pointer  -fno-stack-protector -Wdeclaration-after-statement -Wno-pointer-sign -DHNDCTF -DCTFPOOL    -D"KBUILD_STR(s)=\#s" -D"KBUILD_BASENAME=KBUILD_STR(iptable_mangle)"  -D"KBUILD_MODNAME=KBUILD_STR(iptable_mangle)" -c -o net/ipv4/netfilter/.tmp_iptable_mangle.o net/ipv4/netfilter/iptable_mangle.c
+ipv4/netfilter/.iptable_mangle.o.cmd:deps_net/ipv4/netfilter/iptable_mangle.o := \
+ipv4/netfilter/.iptable_mangle.o.cmd:  net/ipv4/netfilter/iptable_mangle.c \
+ipv4/netfilter/.iptable_mangle.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv4/netfilter/.iptable_mangle.o.cmd:net/ipv4/netfilter/iptable_mangle.o: $(deps_net/ipv4/netfilter/iptable_mangle.o)
+ipv4/netfilter/.iptable_mangle.o.cmd:$(deps_net/ipv4/netfilter/iptable_mangle.o):
+ipv4/netfilter/.ipt_addrtype.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+二進位格式檔案 ipv4/netfilter/nf_nat_h323.o 符合
+二進位格式檔案 ipv4/netfilter/built-in.o 符合
+ipv4/netfilter/.nf_nat_h323.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+二進位格式檔案 ipv4/netfilter/ipt_TOS.o 符合
+ipv4/netfilter/.ipt_NETMAP.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv4/netfilter/.ip_tables.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+二進位格式檔案 ipv4/netfilter/nf_nat_helper.o 符合
+ipv4/netfilter/arpt_mangle.c:#include <linux/netfilter_arp/arpt_mangle.h>
+ipv4/netfilter/arpt_mangle.c:MODULE_DESCRIPTION("arptables arp payload mangle target");
+ipv4/netfilter/arpt_mangle.c:	const struct arpt_mangle *mangle = targinfo;
+ipv4/netfilter/arpt_mangle.c:	if (mangle->flags & ARPT_MANGLE_SDEV) {
+ipv4/netfilter/arpt_mangle.c:		memcpy(arpptr, mangle->src_devaddr, hln);
+ipv4/netfilter/arpt_mangle.c:	if (mangle->flags & ARPT_MANGLE_SIP) {
+ipv4/netfilter/arpt_mangle.c:		memcpy(arpptr, &mangle->u_s.src_ip, pln);
+ipv4/netfilter/arpt_mangle.c:	if (mangle->flags & ARPT_MANGLE_TDEV) {
+ipv4/netfilter/arpt_mangle.c:		memcpy(arpptr, mangle->tgt_devaddr, hln);
+ipv4/netfilter/arpt_mangle.c:	if (mangle->flags & ARPT_MANGLE_TIP) {
+ipv4/netfilter/arpt_mangle.c:		memcpy(arpptr, &mangle->u_t.tgt_ip, pln);
+ipv4/netfilter/arpt_mangle.c:	return mangle->target;
+ipv4/netfilter/arpt_mangle.c:	const struct arpt_mangle *mangle = targinfo;
+ipv4/netfilter/arpt_mangle.c:	if (mangle->flags & ~ARPT_MANGLE_MASK ||
+ipv4/netfilter/arpt_mangle.c:	    !(mangle->flags & ARPT_MANGLE_MASK))
+ipv4/netfilter/arpt_mangle.c:	if (mangle->target != NF_DROP && mangle->target != NF_ACCEPT &&
+ipv4/netfilter/arpt_mangle.c:	   mangle->target != ARPT_CONTINUE)
+ipv4/netfilter/arpt_mangle.c:static struct arpt_target arpt_mangle_reg = {
+ipv4/netfilter/arpt_mangle.c:	.name		= "mangle",
+ipv4/netfilter/arpt_mangle.c:	.targetsize	= sizeof(struct arpt_mangle),
+ipv4/netfilter/arpt_mangle.c:static int __init arpt_mangle_init(void)
+ipv4/netfilter/arpt_mangle.c:	if (arpt_register_target(&arpt_mangle_reg))
+ipv4/netfilter/arpt_mangle.c:static void __exit arpt_mangle_fini(void)
+ipv4/netfilter/arpt_mangle.c:	arpt_unregister_target(&arpt_mangle_reg);
+ipv4/netfilter/arpt_mangle.c:module_init(arpt_mangle_init);
+ipv4/netfilter/arpt_mangle.c:module_exit(arpt_mangle_fini);
+ipv4/netfilter/ip_queue.c:ipq_mangle_ipv4(ipq_verdict_msg_t *v, struct ipq_queue_entry *e)
+ipv4/netfilter/ip_queue.c:				      "in mangle, dropping packet\n");
+ipv4/netfilter/ip_queue.c:			if (ipq_mangle_ipv4(vmsg, entry) < 0)
+二進位格式檔案 ipv4/netfilter/iptable_mangle.o 符合
+ipv4/netfilter/.nf_nat_autofw.o.cmd:    $(wildcard include/config/ip/nf/mangle.h) \
+ipv4/netfilter/.nf_nat_autofw.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+二進位格式檔案 ipv4/netfilter/ipt_TTL.o 符合
+ipv4/netfilter/.nf_nat_standalone.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv4/netfilter/.nf_nat_proto_icmp.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv4/netfilter/.nf_conntrack_l3proto_ipv4.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+二進位格式檔案 ipv4/netfilter/nf_nat_rule.o 符合
+ipv4/netfilter/.ipt_MASQUERADE.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+二進位格式檔案 ipv4/netfilter/ipt_ECN.o 符合
+ipv4/netfilter/.nf_conntrack_l3proto_ipv4_compat.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv4/netfilter/nf_nat_helper.c:static void mangle_contents(struct sk_buff *skb,
+ipv4/netfilter/nf_nat_helper.c:		DEBUGP("nf_nat_mangle_packet: Extending packet by "
+ipv4/netfilter/nf_nat_helper.c:		DEBUGP("nf_nat_mangle_packet: Shrinking packet from "
+ipv4/netfilter/nf_nat_helper.c:nf_nat_mangle_tcp_packet(struct sk_buff **pskb,
+ipv4/netfilter/nf_nat_helper.c:	mangle_contents(*pskb, iph->ihl*4 + tcph->doff*4,
+ipv4/netfilter/nf_nat_helper.c:EXPORT_SYMBOL(nf_nat_mangle_tcp_packet);
+ipv4/netfilter/nf_nat_helper.c:nf_nat_mangle_udp_packet(struct sk_buff **pskb,
+ipv4/netfilter/nf_nat_helper.c:	/* UDP helpers might accidentally mangle the wrong packet */
+ipv4/netfilter/nf_nat_helper.c:	mangle_contents(*pskb, iph->ihl*4 + sizeof(*udph),
+ipv4/netfilter/nf_nat_helper.c:EXPORT_SYMBOL(nf_nat_mangle_udp_packet);
+二進位格式檔案 ipv4/netfilter/nf_nat.o 符合
+ipv4/netfilter/.ipt_cone.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv4/netfilter/nf_nat_amanda.c:	ret = nf_nat_mangle_udp_packet(pskb, exp->master, ctinfo,
+ipv4/netfilter/nf_nat_pptp.c:		 * hook (e.g. PREROUTING) and pkt is not mangled yet */
+ipv4/netfilter/nf_nat_pptp.c:	/* mangle packet */
+ipv4/netfilter/nf_nat_pptp.c:	if (nf_nat_mangle_tcp_packet(pskb, ct, ctinfo,
+ipv4/netfilter/nf_nat_pptp.c:	/* mangle packet */
+ipv4/netfilter/nf_nat_pptp.c:	if (nf_nat_mangle_tcp_packet(pskb, ct, ctinfo,
+ipv4/netfilter/nf_nat_ftp.c:mangle_rfc959_packet(struct sk_buff **pskb,
+ipv4/netfilter/nf_nat_ftp.c:	DEBUGP("calling nf_nat_mangle_tcp_packet\n");
+ipv4/netfilter/nf_nat_ftp.c:	return nf_nat_mangle_tcp_packet(pskb, ct, ctinfo, matchoff,
+ipv4/netfilter/nf_nat_ftp.c:mangle_eprt_packet(struct sk_buff **pskb,
+ipv4/netfilter/nf_nat_ftp.c:	DEBUGP("calling nf_nat_mangle_tcp_packet\n");
+ipv4/netfilter/nf_nat_ftp.c:	return nf_nat_mangle_tcp_packet(pskb, ct, ctinfo, matchoff,
+ipv4/netfilter/nf_nat_ftp.c:mangle_epsv_packet(struct sk_buff **pskb,
+ipv4/netfilter/nf_nat_ftp.c:	DEBUGP("calling nf_nat_mangle_tcp_packet\n");
+ipv4/netfilter/nf_nat_ftp.c:	return nf_nat_mangle_tcp_packet(pskb, ct, ctinfo, matchoff,
+ipv4/netfilter/nf_nat_ftp.c:static int (*mangle[])(struct sk_buff **, __be32, u_int16_t,
+ipv4/netfilter/nf_nat_ftp.c:	[NF_CT_FTP_PORT] = mangle_rfc959_packet,
+ipv4/netfilter/nf_nat_ftp.c:	[NF_CT_FTP_PASV] = mangle_rfc959_packet,
+ipv4/netfilter/nf_nat_ftp.c:	[NF_CT_FTP_EPRT] = mangle_eprt_packet,
+ipv4/netfilter/nf_nat_ftp.c:	[NF_CT_FTP_EPSV] = mangle_epsv_packet
+ipv4/netfilter/nf_nat_ftp.c:	if (!mangle[type](pskb, newip, port, matchoff, matchlen, ct, ctinfo)) {
+ipv4/netfilter/.ipt_ECN.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv4/netfilter/ipt_TTL.c:	.table		= "mangle",
+ipv4/netfilter/.bcm_nat.o.cmd:    $(wildcard include/config/ip/nf/mangle.h) \
+ipv4/netfilter/.bcm_nat.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv4/netfilter/.ipt_TOS.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv4/netfilter/.nf_nat_core.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv4/netfilter/.ipt_SAME.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv4/netfilter/nf_nat_core.c:	/* We're actually going to mangle it beyond trivial checksum
+ipv4/netfilter/.ipt_TTL.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv4/netfilter/.ipt_LOG.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+二進位格式檔案 ipv4/netfilter/nf_nat_pptp.o 符合
+ipv4/netfilter/Kconfig:# mangle + specific targets
+ipv4/netfilter/Kconfig:	  This option adds a `mangle' table to iptables: see the man page for
+ipv4/netfilter/Kconfig:	  the `mangle' table which alter the Type Of Service field of an IP
+ipv4/netfilter/Kconfig:	  This option adds a `ECN' target, which can be used in the iptables mangle
+ipv4/netfilter/ipt_ECN.c:	.table		= "mangle",
+ipv4/netfilter/Makefile:obj-$(CONFIG_IP_NF_MANGLE) += iptable_mangle.o
+ipv4/netfilter/Makefile:obj-$(CONFIG_IP_NF_ARP_MANGLE) += arpt_mangle.o
+ipv4/netfilter/.nf_nat_tftp.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv4/netfilter/.ipt_REJECT.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv4/netfilter/.ipt_REDIRECT.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv4/netfilter/iptable_mangle.c:MODULE_DESCRIPTION("iptables mangle table");
+ipv4/netfilter/iptable_mangle.c:		.name = "mangle",
+ipv4/netfilter/iptable_mangle.c:static struct xt_table packet_mangler = {
+ipv4/netfilter/iptable_mangle.c:	.name		= "mangle",
+ipv4/netfilter/iptable_mangle.c:	return ipt_do_table(pskb, hook, in, out, &packet_mangler);
+ipv4/netfilter/iptable_mangle.c:			printk("iptable_mangle: ignoring short SOCK_RAW "
+ipv4/netfilter/iptable_mangle.c:	ret = ipt_do_table(pskb, hook, in, out, &packet_mangler);
+ipv4/netfilter/iptable_mangle.c:static int __init iptable_mangle_init(void)
+ipv4/netfilter/iptable_mangle.c:	ret = ipt_register_table(&packet_mangler, &initial_table.repl);
+ipv4/netfilter/iptable_mangle.c:	ipt_unregister_table(&packet_mangler);
+ipv4/netfilter/iptable_mangle.c:static void __exit iptable_mangle_fini(void)
+ipv4/netfilter/iptable_mangle.c:	ipt_unregister_table(&packet_mangler);
+ipv4/netfilter/iptable_mangle.c:module_init(iptable_mangle_init);
+ipv4/netfilter/iptable_mangle.c:module_exit(iptable_mangle_fini);
+ipv4/netfilter/nf_nat_irc.c:	ret = nf_nat_mangle_tcp_packet(pskb, exp->master, ctinfo,
+二進位格式檔案 ipv4/netfilter/nf_nat_ftp.o 符合
+ipv4/netfilter/.nf_nat_proto_tcp.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv4/netfilter/nf_nat_h323.c:		if (!nf_nat_mangle_tcp_packet(pskb, ct, ctinfo,
+ipv4/netfilter/nf_nat_h323.c:				printk("nf_nat_h323: nf_nat_mangle_tcp_packet"
+ipv4/netfilter/nf_nat_h323.c:		if (!nf_nat_mangle_udp_packet(pskb, ct, ctinfo,
+ipv4/netfilter/nf_nat_h323.c:				printk("nf_nat_h323: nf_nat_mangle_udp_packet"
+ipv4/netfilter/nf_nat_h323.c:		/* nf_nat_mangle_udp_packet uses skb_make_writable() to copy
+ipv4/netfilter/.nf_nat_pptp.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv4/netfilter/.nf_nat_helper.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv4/netfilter/.nf_nat_proto_udp.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv4/netfilter/.iptable_filter.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv4/netfilter/.built-in.o.cmd:cmd_net/ipv4/netfilter/built-in.o :=  mipsel-linux-ld  -m elf32ltsmip  -r -o net/ipv4/netfilter/built-in.o net/ipv4/netfilter/nf_conntrack_ipv4.o net/ipv4/netfilter/nf_nat.o net/ipv4/netfilter/nf_nat_ftp.o net/ipv4/netfilter/nf_nat_h323.o net/ipv4/netfilter/nf_nat_pptp.o net/ipv4/netfilter/nf_nat_tftp.o net/ipv4/netfilter/nf_nat_autofw.o net/ipv4/netfilter/nf_nat_proto_gre.o net/ipv4/netfilter/ip_tables.o net/ipv4/netfilter/iptable_filter.o net/ipv4/netfilter/iptable_mangle.o net/ipv4/netfilter/iptable_nat.o net/ipv4/netfilter/ipt_iprange.o net/ipv4/netfilter/ipt_addrtype.o net/ipv4/netfilter/ipt_REJECT.o net/ipv4/netfilter/ipt_TOS.o net/ipv4/netfilter/ipt_ECN.o net/ipv4/netfilter/ipt_MASQUERADE.o net/ipv4/netfilter/ipt_REDIRECT.o net/ipv4/netfilter/ipt_NETMAP.o net/ipv4/netfilter/ipt_SAME.o net/ipv4/netfilter/ipt_LOG.o net/ipv4/netfilter/ipt_TTL.o net/ipv4/netfilter/bcm_nat.o
+ipv4/netfilter/.nf_nat_proto_gre.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv4/netfilter/.nf_nat_rule.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv4/netfilter/.nf_nat_proto_unknown.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv4/.igmp.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv4/ip_forward.c:	/* We are about to mangle packet. Copy it! */
+ipv4/.devinet.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv4/.ip_options.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv4/.inet_connection_sock.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv4/.tcp_cong.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv4/ipmr.c:		   And all this only to mangle msg->im_msgtype and
+ipv4/.tcp_ipv4.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv4/.xfrm4_policy.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv4/.udplite.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv4/.udp.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv4/.tcp_timer.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv4/.ip_output.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv4/.datagram.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv4/.tcp.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv4/.fib_frontend.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv4/.tcp_output.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv4/.ip_gre.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv4/.inet_timewait_sock.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv4/raw.c:		/* Linux does not mangle headers on raw sockets,
+ipv6/.sit.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv6/.ip6_flowlabel.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv6/.xfrm6_state.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv6/.protocol.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv6/.ip6_fib.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv6/.route.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv6/.xfrm6_mode_transport.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv6/.ip6_output.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv6/.addrconf.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv6/.ipcomp6.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv6/.ah6.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv6/.proc.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv6/.netfilter.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv6/.xfrm6_input.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv6/.xfrm6_mode_beet.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv6/.anycast.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv6/.exthdrs_core.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv6/.xfrm6_mode_tunnel.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv6/.tunnel6.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv6/.raw.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv6/.xfrm6_output.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv6/.addrconf_core.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv6/.inet6_connection_sock.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv6/.sysctl_net_ipv6.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv6/.icmp.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv6/.mip6.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv6/.af_inet6.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv6/exthdrs.c:	/* We are about to mangle packet header. Be careful!
+ipv6/.reassembly.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv6/.tcp_ipv6.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv6/netfilter/ip6_queue.c:ipq_mangle_ipv6(ipq_verdict_msg_t *v, struct ipq_queue_entry *e)
+ipv6/netfilter/ip6_queue.c:				      "in mangle, dropping packet\n");
+ipv6/netfilter/ip6_queue.c:			if (ipq_mangle_ipv6(vmsg, entry) < 0)
+ipv6/netfilter/ip6table_mangle.c: * IPv6 packet mangling table, a port of the IPv4 mangle table to IPv6
+ipv6/netfilter/ip6table_mangle.c:MODULE_DESCRIPTION("ip6tables mangle table");
+ipv6/netfilter/ip6table_mangle.c:		.name = "mangle",
+ipv6/netfilter/ip6table_mangle.c:static struct xt_table packet_mangler = {
+ipv6/netfilter/ip6table_mangle.c:	.name		= "mangle",
+ipv6/netfilter/ip6table_mangle.c:	return ip6t_do_table(pskb, hook, in, out, &packet_mangler);
+ipv6/netfilter/ip6table_mangle.c:	ret = ip6t_do_table(pskb, hook, in, out, &packet_mangler);
+ipv6/netfilter/ip6table_mangle.c:static int __init ip6table_mangle_init(void)
+ipv6/netfilter/ip6table_mangle.c:	ret = ip6t_register_table(&packet_mangler, &initial_table.repl);
+ipv6/netfilter/ip6table_mangle.c:	ip6t_unregister_table(&packet_mangler);
+ipv6/netfilter/ip6table_mangle.c:static void __exit ip6table_mangle_fini(void)
+ipv6/netfilter/ip6table_mangle.c:	ip6t_unregister_table(&packet_mangler);
+ipv6/netfilter/ip6table_mangle.c:module_init(ip6table_mangle_init);
+ipv6/netfilter/ip6table_mangle.c:module_exit(ip6table_mangle_fini);
+ipv6/netfilter/ip6t_HL.c:	.table		= "mangle",
+ipv6/netfilter/Kconfig:	  This option adds a `mangle' table to iptables: see the man page for
+ipv6/netfilter/Makefile:obj-$(CONFIG_IP6_NF_MANGLE) += ip6table_mangle.o
+ipv6/.ipv6_sockglue.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv6/.exthdrs.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv6/.esp6.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv6/.mcast.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv6/.udplite.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv6/.xfrm6_tunnel.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv6/.ndisc.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv6/.inet6_hashtables.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv6/.udp.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv6/.datagram.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv6/.ip6_input.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+ipv6/.xfrm6_policy.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+llc/.llc_input.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+llc/.llc_core.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+llc/.llc_output.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+m:< cmd_net/ipv4/netfilter/built-in.o :=  mipsel-linux-ld  -m elf32ltsmip  -r -o net/ipv4/netfilter/built-in.o net/ipv4/netfilter/nf_conntrack_ipv4.o net/ipv4/netfilter/nf_nat.o net/ipv4/netfilter/nf_nat_ftp.o net/ipv4/netfilter/nf_nat_h323.o net/ipv4/netfilter/nf_nat_pptp.o net/ipv4/netfilter/nf_nat_tftp.o net/ipv4/netfilter/nf_nat_autofw.o net/ipv4/netfilter/nf_nat_proto_gre.o net/ipv4/netfilter/ip_tables.o net/ipv4/netfilter/iptable_filter.o net/ipv4/netfilter/iptable_mangle.o net/ipv4/netfilter/iptable_nat.o net/ipv4/netfilter/ipt_iprange.o net/ipv4/netfilter/ipt_addrtype.o net/ipv4/netfilter/ipt_REJECT.o net/ipv4/netfilter/ipt_TOS.o net/ipv4/netfilter/ipt_ECN.o net/ipv4/netfilter/ipt_MASQUERADE.o net/ipv4/netfilter/ipt_REDIRECT.o net/ipv4/netfilter/ipt_NETMAP.o net/ipv4/netfilter/ipt_SAME.o net/ipv4/netfilter/ipt_LOG.o net/ipv4/netfilter/ipt_TTL.o net/ipv4/netfilter/bcm_nat.o
+m:> cmd_net/ipv4/netfilter/built-in.o :=  mipsel-uclibc-ld  -m elf32ltsmip  -r -o net/ipv4/netfilter/built-in.o net/ipv4/netfilter/nf_conntrack_ipv4.o net/ipv4/netfilter/nf_nat.o net/ipv4/netfilter/nf_nat_ftp.o net/ipv4/netfilter/nf_nat_h323.o net/ipv4/netfilter/nf_nat_pptp.o net/ipv4/netfilter/nf_nat_tftp.o net/ipv4/netfilter/nf_nat_autofw.o net/ipv4/netfilter/bcm_nat.o net/ipv4/netfilter/nf_nat_proto_gre.o net/ipv4/netfilter/ip_tables.o net/ipv4/netfilter/iptable_filter.o net/ipv4/netfilter/iptable_mangle.o net/ipv4/netfilter/iptable_nat.o net/ipv4/netfilter/ipt_iprange.o net/ipv4/netfilter/ipt_addrtype.o net/ipv4/netfilter/ipt_REJECT.o net/ipv4/netfilter/ipt_TOS.o net/ipv4/netfilter/ipt_ECN.o net/ipv4/netfilter/ipt_MASQUERADE.o net/ipv4/netfilter/ipt_REDIRECT.o net/ipv4/netfilter/ipt_NETMAP.o net/ipv4/netfilter/ipt_SAME.o net/ipv4/netfilter/ipt_LOG.o net/ipv4/netfilter/ipt_TTL.o
+m:二元碼檔 ipv4/netfilter/iptable_mangle.o 與 /root/brcm-2288/src/linux/linux-2.6/net/ipv4/netfilter/iptable_mangle.o 不同
+m:diff -rt ipv4/netfilter/.iptable_mangle.o.cmd /root/brcm-2288/src/linux/linux-2.6/net/ipv4/netfilter/.iptable_mangle.o.cmd
+m:< cmd_net/ipv4/netfilter/iptable_mangle.o := mipsel-linux-gcc -Wp,-MD,net/ipv4/netfilter/.iptable_mangle.o.d  -nostdinc -isystem /root/toolchains/hndtools-mipsel-linux-uclibc-4.1.2-32/bin/../lib/gcc/mipsel-linux-uclibc/4.1.2/include -D__KERNEL__ -Iinclude  -include include/linux/autoconf.h -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -I../../include -DBCMDRIVER -Dlinux -O2  -mabi=32 -G 0 -mno-abicalls -fno-pic -pipe -msoft-float -ggdb -ffreestanding  -march=mips32 -Wa,-mips32 -Wa,--trap  -Iinclude/asm-mips/mach-generic -fomit-frame-pointer  -fno-stack-protector -Wdeclaration-after-statement -Wno-pointer-sign -DHNDCTF -DCTFPOOL    -D"KBUILD_STR(s)=\#s" -D"KBUILD_BASENAME=KBUILD_STR(iptable_mangle)"  -D"KBUILD_MODNAME=KBUILD_STR(iptable_mangle)" -c -o net/ipv4/netfilter/.tmp_iptable_mangle.o net/ipv4/netfilter/iptable_mangle.c
+m:> cmd_net/ipv4/netfilter/iptable_mangle.o := mipsel-uclibc-gcc -Wp,-MD,net/ipv4/netfilter/.iptable_mangle.o.d  -nostdinc -isystem /root/toolchains/hndtools-mipsel-linux-uclibc-4.1.2-32/bin/../lib/gcc/mipsel-linux-uclibc/4.1.2/include -D__KERNEL__ -Iinclude  -include include/linux/autoconf.h -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -I../../include -DBCMDRIVER -Dlinux -O2  -mabi=32 -G 0 -mno-abicalls -fno-pic -pipe -msoft-float -ggdb -ffreestanding  -march=mips32 -Wa,-mips32 -Wa,--trap  -Iinclude/asm-mips/mach-generic -fomit-frame-pointer  -fno-stack-protector -Wdeclaration-after-statement -Wno-pointer-sign -DHNDCTF -DCTFPOOL    -D"KBUILD_STR(s)=\#s" -D"KBUILD_BASENAME=KBUILD_STR(iptable_mangle)"  -D"KBUILD_MODNAME=KBUILD_STR(iptable_mangle)" -c -o net/ipv4/netfilter/.tmp_iptable_mangle.o net/ipv4/netfilter/iptable_mangle.c
+netfilter/.nf_sockopt.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+netfilter/.xt_CONNMARK.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+netfilter/.nf_conntrack_proto_udp.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+netfilter/.xt_conntrack.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+netfilter/nf_conntrack_proto_tcp.c:/* Update sender->td_end after NAT successfully mangled the packet */
+netfilter/.nf_queue.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+二進位格式檔案 netfilter/xt_CONNMARK.o 符合
+二進位格式檔案 netfilter/built-in.o 符合
+netfilter/xt_MARK.c:		.table		= "mangle",
+netfilter/xt_MARK.c:		.table		= "mangle",
+netfilter/xt_MARK.c:		.table		= "mangle",
+netfilter/xt_physdev.c:	 * LOCAL_OUT/mangle and LOCAL_OUT/nat don't know if
+netfilter/.nf_conntrack_proto.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+netfilter/xt_DSCP.c:		.table		= "mangle",
+netfilter/xt_DSCP.c:		.table		= "mangle",
+netfilter/.core.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+netfilter/.nf_conntrack_h323_main.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+netfilter/.nf_conntrack_proto_tcp.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+netfilter/.nf_conntrack_proto_generic.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+netfilter/xt_webstr.c.orig:/* Flags for mangle_http_header() */
+netfilter/xt_webstr.c.orig:static int mangle_http_header(const struct sk_buff *skb, int flags)
+netfilter/xt_webstr.c.orig:	/* Determine the flags value for get_http_info(), and mangle packet 
+netfilter/xt_webstr.c.orig:		    mangle_http_header(skb, HTTP_COOKIE);
+netfilter/.nf_sysctl.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+netfilter/.nf_conntrack_expect.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+netfilter/xt_CONNSECMARK.c:		.table		= "mangle",
+netfilter/xt_CONNSECMARK.c:		.table		= "mangle",
+netfilter/.nf_conntrack_proto_gre.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+netfilter/.xt_helper.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+netfilter/.xt_connmark.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+netfilter/xt_CONNMARK.c:		if (strcmp(tablename, "mangle") != 0) {
+netfilter/xt_CONNMARK.c:			       "called from \"mangle\" table, not \"%s\"\n",
+netfilter/xt_TCPMSS.c:tcpmss_mangle_packet(struct sk_buff **pskb,
+netfilter/xt_TCPMSS.c:	ret = tcpmss_mangle_packet(pskb, targinfo, iph->ihl * 4,
+netfilter/xt_TCPMSS.c:	ret = tcpmss_mangle_packet(pskb, targinfo, tcphoff,
+二進位格式檔案 netfilter/xt_TCPMSS.o 符合
+netfilter/.xt_TCPMSS.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+netfilter/.nf_conntrack_pptp.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+netfilter/.xt_tcpudp.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+netfilter/.nfnetlink.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+netfilter/xt_CLASSIFY.c:		.table		= "mangle",
+netfilter/xt_CLASSIFY.c:		.table		= "mangle",
+二進位格式檔案 netfilter/xt_MARK.o 符合
+netfilter/.xt_mark.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+netfilter/.nf_conntrack_l3proto_generic.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+netfilter/xt_SECMARK.c:		.table		= "mangle",
+netfilter/xt_SECMARK.c:		.table		= "mangle",
+netfilter/.nf_conntrack_ftp.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+netfilter/xt_webstr.c:/* Flags for mangle_http_header() */
+netfilter/xt_webstr.c:static int mangle_http_header(const struct sk_buff *skb, int flags)
+netfilter/xt_webstr.c:	/* Determine the flags value for get_http_info(), and mangle packet 
+netfilter/xt_webstr.c:		    mangle_http_header(skb, HTTP_COOKIE);
+netfilter/.nf_log.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+netfilter/.xt_webstr.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+netfilter/.xt_CLASSIFY.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+netfilter/.nf_conntrack_standalone.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+netfilter/.xt_NFLOG.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+netfilter/.xt_tcpmss.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+netfilter/.nf_conntrack_core.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+netfilter/nf_conntrack_ftp.c:	/* Now, NAT might want to mangle the packet, and register the
+netfilter/.xt_limit.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+netfilter/.xt_multiport.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+netfilter/Kconfig:	  in the `mangle' table which alter the netfilter mark (nfmark) field
+netfilter/.xt_dscp.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+netfilter/.xt_mac.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+netfilter/.xt_MARK.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+netfilter/.x_tables.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+netfilter/.xt_time.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+netfilter/.nf_conntrack_netlink.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+netfilter/.nf_conntrack_helper.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+netfilter/.nf_conntrack_tftp.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+二進位格式檔案 netfilter/xt_CLASSIFY.o 符合
+netfilter/nfnetlink_queue.c:nfqnl_mangle(void *data, int data_len, struct nfqnl_queue_entry *e)
+netfilter/nfnetlink_queue.c:				      "in mangle, dropping packet\n");
+netfilter/nfnetlink_queue.c:		if (nfqnl_mangle(NFA_DATA(nfqa[NFQA_PAYLOAD-1]),
+netfilter/.xt_state.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+netlink/.genetlink.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+netlink/.attr.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+netlink/.af_netlink.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+packet/af_packet.c:   Note tricky part: we DO mangle shared skb! skb->data, skb->len
+packet/af_packet.c:   and skb->cb are mangled. It works because (and until) packets
+packet/.af_packet.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+二進位格式檔案 sched/act_ipt.o 符合
+sched/.sch_api.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+二進位格式檔案 sched/built-in.o 符合
+sched/.sch_generic.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+sched/.sch_htb.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+sched/.sch_ingress.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+sched/.cls_fw.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+sched/.cls_tcindex.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+sched/.act_gact.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+sched/.cls_u32.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+sched/.cls_api.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+sched/.act_api.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+sched/.sch_netem.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+sched/.act_mirred.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+sched/.act_ipt.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+sched/act_ipt.c:		strcpy(tname, "mangle");
+sched/sch_netem.c:	 * do it now in software before we mangle it.
+sched/.cls_route.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+sched/Kconfig:	  Say Y here if you want to mangle the content of packets.
+sched/.act_police.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+sched/.sch_prio.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+sched/.cls_basic.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+sched/.sch_fifo.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+sched/.sch_blackhole.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+sunrpc/cache.c: * Fields are either mangled to quote space tab newline slosh with slosh
+unix/.af_unix.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+unix/.sysctl_net_unix.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+unix/.garbage.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+xfrm/.xfrm_input.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+xfrm/.xfrm_algo.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+xfrm/.xfrm_state.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+xfrm/.xfrm_policy.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \
+xfrm/.xfrm_hash.o.cmd:  include/asm-mips/mach-generic/mangle-port.h \

@@ -1,0 +1,92 @@
+netfilter/nf_conntrack_expect.h:	void (*expectfn)(struct nf_conn *new,
+netfilter/nf_conntrack_expect.h:	struct nf_conn *master;
+netfilter/nf_conntrack_expect.h:void nf_ct_remove_expectations(struct nf_conn *ct);
+netfilter/nf_conntrack_expect.h:struct nf_conntrack_expect *nf_conntrack_expect_alloc(struct nf_conn *me);
+netfilter/nf_nat_core.h:extern unsigned int nf_nat_packet(struct nf_conn *ct,
+netfilter/nf_nat_core.h:extern int nf_nat_icmp_reply_translation(struct nf_conn *ct,
+netfilter/nf_nat_core.h:static inline int nf_nat_initialized(struct nf_conn *ct,
+netfilter/nf_nat.h.orig:extern unsigned int nf_nat_setup_info(struct nf_conn *ct,
+netfilter/nf_nat.h.orig:			     const struct nf_conn *ignored_conntrack);
+netfilter/nf_nat_protocol.h:			    const struct nf_conn *ct);
+netfilter/nf_conntrack_core.h:		      const struct nf_conn *ignored_conntrack);
+netfilter/nf_conntrack_core.h:	struct nf_conn *ct = (struct nf_conn *)(*pskb)->nfct;
+netfilter/nf_nat_rule.h:			    struct nf_conn *ct);
+netfilter/nf_nat_rule.h:alloc_null_binding(struct nf_conn *ct, unsigned int hooknum);
+netfilter/nf_nat_rule.h:alloc_null_binding_confirmed(struct nf_conn *ct, unsigned int hooknum);
+netfilter/nf_conntrack_l4proto.h:	int (*print_conntrack)(struct seq_file *s, const struct nf_conn *);
+netfilter/nf_conntrack_l4proto.h:	int (*packet)(struct nf_conn *conntrack,
+netfilter/nf_conntrack_l4proto.h:	int (*new)(struct nf_conn *conntrack, const struct sk_buff *skb,
+netfilter/nf_conntrack_l4proto.h:	void (*destroy)(struct nf_conn *conntrack);
+netfilter/nf_conntrack_l4proto.h:			 const struct nf_conn *ct);
+netfilter/nf_conntrack_l4proto.h:	int (*from_nfattr)(struct nfattr *tb[], struct nf_conn *ct);
+netfilter/nf_conntrack_ecache.h:	struct nf_conn *ct;
+netfilter/nf_conntrack_ecache.h:extern void nf_ct_deliver_cached_events(const struct nf_conn *ct);
+netfilter/nf_conntrack_ecache.h:extern void __nf_ct_event_cache_init(struct nf_conn *ct);
+netfilter/nf_conntrack_ecache.h:	struct nf_conn *ct = (struct nf_conn *)skb->nfct;
+netfilter/nf_conntrack_ecache.h:				      struct nf_conn *ct)
+netfilter/nf_conntrack_ecache.h:				      struct nf_conn *ct) {}
+netfilter/nf_conntrack_ecache.h:static inline void nf_ct_deliver_cached_events(const struct nf_conn *ct) {}
+netfilter/nf_conntrack_l3proto.h:	int (*print_conntrack)(struct seq_file *s, const struct nf_conn *);
+netfilter/nf_conntrack_l3proto.h:	int (*packet)(struct nf_conn *conntrack,
+netfilter/nf_conntrack_l3proto.h:	int (*new)(struct nf_conn *conntrack, const struct sk_buff *skb);
+netfilter/nf_conntrack.h:/* nf_conn feature for connections that have a helper */
+netfilter/nf_conntrack.h:	struct nf_conn *master;
+netfilter/nf_conntrack.h:static inline struct nf_conn *
+netfilter/nf_conntrack.h:nf_conntrack_alter_reply(struct nf_conn *conntrack,
+netfilter/nf_conntrack.h:			 const struct nf_conn *ignored_conntrack);
+netfilter/nf_conntrack.h:static inline struct nf_conn *
+netfilter/nf_conntrack.h:	return (struct nf_conn *)skb->nfct;
+netfilter/nf_conntrack.h:static inline void nf_ct_put(struct nf_conn *ct)
+netfilter/nf_conntrack.h:		    const struct nf_conn *ignored_conntrack);
+netfilter/nf_conntrack.h:extern void nf_conntrack_hash_insert(struct nf_conn *ct);
+netfilter/nf_conntrack.h:extern void __nf_ct_refresh_acct(struct nf_conn *ct,
+netfilter/nf_conntrack.h:static inline void nf_ct_refresh_acct(struct nf_conn *ct,
+netfilter/nf_conntrack.h:static inline void nf_ct_refresh(struct nf_conn *ct,
+netfilter/nf_conntrack.h:				    struct nf_conn *conntrack,
+netfilter/nf_conntrack.h:extern void (*nf_conntrack_destroyed)(struct nf_conn *conntrack);
+netfilter/nf_conntrack.h:extern struct nf_conn nf_conntrack_untracked;
+netfilter/nf_conntrack.h:nf_ct_iterate_cleanup(int (*iter)(struct nf_conn *i, void *data), void *data);
+netfilter/nf_conntrack.h:extern void nf_conntrack_free(struct nf_conn *ct);
+netfilter/nf_conntrack.h:extern struct nf_conn *
+netfilter/nf_conntrack.h:static inline int nf_ct_is_confirmed(struct nf_conn *ct)
+netfilter/nf_conntrack.h:static inline int nf_ct_is_dying(struct nf_conn *ct)
+netfilter/nf_conntrack.h: * basic: nf_conn, nf_conn .. nf_conn_help
+netfilter/nf_conntrack.h: * nat: nf_conn .. nf_conn_nat, nf_conn .. nf_conn_nat .. nf_conn help
+netfilter/nf_conntrack.h:static inline struct nf_conn_nat *nfct_nat(const struct nf_conn *ct)
+netfilter/nf_conntrack.h:static inline struct nf_conn_help *nfct_help(const struct nf_conn *ct)
+netfilter/nf_conntrack.h:static inline struct nf_conn_help *nfct_help(const struct nf_conn *ct)
+netfilter/nf_conntrack_helper.h:		    struct nf_conn *ct,
+netfilter/nf_conntrack_helper.h:	void (*destroy)(struct nf_conn *ct);
+netfilter/nf_conntrack_helper.h:	int (*to_nfattr)(struct sk_buff *skb, const struct nf_conn *ct);
+netfilter/nf_nat.h:extern unsigned int nf_nat_setup_info(struct nf_conn *ct,
+netfilter/nf_nat.h:			     const struct nf_conn *ignored_conntrack);
+netfilter/nf_nat_helper.h:				    struct nf_conn *ct,
+netfilter/nf_nat_helper.h:				    struct nf_conn *ct,
+netfilter/nf_nat_helper.h:			     struct nf_conn *ct,
+netfilter/nf_nat_helper.h:extern void nf_nat_follow_master(struct nf_conn *ct,
+netfilter/nf_conntrack.h.orig:/* nf_conn feature for connections that have a helper */
+netfilter/nf_conntrack.h.orig:	struct nf_conn *master;
+netfilter/nf_conntrack.h.orig:static inline struct nf_conn *
+netfilter/nf_conntrack.h.orig:nf_conntrack_alter_reply(struct nf_conn *conntrack,
+netfilter/nf_conntrack.h.orig:			 const struct nf_conn *ignored_conntrack);
+netfilter/nf_conntrack.h.orig:static inline struct nf_conn *
+netfilter/nf_conntrack.h.orig:	return (struct nf_conn *)skb->nfct;
+netfilter/nf_conntrack.h.orig:static inline void nf_ct_put(struct nf_conn *ct)
+netfilter/nf_conntrack.h.orig:		    const struct nf_conn *ignored_conntrack);
+netfilter/nf_conntrack.h.orig:extern void nf_conntrack_hash_insert(struct nf_conn *ct);
+netfilter/nf_conntrack.h.orig:extern void __nf_ct_refresh_acct(struct nf_conn *ct,
+netfilter/nf_conntrack.h.orig:static inline void nf_ct_refresh_acct(struct nf_conn *ct,
+netfilter/nf_conntrack.h.orig:static inline void nf_ct_refresh(struct nf_conn *ct,
+netfilter/nf_conntrack.h.orig:				    struct nf_conn *conntrack,
+netfilter/nf_conntrack.h.orig:extern void (*nf_conntrack_destroyed)(struct nf_conn *conntrack);
+netfilter/nf_conntrack.h.orig:extern struct nf_conn nf_conntrack_untracked;
+netfilter/nf_conntrack.h.orig:nf_ct_iterate_cleanup(int (*iter)(struct nf_conn *i, void *data), void *data);
+netfilter/nf_conntrack.h.orig:extern void nf_conntrack_free(struct nf_conn *ct);
+netfilter/nf_conntrack.h.orig:extern struct nf_conn *
+netfilter/nf_conntrack.h.orig:static inline int nf_ct_is_confirmed(struct nf_conn *ct)
+netfilter/nf_conntrack.h.orig:static inline int nf_ct_is_dying(struct nf_conn *ct)
+netfilter/nf_conntrack.h.orig: * basic: nf_conn, nf_conn .. nf_conn_help
+netfilter/nf_conntrack.h.orig: * nat: nf_conn .. nf_conn_nat, nf_conn .. nf_conn_nat .. nf_conn help
+netfilter/nf_conntrack.h.orig:static inline struct nf_conn_nat *nfct_nat(const struct nf_conn *ct)
+netfilter/nf_conntrack.h.orig:static inline struct nf_conn_help *nfct_help(const struct nf_conn *ct)
+netfilter/nf_conntrack.h.orig:static inline struct nf_conn_help *nfct_help(const struct nf_conn *ct)

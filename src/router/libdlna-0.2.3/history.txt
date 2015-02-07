@@ -1,0 +1,14 @@
+
+Project TAG: libdlna-1_0
+======================
+Reasons:
+	1. First release
+
+Modification:
+
+Search patterns:
+
+Author:
+	Dora Liu
+
+

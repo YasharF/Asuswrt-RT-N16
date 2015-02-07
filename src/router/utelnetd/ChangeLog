@@ -1,0 +1,82 @@
+2003-08-08	Robert Schwebel <r.schwebel@pengutronix.de>
+
+		- Revision 0.1.9 released
+		- fixed Makefile for BSD
+		  (thanks to Sepherosa Ziehau <sepherosa@myrealbox.com>)
+
+2003-08-07	Robert Schwebel <r.schwebel@pengutronix.de>
+
+		- Revision 0.1.8 released
+		- optimized BSD compile option; run 'make BSD=1' 
+		  on BSD systems
+
+2003-08-06	Robert Schwebel <r.schwebel@pengutronix.de>
+
+		- Revision 0.1.7 released
+		- changed Makefile and utelnetd.c to work with BSD
+		  (thanks to Sepherosa Ziehau <sepherosa@myrealbox.com>)
+
+2003-02-27	Robert Schwebel <r.schwebel@pengutronix.de>
+
+		- Revision 0.1.6 released
+		- fixed controlling tty problem: it was not possible to break
+		  a program with ctrl-c. 
+		  (thanks to Kai-Uwe Bloem <kai-uwe.bloem@auerswald.de>)
+
+2003-02-23	Robert Schwebel <r.schwebel@pengutronix.de>
+
+		- Revision 0.1.5 released
+		- INSTALL added in makefile 
+		  (thanks to Jules Colding <JuBColding@yorkref.com>)
+
+		Artur Bajor <abajor@cirow.pl>
+
+		- Better syslogd support (log application name & PID)
+		- New USE_SYSLOG & USE_ISSUE directive to turn off this features
+
+2002-12-13	Robert Schwebel <r.schwebel@pengutronix.de>
+
+		- Revision 0.1.4 released
+		- getpt() was undefined; fixed.
+
+		Artur Bajor <abajor@cirow.pl>
+
+		- Diplay ISSUE_FILE
+		- Logging to syslogd
+
+2002-08-02	Robert Schwebel <r.schwebel@pengutronix.de
+
+		- Revision 0.1.3 released
+
+		Gabriel L. Somlo <somlo@cs.colostate.edu>
+		Julien Herfurth <jherfurth@easynet.be>
+
+		- Option '-i <interface>' added: makes it possible to
+		  restrict the access to one interface
+
+
+		Richard Wilson <rich_wilson@agilent.com>
+
+		- Segfault fixed: utelnetd broke when the argument after -l
+		  was no valid executable
+
+
+2002-05-25	Robert Schwebel <r.schwebel@pengutronix.de>
+
+		- Revision 0.1.2 released
+		- typo fixed
+		- Makefile fixed: DEBUG=1 works now 
+		  (thanks to Rich Wilson <rich_wilson@agilent.com>)
+
+
+2002-05-14      Robert Schwebel <r.schwebel@pengutronix.de>
+
+                - Revision 0.1.1 released (initial revision)
+                - port of Joerg Schmitz-Linneweber's telnetd
+                  for busybox
+                - getpty() adapted to devfs
+                - -d switch added (daemonize)
+                - help message added
+
+
+

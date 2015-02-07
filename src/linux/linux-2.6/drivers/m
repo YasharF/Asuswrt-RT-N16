@@ -1,0 +1,535 @@
+只在 /root/brcm-2288/src/linux/linux-2.6/drivers/net/bcm57xx 存在：bcm57xx_dbgsym.ko
+二元碼檔 net/bcm57xx/bcm57xx.ko 與 /root/brcm-2288/src/linux/linux-2.6/drivers/net/bcm57xx/bcm57xx.ko 不同
+diff -rt net/bcm57xx/.bcm57xx.ko.cmd /root/brcm-2288/src/linux/linux-2.6/drivers/net/bcm57xx/.bcm57xx.ko.cmd
+1c1
+< cmd_drivers/net/bcm57xx/bcm57xx.ko := mipsel-linux-ld  -m elf32ltsmip -r -o drivers/net/bcm57xx/bcm57xx.ko drivers/net/bcm57xx/bcm57xx.o drivers/net/bcm57xx/bcm57xx.mod.o
+---
+> cmd_drivers/net/bcm57xx/bcm57xx.ko := mipsel-uclibc-ld  -m elf32ltsmip -r -o drivers/net/bcm57xx/bcm57xx.ko drivers/net/bcm57xx/bcm57xx.o drivers/net/bcm57xx/bcm57xx.mod.o
+diff -rt net/bcm57xx/bcm57xx.mod.c /root/brcm-2288/src/linux/linux-2.6/drivers/net/bcm57xx/bcm57xx.mod.c
+27c27
+<         { 0xecb00d8a, "alloc_etherdev" },
+---
+>         { 0xdda7cd8c, "alloc_etherdev" },
+31c31
+<         { 0xc0d431e8, "netif_carrier_on" },
+---
+>         { 0xab6a0878, "netif_carrier_on" },
+33c33
+<         { 0xd4503074, "skb_copy" },
+---
+>         { 0xeec53e2b, "skb_copy" },
+36c36
+<         { 0x80875765, "netif_carrier_off" },
+---
+>         { 0x7108749, "netif_carrier_off" },
+61c61
+<         { 0x3289cdb0, "free_netdev" },
+---
+>         { 0xc184f15c, "free_netdev" },
+63c63
+<         { 0x1535eeb3, "register_netdev" },
+---
+>         { 0x643c7cd0, "register_netdev" },
+65c65
+<         { 0xd350bc71, "netif_receive_skb" },
+---
+>         { 0x6fa5b7b8, "netif_receive_skb" },
+75c75
+<         { 0xc664e893, "dev_kfree_skb_any" },
+---
+>         { 0xf708347f, "dev_kfree_skb_any" },
+81c81
+<         { 0x69a9ae70, "skb_over_panic" },
+---
+>         { 0x3cb9837e, "skb_over_panic" },
+83,85c83,85
+<         { 0x32045a28, "netif_device_attach" },
+<         { 0x1abc7757, "netif_device_detach" },
+<         { 0xf94ef947, "__alloc_skb" },
+---
+>         { 0xfab1f179, "netif_device_attach" },
+>         { 0x2edee302, "netif_device_detach" },
+>         { 0x7da3720c, "__alloc_skb" },
+92c92
+<         { 0x6df80250, "kfree_skb" },
+---
+>         { 0xecd87dfa, "kfree_skb" },
+94c94
+<         { 0x1fd23449, "eth_type_trans" },
+---
+>         { 0xc8c63418, "eth_type_trans" },
+96c96
+<         { 0x82007fb5, "pskb_expand_head" },
+---
+>         { 0x8bf4c54f, "pskb_expand_head" },
+110c110
+<         { 0x6e631e47, "unregister_netdev" },
+---
+>         { 0x8a81c0aa, "unregister_netdev" },
+113c113
+<         { 0x2665d55, "__netif_schedule" },
+---
+>         { 0x18e9636b, "__netif_schedule" },
+118c118
+<         { 0xb724793, "__netif_rx_schedule" },
+---
+>         { 0x5a29a73d, "__netif_rx_schedule" },
+120c120
+<         { 0xb21898c1, "per_cpu__softnet_data" },
+---
+>         { 0xc8246073, "per_cpu__softnet_data" },
+二元碼檔 net/bcm57xx/bcm57xx.mod.o 與 /root/brcm-2288/src/linux/linux-2.6/drivers/net/bcm57xx/bcm57xx.mod.o 不同
+diff -rt net/bcm57xx/.bcm57xx.mod.o.cmd /root/brcm-2288/src/linux/linux-2.6/drivers/net/bcm57xx/.bcm57xx.mod.o.cmd
+1c1
+< cmd_drivers/net/bcm57xx/bcm57xx.mod.o := mipsel-linux-gcc -Wp,-MD,drivers/net/bcm57xx/.bcm57xx.mod.o.d  -nostdinc -isystem /root/toolchains/hndtools-mipsel-linux-uclibc-4.1.2-32/bin/../lib/gcc/mipsel-linux-uclibc/4.1.2/include -D__KERNEL__ -Iinclude  -include include/linux/autoconf.h -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -I../../include -DBCMDRIVER -Dlinux -O2  -mabi=32 -G 0 -mno-abicalls -fno-pic -pipe -msoft-float -ggdb -ffreestanding  -march=mips32 -Wa,-mips32 -Wa,--trap  -Iinclude/asm-mips/mach-generic -fomit-frame-pointer  -fno-stack-protector -Wdeclaration-after-statement -Wno-pointer-sign -DHNDCTF -DCTFPOOL    -D"KBUILD_STR(s)=\#s" -D"KBUILD_BASENAME=KBUILD_STR(bcm57xx.mod)"  -D"KBUILD_MODNAME=KBUILD_STR(bcm57xx)" -DMODULE -mlong-calls -fno-common -c -o drivers/net/bcm57xx/bcm57xx.mod.o drivers/net/bcm57xx/bcm57xx.mod.c
+---
+> cmd_drivers/net/bcm57xx/bcm57xx.mod.o := mipsel-uclibc-gcc -Wp,-MD,drivers/net/bcm57xx/.bcm57xx.mod.o.d  -nostdinc -isystem /root/toolchains/hndtools-mipsel-linux-uclibc-4.1.2-32/bin/../lib/gcc/mipsel-linux-uclibc/4.1.2/include -D__KERNEL__ -Iinclude  -include include/linux/autoconf.h -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -I../../include -DBCMDRIVER -Dlinux -O2  -mabi=32 -G 0 -mno-abicalls -fno-pic -pipe -msoft-float -ggdb -ffreestanding  -march=mips32 -Wa,-mips32 -Wa,--trap  -Iinclude/asm-mips/mach-generic -fomit-frame-pointer  -fno-stack-protector -Wdeclaration-after-statement -Wno-pointer-sign -DHNDCTF -DCTFPOOL    -D"KBUILD_STR(s)=\#s" -D"KBUILD_BASENAME=KBUILD_STR(bcm57xx.mod)"  -D"KBUILD_MODNAME=KBUILD_STR(bcm57xx)" -DMODULE -mlong-calls -fno-common -c -o drivers/net/bcm57xx/bcm57xx.mod.o drivers/net/bcm57xx/bcm57xx.mod.c
+二元碼檔 net/bcm57xx/bcm57xx.o 與 /root/brcm-2288/src/linux/linux-2.6/drivers/net/bcm57xx/bcm57xx.o 不同
+diff -rt net/bcm57xx/.bcm57xx.o.cmd /root/brcm-2288/src/linux/linux-2.6/drivers/net/bcm57xx/.bcm57xx.o.cmd
+1c1
+< cmd_drivers/net/bcm57xx/bcm57xx.o := mipsel-linux-ld  -m elf32ltsmip  -r -o drivers/net/bcm57xx/bcm57xx.o drivers/net/bcm57xx/../../../../../bcm57xx/linux/b57um.o drivers/net/bcm57xx/../../../../../bcm57xx/linux/b57proc.o drivers/net/bcm57xx/../../../../../bcm57xx/linux/b57diag.o drivers/net/bcm57xx/../../../../../bcm57xx/sys/tigon3.o drivers/net/bcm57xx/../../../../../bcm57xx/sys/autoneg.o drivers/net/bcm57xx/../../../../../bcm57xx/sys/5701rls.o drivers/net/bcm57xx/../../../../../bcm57xx/sys/tcp_seg.o drivers/net/bcm57xx/../../../../../shared/hndgige.o
+---
+> cmd_drivers/net/bcm57xx/bcm57xx.o := mipsel-uclibc-ld  -m elf32ltsmip  -r -o drivers/net/bcm57xx/bcm57xx.o drivers/net/bcm57xx/../../../../../bcm57xx/linux/b57um.o drivers/net/bcm57xx/../../../../../bcm57xx/linux/b57proc.o drivers/net/bcm57xx/../../../../../bcm57xx/linux/b57diag.o drivers/net/bcm57xx/../../../../../bcm57xx/sys/tigon3.o drivers/net/bcm57xx/../../../../../bcm57xx/sys/autoneg.o drivers/net/bcm57xx/../../../../../bcm57xx/sys/5701rls.o drivers/net/bcm57xx/../../../../../bcm57xx/sys/tcp_seg.o drivers/net/bcm57xx/../../../../../shared/hndgige.o
+diff -rt net/bcm57xx/.built-in.o.cmd /root/brcm-2288/src/linux/linux-2.6/drivers/net/bcm57xx/.built-in.o.cmd
+1c1
+< cmd_drivers/net/bcm57xx/built-in.o :=  rm -f drivers/net/bcm57xx/built-in.o; mipsel-linux-ar rcs drivers/net/bcm57xx/built-in.o
+---
+> cmd_drivers/net/bcm57xx/built-in.o :=  rm -f drivers/net/bcm57xx/built-in.o; mipsel-uclibc-ar rcs drivers/net/bcm57xx/built-in.o
+只在 net 存在：bcm57xx.orig
+二元碼檔 net/bsd_comp.o 與 /root/brcm-2288/src/linux/linux-2.6/drivers/net/bsd_comp.o 不同
+diff -rt net/.bsd_comp.o.cmd /root/brcm-2288/src/linux/linux-2.6/drivers/net/.bsd_comp.o.cmd
+1c1
+< cmd_drivers/net/bsd_comp.o := mipsel-linux-gcc -Wp,-MD,drivers/net/.bsd_comp.o.d  -nostdinc -isystem /root/toolchains/hndtools-mipsel-linux-uclibc-4.1.2-32/bin/../lib/gcc/mipsel-linux-uclibc/4.1.2/include -D__KERNEL__ -Iinclude  -include include/linux/autoconf.h -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -I../../include -DBCMDRIVER -Dlinux -O2  -mabi=32 -G 0 -mno-abicalls -fno-pic -pipe -msoft-float -ggdb -ffreestanding  -march=mips32 -Wa,-mips32 -Wa,--trap  -Iinclude/asm-mips/mach-generic -fomit-frame-pointer  -fno-stack-protector -Wdeclaration-after-statement -Wno-pointer-sign -DHNDCTF -DCTFPOOL    -D"KBUILD_STR(s)=\#s" -D"KBUILD_BASENAME=KBUILD_STR(bsd_comp)"  -D"KBUILD_MODNAME=KBUILD_STR(bsd_comp)" -c -o drivers/net/.tmp_bsd_comp.o drivers/net/bsd_comp.c
+---
+> cmd_drivers/net/bsd_comp.o := mipsel-uclibc-gcc -Wp,-MD,drivers/net/.bsd_comp.o.d  -nostdinc -isystem /root/toolchains/hndtools-mipsel-linux-uclibc-4.1.2-32/bin/../lib/gcc/mipsel-linux-uclibc/4.1.2/include -D__KERNEL__ -Iinclude  -include include/linux/autoconf.h -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -I../../include -DBCMDRIVER -Dlinux -O2  -mabi=32 -G 0 -mno-abicalls -fno-pic -pipe -msoft-float -ggdb -ffreestanding  -march=mips32 -Wa,-mips32 -Wa,--trap  -Iinclude/asm-mips/mach-generic -fomit-frame-pointer  -fno-stack-protector -Wdeclaration-after-statement -Wno-pointer-sign -DHNDCTF -DCTFPOOL    -D"KBUILD_STR(s)=\#s" -D"KBUILD_BASENAME=KBUILD_STR(bsd_comp)"  -D"KBUILD_MODNAME=KBUILD_STR(bsd_comp)" -c -o drivers/net/.tmp_bsd_comp.o drivers/net/bsd_comp.c
+二元碼檔 net/built-in.o 與 /root/brcm-2288/src/linux/linux-2.6/drivers/net/built-in.o 不同
+diff -rt net/.built-in.o.cmd /root/brcm-2288/src/linux/linux-2.6/drivers/net/.built-in.o.cmd
+1c1
+< cmd_drivers/net/built-in.o :=  mipsel-linux-ld  -m elf32ltsmip  -r -o drivers/net/built-in.o drivers/net/Space.o drivers/net/loopback.o drivers/net/ppp_generic.o drivers/net/ppp_async.o drivers/net/ppp_synctty.o drivers/net/ppp_deflate.o drivers/net/bsd_comp.o drivers/net/ppp_mppe.o drivers/net/pppox.o drivers/net/pppoe.o drivers/net/pppol2tp.o drivers/net/pptp.o drivers/net/slhc.o drivers/net/hnd/built-in.o drivers/net/wireless/built-in.o
+---
+> cmd_drivers/net/built-in.o :=  mipsel-uclibc-ld  -m elf32ltsmip  -r -o drivers/net/built-in.o drivers/net/Space.o drivers/net/loopback.o drivers/net/ppp_generic.o drivers/net/ppp_async.o drivers/net/ppp_synctty.o drivers/net/ppp_deflate.o drivers/net/bsd_comp.o drivers/net/ppp_mppe.o drivers/net/pppox.o drivers/net/pppoe.o drivers/net/slhc.o drivers/net/hnd/built-in.o drivers/net/wireless/built-in.o
+diff -rt net/ctf/.built-in.o.cmd /root/brcm-2288/src/linux/linux-2.6/drivers/net/ctf/.built-in.o.cmd
+1c1
+< cmd_drivers/net/ctf/built-in.o :=  rm -f drivers/net/ctf/built-in.o; mipsel-linux-ar rcs drivers/net/ctf/built-in.o
+---
+> cmd_drivers/net/ctf/built-in.o :=  rm -f drivers/net/ctf/built-in.o; mipsel-uclibc-ar rcs drivers/net/ctf/built-in.o
+只在 /root/brcm-2288/src/linux/linux-2.6/drivers/net/ctf 存在：ctf_dbgsym.ko
+二元碼檔 net/ctf/ctf.ko 與 /root/brcm-2288/src/linux/linux-2.6/drivers/net/ctf/ctf.ko 不同
+diff -rt net/ctf/.ctf.ko.cmd /root/brcm-2288/src/linux/linux-2.6/drivers/net/ctf/.ctf.ko.cmd
+1c1
+< cmd_drivers/net/ctf/ctf.ko := mipsel-linux-ld  -m elf32ltsmip -r -o drivers/net/ctf/ctf.ko drivers/net/ctf/ctf.o drivers/net/ctf/ctf.mod.o
+---
+> cmd_drivers/net/ctf/ctf.ko := mipsel-uclibc-ld  -m elf32ltsmip -r -o drivers/net/ctf/ctf.ko drivers/net/ctf/ctf.o drivers/net/ctf/ctf.mod.o
+diff -rt net/ctf/ctf.mod.c /root/brcm-2288/src/linux/linux-2.6/drivers/net/ctf/ctf.mod.c
+31c31
+<         { 0x2d42aa7a, "skb_under_panic" },
+---
+>         { 0x4b87a999, "skb_under_panic" },
+35c35
+<         { 0x984542b8, "dev_queue_xmit" },
+---
+>         { 0xfd69715c, "dev_queue_xmit" },
+二元碼檔 net/ctf/ctf.mod.o 與 /root/brcm-2288/src/linux/linux-2.6/drivers/net/ctf/ctf.mod.o 不同
+diff -rt net/ctf/.ctf.mod.o.cmd /root/brcm-2288/src/linux/linux-2.6/drivers/net/ctf/.ctf.mod.o.cmd
+1c1
+< cmd_drivers/net/ctf/ctf.mod.o := mipsel-linux-gcc -Wp,-MD,drivers/net/ctf/.ctf.mod.o.d  -nostdinc -isystem /root/toolchains/hndtools-mipsel-linux-uclibc-4.1.2-32/bin/../lib/gcc/mipsel-linux-uclibc/4.1.2/include -D__KERNEL__ -Iinclude  -include include/linux/autoconf.h -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -I../../include -DBCMDRIVER -Dlinux -O2  -mabi=32 -G 0 -mno-abicalls -fno-pic -pipe -msoft-float -ggdb -ffreestanding  -march=mips32 -Wa,-mips32 -Wa,--trap  -Iinclude/asm-mips/mach-generic -fomit-frame-pointer  -fno-stack-protector -Wdeclaration-after-statement -Wno-pointer-sign -DHNDCTF -DCTFPOOL    -D"KBUILD_STR(s)=\#s" -D"KBUILD_BASENAME=KBUILD_STR(ctf.mod)"  -D"KBUILD_MODNAME=KBUILD_STR(ctf)" -DMODULE -mlong-calls -fno-common -c -o drivers/net/ctf/ctf.mod.o drivers/net/ctf/ctf.mod.c
+---
+> cmd_drivers/net/ctf/ctf.mod.o := mipsel-uclibc-gcc -Wp,-MD,drivers/net/ctf/.ctf.mod.o.d  -nostdinc -isystem /root/toolchains/hndtools-mipsel-linux-uclibc-4.1.2-32/bin/../lib/gcc/mipsel-linux-uclibc/4.1.2/include -D__KERNEL__ -Iinclude  -include include/linux/autoconf.h -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -I../../include -DBCMDRIVER -Dlinux -O2  -mabi=32 -G 0 -mno-abicalls -fno-pic -pipe -msoft-float -ggdb -ffreestanding  -march=mips32 -Wa,-mips32 -Wa,--trap  -Iinclude/asm-mips/mach-generic -fomit-frame-pointer  -fno-stack-protector -Wdeclaration-after-statement -Wno-pointer-sign -DHNDCTF -DCTFPOOL    -D"KBUILD_STR(s)=\#s" -D"KBUILD_BASENAME=KBUILD_STR(ctf.mod)"  -D"KBUILD_MODNAME=KBUILD_STR(ctf)" -DMODULE -mlong-calls -fno-common -c -o drivers/net/ctf/ctf.mod.o drivers/net/ctf/ctf.mod.c
+diff -rt net/ctf/.ctf.o.cmd /root/brcm-2288/src/linux/linux-2.6/drivers/net/ctf/.ctf.o.cmd
+1c1
+< cmd_drivers/net/ctf/ctf.o := mipsel-linux-ld  -m elf32ltsmip  -r -o drivers/net/ctf/ctf.o drivers/net/ctf/../../../../../router/ctf/linux/ctf.o
+---
+> cmd_drivers/net/ctf/ctf.o := mipsel-uclibc-ld  -m elf32ltsmip  -r -o drivers/net/ctf/ctf.o drivers/net/ctf/../../../../../router/ctf/linux/ctf.o
+diff -rt net/emf/.built-in.o.cmd /root/brcm-2288/src/linux/linux-2.6/drivers/net/emf/.built-in.o.cmd
+1c1
+< cmd_drivers/net/emf/built-in.o :=  rm -f drivers/net/emf/built-in.o; mipsel-linux-ar rcs drivers/net/emf/built-in.o
+---
+> cmd_drivers/net/emf/built-in.o :=  rm -f drivers/net/emf/built-in.o; mipsel-uclibc-ar rcs drivers/net/emf/built-in.o
+只在 net/emf 存在：emf
+只在 /root/brcm-2288/src/linux/linux-2.6/drivers/net/emf 存在：emf_dbgsym.ko
+二元碼檔 net/emf/emf.ko 與 /root/brcm-2288/src/linux/linux-2.6/drivers/net/emf/emf.ko 不同
+diff -rt net/emf/.emf.ko.cmd /root/brcm-2288/src/linux/linux-2.6/drivers/net/emf/.emf.ko.cmd
+1c1
+< cmd_drivers/net/emf/emf.ko := mipsel-linux-ld  -m elf32ltsmip -r -o drivers/net/emf/emf.ko drivers/net/emf/emf.o drivers/net/emf/emf.mod.o
+---
+> cmd_drivers/net/emf/emf.ko := mipsel-uclibc-ld  -m elf32ltsmip -r -o drivers/net/emf/emf.ko drivers/net/emf/emf.o drivers/net/emf/emf.mod.o
+diff -rt net/emf/emf.mod.c /root/brcm-2288/src/linux/linux-2.6/drivers/net/emf/emf.mod.c
+23c23
+<         { 0x93dd02ce, "sock_release" },
+---
+>         { 0x3997d8c4, "sock_release" },
+25c25
+<         { 0xe22a9e2a, "dev_get_by_name" },
+---
+>         { 0x7835aef8, "dev_get_by_name" },
+27c27
+<         { 0xb6b381c, "nf_register_hook" },
+---
+>         { 0x67cd632d, "nf_register_hook" },
+29,30c29,30
+<         { 0xda6a549e, "netif_rx" },
+<         { 0x399f90d5, "netlink_kernel_create" },
+---
+>         { 0x283b760a, "netif_rx" },
+>         { 0xbb90adb2, "netlink_kernel_create" },
+34c34
+<         { 0x360e894a, "netlink_unicast" },
+---
+>         { 0xea65a41e, "netlink_unicast" },
+37c37
+<         { 0x6df80250, "kfree_skb" },
+---
+>         { 0xecd87dfa, "kfree_skb" },
+39c39
+<         { 0x2d42aa7a, "skb_under_panic" },
+---
+>         { 0x4b87a999, "skb_under_panic" },
+43c43
+<         { 0x66c7fc9, "nf_unregister_hook" },
+---
+>         { 0x18a1903a, "nf_unregister_hook" },
+46c46
+<         { 0x69a72b71, "skb_dequeue" },
+---
+>         { 0x16574d4e, "skb_dequeue" },
+48c48
+<         { 0x984542b8, "dev_queue_xmit" },
+---
+>         { 0xfd69715c, "dev_queue_xmit" },
+二元碼檔 net/emf/emf.mod.o 與 /root/brcm-2288/src/linux/linux-2.6/drivers/net/emf/emf.mod.o 不同
+diff -rt net/emf/.emf.mod.o.cmd /root/brcm-2288/src/linux/linux-2.6/drivers/net/emf/.emf.mod.o.cmd
+1c1
+< cmd_drivers/net/emf/emf.mod.o := mipsel-linux-gcc -Wp,-MD,drivers/net/emf/.emf.mod.o.d  -nostdinc -isystem /root/toolchains/hndtools-mipsel-linux-uclibc-4.1.2-32/bin/../lib/gcc/mipsel-linux-uclibc/4.1.2/include -D__KERNEL__ -Iinclude  -include include/linux/autoconf.h -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -I../../include -DBCMDRIVER -Dlinux -O2  -mabi=32 -G 0 -mno-abicalls -fno-pic -pipe -msoft-float -ggdb -ffreestanding  -march=mips32 -Wa,-mips32 -Wa,--trap  -Iinclude/asm-mips/mach-generic -fomit-frame-pointer  -fno-stack-protector -Wdeclaration-after-statement -Wno-pointer-sign -DHNDCTF -DCTFPOOL    -D"KBUILD_STR(s)=\#s" -D"KBUILD_BASENAME=KBUILD_STR(emf.mod)"  -D"KBUILD_MODNAME=KBUILD_STR(emf)" -DMODULE -mlong-calls -fno-common -c -o drivers/net/emf/emf.mod.o drivers/net/emf/emf.mod.c
+---
+> cmd_drivers/net/emf/emf.mod.o := mipsel-uclibc-gcc -Wp,-MD,drivers/net/emf/.emf.mod.o.d  -nostdinc -isystem /root/toolchains/hndtools-mipsel-linux-uclibc-4.1.2-32/bin/../lib/gcc/mipsel-linux-uclibc/4.1.2/include -D__KERNEL__ -Iinclude  -include include/linux/autoconf.h -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -I../../include -DBCMDRIVER -Dlinux -O2  -mabi=32 -G 0 -mno-abicalls -fno-pic -pipe -msoft-float -ggdb -ffreestanding  -march=mips32 -Wa,-mips32 -Wa,--trap  -Iinclude/asm-mips/mach-generic -fomit-frame-pointer  -fno-stack-protector -Wdeclaration-after-statement -Wno-pointer-sign -DHNDCTF -DCTFPOOL    -D"KBUILD_STR(s)=\#s" -D"KBUILD_BASENAME=KBUILD_STR(emf.mod)"  -D"KBUILD_MODNAME=KBUILD_STR(emf)" -DMODULE -mlong-calls -fno-common -c -o drivers/net/emf/emf.mod.o drivers/net/emf/emf.mod.c
+二元碼檔 net/emf/emf.o 與 /root/brcm-2288/src/linux/linux-2.6/drivers/net/emf/emf.o 不同
+diff -rt net/emf/.emf.o.cmd /root/brcm-2288/src/linux/linux-2.6/drivers/net/emf/.emf.o.cmd
+1c1
+< cmd_drivers/net/emf/emf.o := mipsel-linux-ld  -m elf32ltsmip  -r -o drivers/net/emf/emf.o drivers/net/emf/../../../../../emf/emf/emfc.o drivers/net/emf/../../../../../router/emf/emf/emf_linux.o
+---
+> cmd_drivers/net/emf/emf.o := mipsel-uclibc-ld  -m elf32ltsmip  -r -o drivers/net/emf/emf.o drivers/net/emf/../../../../../emf/emf/emfc.o drivers/net/emf/../../../../../router/emf/emf/emf_linux.o
+diff -rt net/et/.built-in.o.cmd /root/brcm-2288/src/linux/linux-2.6/drivers/net/et/.built-in.o.cmd
+1c1
+< cmd_drivers/net/et/built-in.o :=  rm -f drivers/net/et/built-in.o; mipsel-linux-ar rcs drivers/net/et/built-in.o
+---
+> cmd_drivers/net/et/built-in.o :=  rm -f drivers/net/et/built-in.o; mipsel-uclibc-ar rcs drivers/net/et/built-in.o
+只在 /root/brcm-2288/src/linux/linux-2.6/drivers/net/et 存在：et_dbgsym.ko
+二元碼檔 net/et/et.ko 與 /root/brcm-2288/src/linux/linux-2.6/drivers/net/et/et.ko 不同
+diff -rt net/et/.et.ko.cmd /root/brcm-2288/src/linux/linux-2.6/drivers/net/et/.et.ko.cmd
+1c1
+< cmd_drivers/net/et/et.ko := mipsel-linux-ld  -m elf32ltsmip -r -o drivers/net/et/et.ko drivers/net/et/et.o drivers/net/et/et.mod.o
+---
+> cmd_drivers/net/et/et.ko := mipsel-uclibc-ld  -m elf32ltsmip -r -o drivers/net/et/et.ko drivers/net/et/et.o drivers/net/et/et.mod.o
+diff -rt net/et/et.mod.c /root/brcm-2288/src/linux/linux-2.6/drivers/net/et/et.mod.c
+31c31
+<         { 0xecb00d8a, "alloc_etherdev" },
+---
+>         { 0xdda7cd8c, "alloc_etherdev" },
+44c44
+<         { 0xda6a549e, "netif_rx" },
+---
+>         { 0x283b760a, "netif_rx" },
+55c55
+<         { 0x3289cdb0, "free_netdev" },
+---
+>         { 0xc184f15c, "free_netdev" },
+58c58
+<         { 0x1535eeb3, "register_netdev" },
+---
+>         { 0x643c7cd0, "register_netdev" },
+74,75c74,75
+<         { 0x32045a28, "netif_device_attach" },
+<         { 0x1abc7757, "netif_device_detach" },
+---
+>         { 0xfab1f179, "netif_device_attach" },
+>         { 0x2edee302, "netif_device_detach" },
+80c80
+<         { 0x2d42aa7a, "skb_under_panic" },
+---
+>         { 0x4b87a999, "skb_under_panic" },
+82c82
+<         { 0x1fd23449, "eth_type_trans" },
+---
+>         { 0xc8c63418, "eth_type_trans" },
+95,96c95,96
+<         { 0x69a72b71, "skb_dequeue" },
+<         { 0x6e631e47, "unregister_netdev" },
+---
+>         { 0x16574d4e, "skb_dequeue" },
+>         { 0x8a81c0aa, "unregister_netdev" },
+99c99
+<         { 0x2665d55, "__netif_schedule" },
+---
+>         { 0x18e9636b, "__netif_schedule" },
+二元碼檔 net/et/et.mod.o 與 /root/brcm-2288/src/linux/linux-2.6/drivers/net/et/et.mod.o 不同
+diff -rt net/et/.et.mod.o.cmd /root/brcm-2288/src/linux/linux-2.6/drivers/net/et/.et.mod.o.cmd
+1c1
+< cmd_drivers/net/et/et.mod.o := mipsel-linux-gcc -Wp,-MD,drivers/net/et/.et.mod.o.d  -nostdinc -isystem /root/toolchains/hndtools-mipsel-linux-uclibc-4.1.2-32/bin/../lib/gcc/mipsel-linux-uclibc/4.1.2/include -D__KERNEL__ -Iinclude  -include include/linux/autoconf.h -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -I../../include -DBCMDRIVER -Dlinux -O2  -mabi=32 -G 0 -mno-abicalls -fno-pic -pipe -msoft-float -ggdb -ffreestanding  -march=mips32 -Wa,-mips32 -Wa,--trap  -Iinclude/asm-mips/mach-generic -fomit-frame-pointer  -fno-stack-protector -Wdeclaration-after-statement -Wno-pointer-sign -DHNDCTF -DCTFPOOL    -D"KBUILD_STR(s)=\#s" -D"KBUILD_BASENAME=KBUILD_STR(et.mod)"  -D"KBUILD_MODNAME=KBUILD_STR(et)" -DMODULE -mlong-calls -fno-common -c -o drivers/net/et/et.mod.o drivers/net/et/et.mod.c
+---
+> cmd_drivers/net/et/et.mod.o := mipsel-uclibc-gcc -Wp,-MD,drivers/net/et/.et.mod.o.d  -nostdinc -isystem /root/toolchains/hndtools-mipsel-linux-uclibc-4.1.2-32/bin/../lib/gcc/mipsel-linux-uclibc/4.1.2/include -D__KERNEL__ -Iinclude  -include include/linux/autoconf.h -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -I../../include -DBCMDRIVER -Dlinux -O2  -mabi=32 -G 0 -mno-abicalls -fno-pic -pipe -msoft-float -ggdb -ffreestanding  -march=mips32 -Wa,-mips32 -Wa,--trap  -Iinclude/asm-mips/mach-generic -fomit-frame-pointer  -fno-stack-protector -Wdeclaration-after-statement -Wno-pointer-sign -DHNDCTF -DCTFPOOL    -D"KBUILD_STR(s)=\#s" -D"KBUILD_BASENAME=KBUILD_STR(et.mod)"  -D"KBUILD_MODNAME=KBUILD_STR(et)" -DMODULE -mlong-calls -fno-common -c -o drivers/net/et/et.mod.o drivers/net/et/et.mod.c
+二元碼檔 net/et/et.o 與 /root/brcm-2288/src/linux/linux-2.6/drivers/net/et/et.o 不同
+diff -rt net/et/.et.o.cmd /root/brcm-2288/src/linux/linux-2.6/drivers/net/et/.et.o.cmd
+1c1
+< cmd_drivers/net/et/et.o := mipsel-linux-ld  -m elf32ltsmip  -r -o drivers/net/et/et.o drivers/net/et/../../../../../et/sys/et_linux.o drivers/net/et/../../../../../et/sys/etc.o drivers/net/et/../../../../../et/sys/etc47xx.o drivers/net/et/../../../../../et/sys/etc_adm.o drivers/net/et/../../../../../et/sys/etcgmac.o
+---
+> cmd_drivers/net/et/et.o := mipsel-uclibc-ld  -m elf32ltsmip  -r -o drivers/net/et/et.o drivers/net/et/../../../../../et/sys/et_linux.o drivers/net/et/../../../../../et/sys/etc.o drivers/net/et/../../../../../et/sys/etc47xx.o drivers/net/et/../../../../../et/sys/etc_adm.o drivers/net/et/../../../../../et/sys/etcgmac.o
+只在 net 存在：et.orig
+二元碼檔 net/hnd/built-in.o 與 /root/brcm-2288/src/linux/linux-2.6/drivers/net/hnd/built-in.o 不同
+diff -rt net/hnd/.built-in.o.cmd /root/brcm-2288/src/linux/linux-2.6/drivers/net/hnd/.built-in.o.cmd
+1c1
+< cmd_drivers/net/hnd/built-in.o :=  mipsel-linux-ld  -m elf32ltsmip  -r -o drivers/net/hnd/built-in.o drivers/net/hnd/hnd.o drivers/net/hnd/shared_ksyms.o
+---
+> cmd_drivers/net/hnd/built-in.o :=  mipsel-uclibc-ld  -m elf32ltsmip  -r -o drivers/net/hnd/built-in.o drivers/net/hnd/hnd.o drivers/net/hnd/shared_ksyms.o
+二元碼檔 net/hnd/hnd.o 與 /root/brcm-2288/src/linux/linux-2.6/drivers/net/hnd/hnd.o 不同
+diff -rt net/hnd/.hnd.o.cmd /root/brcm-2288/src/linux/linux-2.6/drivers/net/hnd/.hnd.o.cmd
+1c1
+< cmd_drivers/net/hnd/hnd.o := mipsel-linux-ld  -m elf32ltsmip  -r -o drivers/net/hnd/hnd.o drivers/net/hnd/../../../../../shared/aiutils.o drivers/net/hnd/../../../../../shared/bcmotp.o drivers/net/hnd/../../../../../shared/bcmsrom.o drivers/net/hnd/../../../../../shared/bcmutils.o drivers/net/hnd/../../../../../shared/hnddma.o drivers/net/hnd/../../../../../shared/hndpmu.o drivers/net/hnd/../../../../../shared/linux_osl.o drivers/net/hnd/../../../../../shared/nicpci.o drivers/net/hnd/../../../../../shared/sbutils.o drivers/net/hnd/../../../../../shared/siutils.o drivers/net/hnd/../../../../../shared/bcmrobo.o
+---
+> cmd_drivers/net/hnd/hnd.o := mipsel-uclibc-ld  -m elf32ltsmip  -r -o drivers/net/hnd/hnd.o drivers/net/hnd/../../../../../shared/aiutils.o drivers/net/hnd/../../../../../shared/bcmotp.o drivers/net/hnd/../../../../../shared/bcmsrom.o drivers/net/hnd/../../../../../shared/bcmutils.o drivers/net/hnd/../../../../../shared/hnddma.o drivers/net/hnd/../../../../../shared/hndpmu.o drivers/net/hnd/../../../../../shared/linux_osl.o drivers/net/hnd/../../../../../shared/nicpci.o drivers/net/hnd/../../../../../shared/sbutils.o drivers/net/hnd/../../../../../shared/siutils.o drivers/net/hnd/../../../../../shared/bcmrobo.o
+二元碼檔 net/hnd/shared_ksyms.o 與 /root/brcm-2288/src/linux/linux-2.6/drivers/net/hnd/shared_ksyms.o 不同
+diff -rt net/hnd/.shared_ksyms.o.cmd /root/brcm-2288/src/linux/linux-2.6/drivers/net/hnd/.shared_ksyms.o.cmd
+1c1
+< cmd_drivers/net/hnd/shared_ksyms.o := mipsel-linux-gcc -Wp,-MD,drivers/net/hnd/.shared_ksyms.o.d  -nostdinc -isystem /root/toolchains/hndtools-mipsel-linux-uclibc-4.1.2-32/bin/../lib/gcc/mipsel-linux-uclibc/4.1.2/include -D__KERNEL__ -Iinclude  -include include/linux/autoconf.h -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -I../../include -DBCMDRIVER -Dlinux -O2  -mabi=32 -G 0 -mno-abicalls -fno-pic -pipe -msoft-float -ggdb -ffreestanding  -march=mips32 -Wa,-mips32 -Wa,--trap  -Iinclude/asm-mips/mach-generic -fomit-frame-pointer  -fno-stack-protector -Wdeclaration-after-statement -Wno-pointer-sign -DHNDCTF -DCTFPOOL -DWLC_LOW -DWLC_HIGH -DBCMDMA64 -DBCMNVRAMR -DBCMAUTOOTP -DBCM5354 -DLINUX_HYBRID_POSTPROCESSING_REMOVAL   -D"KBUILD_STR(s)=\#s" -D"KBUILD_BASENAME=KBUILD_STR(shared_ksyms)"  -D"KBUILD_MODNAME=KBUILD_STR(shared_ksyms)" -c -o drivers/net/hnd/.tmp_shared_ksyms.o drivers/net/hnd/shared_ksyms.c
+---
+> cmd_drivers/net/hnd/shared_ksyms.o := mipsel-uclibc-gcc -Wp,-MD,drivers/net/hnd/.shared_ksyms.o.d  -nostdinc -isystem /root/toolchains/hndtools-mipsel-linux-uclibc-4.1.2-32/bin/../lib/gcc/mipsel-linux-uclibc/4.1.2/include -D__KERNEL__ -Iinclude  -include include/linux/autoconf.h -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -I../../include -DBCMDRIVER -Dlinux -O2  -mabi=32 -G 0 -mno-abicalls -fno-pic -pipe -msoft-float -ggdb -ffreestanding  -march=mips32 -Wa,-mips32 -Wa,--trap  -Iinclude/asm-mips/mach-generic -fomit-frame-pointer  -fno-stack-protector -Wdeclaration-after-statement -Wno-pointer-sign -DHNDCTF -DCTFPOOL -DWLC_LOW -DWLC_HIGH -DBCMDMA64 -DBCMNVRAMR -DBCMAUTOOTP -DBCM5354 -DLINUX_HYBRID_POSTPROCESSING_REMOVAL   -D"KBUILD_STR(s)=\#s" -D"KBUILD_BASENAME=KBUILD_STR(shared_ksyms)"  -D"KBUILD_MODNAME=KBUILD_STR(shared_ksyms)" -c -o drivers/net/hnd/.tmp_shared_ksyms.o drivers/net/hnd/shared_ksyms.c
+32d31
+<     $(wildcard include/config/netfilter/xt/match/time.h) \
+151d149
+<     $(wildcard include/config/pppol2tp.h) \
+163d160
+<     $(wildcard include/config/pptp/kernel.h) \
+291d287
+<     $(wildcard include/config/netfilter/xt/match/webstr.h) \
+只在 net 存在：hnd.orig
+diff -rt net/igs/.built-in.o.cmd /root/brcm-2288/src/linux/linux-2.6/drivers/net/igs/.built-in.o.cmd
+1c1
+< cmd_drivers/net/igs/built-in.o :=  rm -f drivers/net/igs/built-in.o; mipsel-linux-ar rcs drivers/net/igs/built-in.o
+---
+> cmd_drivers/net/igs/built-in.o :=  rm -f drivers/net/igs/built-in.o; mipsel-uclibc-ar rcs drivers/net/igs/built-in.o
+只在 /root/brcm-2288/src/linux/linux-2.6/drivers/net/igs 存在：igs_dbgsym.ko
+二元碼檔 net/igs/igs.ko 與 /root/brcm-2288/src/linux/linux-2.6/drivers/net/igs/igs.ko 不同
+diff -rt net/igs/.igs.ko.cmd /root/brcm-2288/src/linux/linux-2.6/drivers/net/igs/.igs.ko.cmd
+1c1
+< cmd_drivers/net/igs/igs.ko := mipsel-linux-ld  -m elf32ltsmip -r -o drivers/net/igs/igs.ko drivers/net/igs/igs.o drivers/net/igs/igs.mod.o
+---
+> cmd_drivers/net/igs/igs.ko := mipsel-uclibc-ld  -m elf32ltsmip -r -o drivers/net/igs/igs.ko drivers/net/igs/igs.o drivers/net/igs/igs.mod.o
+diff -rt net/igs/igs.mod.c /root/brcm-2288/src/linux/linux-2.6/drivers/net/igs/igs.mod.c
+25c25
+<         { 0x93dd02ce, "sock_release" },
+---
+>         { 0x3997d8c4, "sock_release" },
+27c27
+<         { 0xe22a9e2a, "dev_get_by_name" },
+---
+>         { 0x7835aef8, "dev_get_by_name" },
+33c33
+<         { 0x399f90d5, "netlink_kernel_create" },
+---
+>         { 0xbb90adb2, "netlink_kernel_create" },
+38c38
+<         { 0x360e894a, "netlink_unicast" },
+---
+>         { 0xea65a41e, "netlink_unicast" },
+40c40
+<         { 0x69a9ae70, "skb_over_panic" },
+---
+>         { 0x3cb9837e, "skb_over_panic" },
+42c42
+<         { 0xf94ef947, "__alloc_skb" },
+---
+>         { 0x7da3720c, "__alloc_skb" },
+44c44
+<         { 0x2d42aa7a, "skb_under_panic" },
+---
+>         { 0x4b87a999, "skb_under_panic" },
+53c53
+<         { 0x69a72b71, "skb_dequeue" },
+---
+>         { 0x16574d4e, "skb_dequeue" },
+55c55
+<         { 0x984542b8, "dev_queue_xmit" },
+---
+>         { 0xfd69715c, "dev_queue_xmit" },
+二元碼檔 net/igs/igs.mod.o 與 /root/brcm-2288/src/linux/linux-2.6/drivers/net/igs/igs.mod.o 不同
+diff -rt net/igs/.igs.mod.o.cmd /root/brcm-2288/src/linux/linux-2.6/drivers/net/igs/.igs.mod.o.cmd
+1c1
+< cmd_drivers/net/igs/igs.mod.o := mipsel-linux-gcc -Wp,-MD,drivers/net/igs/.igs.mod.o.d  -nostdinc -isystem /root/toolchains/hndtools-mipsel-linux-uclibc-4.1.2-32/bin/../lib/gcc/mipsel-linux-uclibc/4.1.2/include -D__KERNEL__ -Iinclude  -include include/linux/autoconf.h -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -I../../include -DBCMDRIVER -Dlinux -O2  -mabi=32 -G 0 -mno-abicalls -fno-pic -pipe -msoft-float -ggdb -ffreestanding  -march=mips32 -Wa,-mips32 -Wa,--trap  -Iinclude/asm-mips/mach-generic -fomit-frame-pointer  -fno-stack-protector -Wdeclaration-after-statement -Wno-pointer-sign -DHNDCTF -DCTFPOOL    -D"KBUILD_STR(s)=\#s" -D"KBUILD_BASENAME=KBUILD_STR(igs.mod)"  -D"KBUILD_MODNAME=KBUILD_STR(igs)" -DMODULE -mlong-calls -fno-common -c -o drivers/net/igs/igs.mod.o drivers/net/igs/igs.mod.c
+---
+> cmd_drivers/net/igs/igs.mod.o := mipsel-uclibc-gcc -Wp,-MD,drivers/net/igs/.igs.mod.o.d  -nostdinc -isystem /root/toolchains/hndtools-mipsel-linux-uclibc-4.1.2-32/bin/../lib/gcc/mipsel-linux-uclibc/4.1.2/include -D__KERNEL__ -Iinclude  -include include/linux/autoconf.h -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -I../../include -DBCMDRIVER -Dlinux -O2  -mabi=32 -G 0 -mno-abicalls -fno-pic -pipe -msoft-float -ggdb -ffreestanding  -march=mips32 -Wa,-mips32 -Wa,--trap  -Iinclude/asm-mips/mach-generic -fomit-frame-pointer  -fno-stack-protector -Wdeclaration-after-statement -Wno-pointer-sign -DHNDCTF -DCTFPOOL    -D"KBUILD_STR(s)=\#s" -D"KBUILD_BASENAME=KBUILD_STR(igs.mod)"  -D"KBUILD_MODNAME=KBUILD_STR(igs)" -DMODULE -mlong-calls -fno-common -c -o drivers/net/igs/igs.mod.o drivers/net/igs/igs.mod.c
+二元碼檔 net/igs/igs.o 與 /root/brcm-2288/src/linux/linux-2.6/drivers/net/igs/igs.o 不同
+diff -rt net/igs/.igs.o.cmd /root/brcm-2288/src/linux/linux-2.6/drivers/net/igs/.igs.o.cmd
+1c1
+< cmd_drivers/net/igs/igs.o := mipsel-linux-ld  -m elf32ltsmip  -r -o drivers/net/igs/igs.o drivers/net/igs/../../../../../emf/igs/igsc.o drivers/net/igs/../../../../../emf/igs/igsc_sdb.o drivers/net/igs/../../../../../router/emf/igs/igs_linux.o drivers/net/igs/../../../../../emf/igs/osl_linux.o
+---
+> cmd_drivers/net/igs/igs.o := mipsel-uclibc-ld  -m elf32ltsmip  -r -o drivers/net/igs/igs.o drivers/net/igs/../../../../../emf/igs/igsc.o drivers/net/igs/../../../../../emf/igs/igsc_sdb.o drivers/net/igs/../../../../../router/emf/igs/igs_linux.o drivers/net/igs/../../../../../emf/igs/osl_linux.o
+diff -rt net/Kconfig /root/brcm-2288/src/linux/linux-2.6/drivers/net/Kconfig
+2845,2862d2844
+< config PPPOL2TP
+<         tristate "PPP over L2TP (EXPERIMENTAL)"
+<         depends on EXPERIMENTAL && PPP
+<         help
+<           Support for PPP-over-L2TP socket family. L2TP is a protocol
+<           used by ISPs and enterprises to tunnel PPP traffic over UDP
+<           tunnels. L2TP is replacing PPTP for VPN uses.
+< 
+<           This kernel component handles only L2TP data packets: a
+<           userland daemon handles L2TP the control protocol (tunnel
+<           and session setup). One such daemon is OpenL2TP
+<           (http://openl2tp.sourceforge.net/).
+<           
+< config PPTP_KERNEL
+<         bool "PPTP Kernel Module"
+<         help
+<           PPTP Kernel Module      
+< 
+二元碼檔 net/loopback.o 與 /root/brcm-2288/src/linux/linux-2.6/drivers/net/loopback.o 不同
+diff -rt net/.loopback.o.cmd /root/brcm-2288/src/linux/linux-2.6/drivers/net/.loopback.o.cmd
+1c1
+< cmd_drivers/net/loopback.o := mipsel-linux-gcc -Wp,-MD,drivers/net/.loopback.o.d  -nostdinc -isystem /root/toolchains/hndtools-mipsel-linux-uclibc-4.1.2-32/bin/../lib/gcc/mipsel-linux-uclibc/4.1.2/include -D__KERNEL__ -Iinclude  -include include/linux/autoconf.h -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -I../../include -DBCMDRIVER -Dlinux -O2  -mabi=32 -G 0 -mno-abicalls -fno-pic -pipe -msoft-float -ggdb -ffreestanding  -march=mips32 -Wa,-mips32 -Wa,--trap  -Iinclude/asm-mips/mach-generic -fomit-frame-pointer  -fno-stack-protector -Wdeclaration-after-statement -Wno-pointer-sign -DHNDCTF -DCTFPOOL    -D"KBUILD_STR(s)=\#s" -D"KBUILD_BASENAME=KBUILD_STR(loopback)"  -D"KBUILD_MODNAME=KBUILD_STR(loopback)" -c -o drivers/net/.tmp_loopback.o drivers/net/loopback.c
+---
+> cmd_drivers/net/loopback.o := mipsel-uclibc-gcc -Wp,-MD,drivers/net/.loopback.o.d  -nostdinc -isystem /root/toolchains/hndtools-mipsel-linux-uclibc-4.1.2-32/bin/../lib/gcc/mipsel-linux-uclibc/4.1.2/include -D__KERNEL__ -Iinclude  -include include/linux/autoconf.h -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -I../../include -DBCMDRIVER -Dlinux -O2  -mabi=32 -G 0 -mno-abicalls -fno-pic -pipe -msoft-float -ggdb -ffreestanding  -march=mips32 -Wa,-mips32 -Wa,--trap  -Iinclude/asm-mips/mach-generic -fomit-frame-pointer  -fno-stack-protector -Wdeclaration-after-statement -Wno-pointer-sign -DHNDCTF -DCTFPOOL    -D"KBUILD_STR(s)=\#s" -D"KBUILD_BASENAME=KBUILD_STR(loopback)"  -D"KBUILD_MODNAME=KBUILD_STR(loopback)" -c -o drivers/net/.tmp_loopback.o drivers/net/loopback.c
+diff -rt net/Makefile /root/brcm-2288/src/linux/linux-2.6/drivers/net/Makefile
+126,128d125
+< obj-$(CONFIG_PPPOL2TP) += pppox.o pppol2tp.o
+< 
+< obj-$(CONFIG_PPTP_KERNEL) += pptp.o
+228a226
+> obj-$(CONFIG_BCM_CTF) += ctf/
+247,248d244
+< 
+< obj-$(CONFIG_BCM_CTF) += ctf/
+二元碼檔 net/ppp_async.o 與 /root/brcm-2288/src/linux/linux-2.6/drivers/net/ppp_async.o 不同
+diff -rt net/.ppp_async.o.cmd /root/brcm-2288/src/linux/linux-2.6/drivers/net/.ppp_async.o.cmd
+1c1
+< cmd_drivers/net/ppp_async.o := mipsel-linux-gcc -Wp,-MD,drivers/net/.ppp_async.o.d  -nostdinc -isystem /root/toolchains/hndtools-mipsel-linux-uclibc-4.1.2-32/bin/../lib/gcc/mipsel-linux-uclibc/4.1.2/include -D__KERNEL__ -Iinclude  -include include/linux/autoconf.h -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -I../../include -DBCMDRIVER -Dlinux -O2  -mabi=32 -G 0 -mno-abicalls -fno-pic -pipe -msoft-float -ggdb -ffreestanding  -march=mips32 -Wa,-mips32 -Wa,--trap  -Iinclude/asm-mips/mach-generic -fomit-frame-pointer  -fno-stack-protector -Wdeclaration-after-statement -Wno-pointer-sign -DHNDCTF -DCTFPOOL    -D"KBUILD_STR(s)=\#s" -D"KBUILD_BASENAME=KBUILD_STR(ppp_async)"  -D"KBUILD_MODNAME=KBUILD_STR(ppp_async)" -c -o drivers/net/.tmp_ppp_async.o drivers/net/ppp_async.c
+---
+> cmd_drivers/net/ppp_async.o := mipsel-uclibc-gcc -Wp,-MD,drivers/net/.ppp_async.o.d  -nostdinc -isystem /root/toolchains/hndtools-mipsel-linux-uclibc-4.1.2-32/bin/../lib/gcc/mipsel-linux-uclibc/4.1.2/include -D__KERNEL__ -Iinclude  -include include/linux/autoconf.h -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -I../../include -DBCMDRIVER -Dlinux -O2  -mabi=32 -G 0 -mno-abicalls -fno-pic -pipe -msoft-float -ggdb -ffreestanding  -march=mips32 -Wa,-mips32 -Wa,--trap  -Iinclude/asm-mips/mach-generic -fomit-frame-pointer  -fno-stack-protector -Wdeclaration-after-statement -Wno-pointer-sign -DHNDCTF -DCTFPOOL    -D"KBUILD_STR(s)=\#s" -D"KBUILD_BASENAME=KBUILD_STR(ppp_async)"  -D"KBUILD_MODNAME=KBUILD_STR(ppp_async)" -c -o drivers/net/.tmp_ppp_async.o drivers/net/ppp_async.c
+二元碼檔 net/ppp_deflate.o 與 /root/brcm-2288/src/linux/linux-2.6/drivers/net/ppp_deflate.o 不同
+diff -rt net/.ppp_deflate.o.cmd /root/brcm-2288/src/linux/linux-2.6/drivers/net/.ppp_deflate.o.cmd
+1c1
+< cmd_drivers/net/ppp_deflate.o := mipsel-linux-gcc -Wp,-MD,drivers/net/.ppp_deflate.o.d  -nostdinc -isystem /root/toolchains/hndtools-mipsel-linux-uclibc-4.1.2-32/bin/../lib/gcc/mipsel-linux-uclibc/4.1.2/include -D__KERNEL__ -Iinclude  -include include/linux/autoconf.h -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -I../../include -DBCMDRIVER -Dlinux -O2  -mabi=32 -G 0 -mno-abicalls -fno-pic -pipe -msoft-float -ggdb -ffreestanding  -march=mips32 -Wa,-mips32 -Wa,--trap  -Iinclude/asm-mips/mach-generic -fomit-frame-pointer  -fno-stack-protector -Wdeclaration-after-statement -Wno-pointer-sign -DHNDCTF -DCTFPOOL    -D"KBUILD_STR(s)=\#s" -D"KBUILD_BASENAME=KBUILD_STR(ppp_deflate)"  -D"KBUILD_MODNAME=KBUILD_STR(ppp_deflate)" -c -o drivers/net/.tmp_ppp_deflate.o drivers/net/ppp_deflate.c
+---
+> cmd_drivers/net/ppp_deflate.o := mipsel-uclibc-gcc -Wp,-MD,drivers/net/.ppp_deflate.o.d  -nostdinc -isystem /root/toolchains/hndtools-mipsel-linux-uclibc-4.1.2-32/bin/../lib/gcc/mipsel-linux-uclibc/4.1.2/include -D__KERNEL__ -Iinclude  -include include/linux/autoconf.h -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -I../../include -DBCMDRIVER -Dlinux -O2  -mabi=32 -G 0 -mno-abicalls -fno-pic -pipe -msoft-float -ggdb -ffreestanding  -march=mips32 -Wa,-mips32 -Wa,--trap  -Iinclude/asm-mips/mach-generic -fomit-frame-pointer  -fno-stack-protector -Wdeclaration-after-statement -Wno-pointer-sign -DHNDCTF -DCTFPOOL    -D"KBUILD_STR(s)=\#s" -D"KBUILD_BASENAME=KBUILD_STR(ppp_deflate)"  -D"KBUILD_MODNAME=KBUILD_STR(ppp_deflate)" -c -o drivers/net/.tmp_ppp_deflate.o drivers/net/ppp_deflate.c
+二元碼檔 net/ppp_generic.o 與 /root/brcm-2288/src/linux/linux-2.6/drivers/net/ppp_generic.o 不同
+diff -rt net/.ppp_generic.o.cmd /root/brcm-2288/src/linux/linux-2.6/drivers/net/.ppp_generic.o.cmd
+1c1
+< cmd_drivers/net/ppp_generic.o := mipsel-linux-gcc -Wp,-MD,drivers/net/.ppp_generic.o.d  -nostdinc -isystem /root/toolchains/hndtools-mipsel-linux-uclibc-4.1.2-32/bin/../lib/gcc/mipsel-linux-uclibc/4.1.2/include -D__KERNEL__ -Iinclude  -include include/linux/autoconf.h -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -I../../include -DBCMDRIVER -Dlinux -O2  -mabi=32 -G 0 -mno-abicalls -fno-pic -pipe -msoft-float -ggdb -ffreestanding  -march=mips32 -Wa,-mips32 -Wa,--trap  -Iinclude/asm-mips/mach-generic -fomit-frame-pointer  -fno-stack-protector -Wdeclaration-after-statement -Wno-pointer-sign -DHNDCTF -DCTFPOOL    -D"KBUILD_STR(s)=\#s" -D"KBUILD_BASENAME=KBUILD_STR(ppp_generic)"  -D"KBUILD_MODNAME=KBUILD_STR(ppp_generic)" -c -o drivers/net/.tmp_ppp_generic.o drivers/net/ppp_generic.c
+---
+> cmd_drivers/net/ppp_generic.o := mipsel-uclibc-gcc -Wp,-MD,drivers/net/.ppp_generic.o.d  -nostdinc -isystem /root/toolchains/hndtools-mipsel-linux-uclibc-4.1.2-32/bin/../lib/gcc/mipsel-linux-uclibc/4.1.2/include -D__KERNEL__ -Iinclude  -include include/linux/autoconf.h -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -I../../include -DBCMDRIVER -Dlinux -O2  -mabi=32 -G 0 -mno-abicalls -fno-pic -pipe -msoft-float -ggdb -ffreestanding  -march=mips32 -Wa,-mips32 -Wa,--trap  -Iinclude/asm-mips/mach-generic -fomit-frame-pointer  -fno-stack-protector -Wdeclaration-after-statement -Wno-pointer-sign -DHNDCTF -DCTFPOOL    -D"KBUILD_STR(s)=\#s" -D"KBUILD_BASENAME=KBUILD_STR(ppp_generic)"  -D"KBUILD_MODNAME=KBUILD_STR(ppp_generic)" -c -o drivers/net/.tmp_ppp_generic.o drivers/net/ppp_generic.c
+二元碼檔 net/ppp_mppe.o 與 /root/brcm-2288/src/linux/linux-2.6/drivers/net/ppp_mppe.o 不同
+diff -rt net/.ppp_mppe.o.cmd /root/brcm-2288/src/linux/linux-2.6/drivers/net/.ppp_mppe.o.cmd
+1c1
+< cmd_drivers/net/ppp_mppe.o := mipsel-linux-gcc -Wp,-MD,drivers/net/.ppp_mppe.o.d  -nostdinc -isystem /root/toolchains/hndtools-mipsel-linux-uclibc-4.1.2-32/bin/../lib/gcc/mipsel-linux-uclibc/4.1.2/include -D__KERNEL__ -Iinclude  -include include/linux/autoconf.h -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -I../../include -DBCMDRIVER -Dlinux -O2  -mabi=32 -G 0 -mno-abicalls -fno-pic -pipe -msoft-float -ggdb -ffreestanding  -march=mips32 -Wa,-mips32 -Wa,--trap  -Iinclude/asm-mips/mach-generic -fomit-frame-pointer  -fno-stack-protector -Wdeclaration-after-statement -Wno-pointer-sign -DHNDCTF -DCTFPOOL    -D"KBUILD_STR(s)=\#s" -D"KBUILD_BASENAME=KBUILD_STR(ppp_mppe)"  -D"KBUILD_MODNAME=KBUILD_STR(ppp_mppe)" -c -o drivers/net/.tmp_ppp_mppe.o drivers/net/ppp_mppe.c
+---
+> cmd_drivers/net/ppp_mppe.o := mipsel-uclibc-gcc -Wp,-MD,drivers/net/.ppp_mppe.o.d  -nostdinc -isystem /root/toolchains/hndtools-mipsel-linux-uclibc-4.1.2-32/bin/../lib/gcc/mipsel-linux-uclibc/4.1.2/include -D__KERNEL__ -Iinclude  -include include/linux/autoconf.h -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -I../../include -DBCMDRIVER -Dlinux -O2  -mabi=32 -G 0 -mno-abicalls -fno-pic -pipe -msoft-float -ggdb -ffreestanding  -march=mips32 -Wa,-mips32 -Wa,--trap  -Iinclude/asm-mips/mach-generic -fomit-frame-pointer  -fno-stack-protector -Wdeclaration-after-statement -Wno-pointer-sign -DHNDCTF -DCTFPOOL    -D"KBUILD_STR(s)=\#s" -D"KBUILD_BASENAME=KBUILD_STR(ppp_mppe)"  -D"KBUILD_MODNAME=KBUILD_STR(ppp_mppe)" -c -o drivers/net/.tmp_ppp_mppe.o drivers/net/ppp_mppe.c
+二元碼檔 net/pppoe.o 與 /root/brcm-2288/src/linux/linux-2.6/drivers/net/pppoe.o 不同
+diff -rt net/.pppoe.o.cmd /root/brcm-2288/src/linux/linux-2.6/drivers/net/.pppoe.o.cmd
+1c1
+< cmd_drivers/net/pppoe.o := mipsel-linux-gcc -Wp,-MD,drivers/net/.pppoe.o.d  -nostdinc -isystem /root/toolchains/hndtools-mipsel-linux-uclibc-4.1.2-32/bin/../lib/gcc/mipsel-linux-uclibc/4.1.2/include -D__KERNEL__ -Iinclude  -include include/linux/autoconf.h -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -I../../include -DBCMDRIVER -Dlinux -O2  -mabi=32 -G 0 -mno-abicalls -fno-pic -pipe -msoft-float -ggdb -ffreestanding  -march=mips32 -Wa,-mips32 -Wa,--trap  -Iinclude/asm-mips/mach-generic -fomit-frame-pointer  -fno-stack-protector -Wdeclaration-after-statement -Wno-pointer-sign -DHNDCTF -DCTFPOOL    -D"KBUILD_STR(s)=\#s" -D"KBUILD_BASENAME=KBUILD_STR(pppoe)"  -D"KBUILD_MODNAME=KBUILD_STR(pppoe)" -c -o drivers/net/.tmp_pppoe.o drivers/net/pppoe.c
+---
+> cmd_drivers/net/pppoe.o := mipsel-uclibc-gcc -Wp,-MD,drivers/net/.pppoe.o.d  -nostdinc -isystem /root/toolchains/hndtools-mipsel-linux-uclibc-4.1.2-32/bin/../lib/gcc/mipsel-linux-uclibc/4.1.2/include -D__KERNEL__ -Iinclude  -include include/linux/autoconf.h -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -I../../include -DBCMDRIVER -Dlinux -O2  -mabi=32 -G 0 -mno-abicalls -fno-pic -pipe -msoft-float -ggdb -ffreestanding  -march=mips32 -Wa,-mips32 -Wa,--trap  -Iinclude/asm-mips/mach-generic -fomit-frame-pointer  -fno-stack-protector -Wdeclaration-after-statement -Wno-pointer-sign -DHNDCTF -DCTFPOOL    -D"KBUILD_STR(s)=\#s" -D"KBUILD_BASENAME=KBUILD_STR(pppoe)"  -D"KBUILD_MODNAME=KBUILD_STR(pppoe)" -c -o drivers/net/.tmp_pppoe.o drivers/net/pppoe.c
+429,430d428
+<   include/linux/version.h \
+<   include/linux/in.h \
+461d458
+<   include/linux/if_pppol2tp.h \
+只在 net 存在：pppol2tp.c
+只在 net 存在：pppol2tp.o
+只在 net 存在：.pppol2tp.o.cmd
+二元碼檔 net/pppox.o 與 /root/brcm-2288/src/linux/linux-2.6/drivers/net/pppox.o 不同
+diff -rt net/.pppox.o.cmd /root/brcm-2288/src/linux/linux-2.6/drivers/net/.pppox.o.cmd
+1c1
+< cmd_drivers/net/pppox.o := mipsel-linux-gcc -Wp,-MD,drivers/net/.pppox.o.d  -nostdinc -isystem /root/toolchains/hndtools-mipsel-linux-uclibc-4.1.2-32/bin/../lib/gcc/mipsel-linux-uclibc/4.1.2/include -D__KERNEL__ -Iinclude  -include include/linux/autoconf.h -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -I../../include -DBCMDRIVER -Dlinux -O2  -mabi=32 -G 0 -mno-abicalls -fno-pic -pipe -msoft-float -ggdb -ffreestanding  -march=mips32 -Wa,-mips32 -Wa,--trap  -Iinclude/asm-mips/mach-generic -fomit-frame-pointer  -fno-stack-protector -Wdeclaration-after-statement -Wno-pointer-sign -DHNDCTF -DCTFPOOL    -D"KBUILD_STR(s)=\#s" -D"KBUILD_BASENAME=KBUILD_STR(pppox)"  -D"KBUILD_MODNAME=KBUILD_STR(pppox)" -c -o drivers/net/.tmp_pppox.o drivers/net/pppox.c
+---
+> cmd_drivers/net/pppox.o := mipsel-uclibc-gcc -Wp,-MD,drivers/net/.pppox.o.d  -nostdinc -isystem /root/toolchains/hndtools-mipsel-linux-uclibc-4.1.2-32/bin/../lib/gcc/mipsel-linux-uclibc/4.1.2/include -D__KERNEL__ -Iinclude  -include include/linux/autoconf.h -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -I../../include -DBCMDRIVER -Dlinux -O2  -mabi=32 -G 0 -mno-abicalls -fno-pic -pipe -msoft-float -ggdb -ffreestanding  -march=mips32 -Wa,-mips32 -Wa,--trap  -Iinclude/asm-mips/mach-generic -fomit-frame-pointer  -fno-stack-protector -Wdeclaration-after-statement -Wno-pointer-sign -DHNDCTF -DCTFPOOL    -D"KBUILD_STR(s)=\#s" -D"KBUILD_BASENAME=KBUILD_STR(pppox)"  -D"KBUILD_MODNAME=KBUILD_STR(pppox)" -c -o drivers/net/.tmp_pppox.o drivers/net/pppox.c
+427,428d426
+<   include/linux/version.h \
+<   include/linux/in.h \
+459d456
+<   include/linux/if_pppol2tp.h \
+二元碼檔 net/ppp_synctty.o 與 /root/brcm-2288/src/linux/linux-2.6/drivers/net/ppp_synctty.o 不同
+diff -rt net/.ppp_synctty.o.cmd /root/brcm-2288/src/linux/linux-2.6/drivers/net/.ppp_synctty.o.cmd
+1c1
+< cmd_drivers/net/ppp_synctty.o := mipsel-linux-gcc -Wp,-MD,drivers/net/.ppp_synctty.o.d  -nostdinc -isystem /root/toolchains/hndtools-mipsel-linux-uclibc-4.1.2-32/bin/../lib/gcc/mipsel-linux-uclibc/4.1.2/include -D__KERNEL__ -Iinclude  -include include/linux/autoconf.h -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -I../../include -DBCMDRIVER -Dlinux -O2  -mabi=32 -G 0 -mno-abicalls -fno-pic -pipe -msoft-float -ggdb -ffreestanding  -march=mips32 -Wa,-mips32 -Wa,--trap  -Iinclude/asm-mips/mach-generic -fomit-frame-pointer  -fno-stack-protector -Wdeclaration-after-statement -Wno-pointer-sign -DHNDCTF -DCTFPOOL    -D"KBUILD_STR(s)=\#s" -D"KBUILD_BASENAME=KBUILD_STR(ppp_synctty)"  -D"KBUILD_MODNAME=KBUILD_STR(ppp_synctty)" -c -o drivers/net/.tmp_ppp_synctty.o drivers/net/ppp_synctty.c
+---
+> cmd_drivers/net/ppp_synctty.o := mipsel-uclibc-gcc -Wp,-MD,drivers/net/.ppp_synctty.o.d  -nostdinc -isystem /root/toolchains/hndtools-mipsel-linux-uclibc-4.1.2-32/bin/../lib/gcc/mipsel-linux-uclibc/4.1.2/include -D__KERNEL__ -Iinclude  -include include/linux/autoconf.h -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -I../../include -DBCMDRIVER -Dlinux -O2  -mabi=32 -G 0 -mno-abicalls -fno-pic -pipe -msoft-float -ggdb -ffreestanding  -march=mips32 -Wa,-mips32 -Wa,--trap  -Iinclude/asm-mips/mach-generic -fomit-frame-pointer  -fno-stack-protector -Wdeclaration-after-statement -Wno-pointer-sign -DHNDCTF -DCTFPOOL    -D"KBUILD_STR(s)=\#s" -D"KBUILD_BASENAME=KBUILD_STR(ppp_synctty)"  -D"KBUILD_MODNAME=KBUILD_STR(ppp_synctty)" -c -o drivers/net/.tmp_ppp_synctty.o drivers/net/ppp_synctty.c
+只在 net 存在：pptp.c
+只在 net 存在：pptp.o
+只在 net 存在：.pptp.o.cmd
+二元碼檔 net/slhc.o 與 /root/brcm-2288/src/linux/linux-2.6/drivers/net/slhc.o 不同
+diff -rt net/.slhc.o.cmd /root/brcm-2288/src/linux/linux-2.6/drivers/net/.slhc.o.cmd
+1c1
+< cmd_drivers/net/slhc.o := mipsel-linux-gcc -Wp,-MD,drivers/net/.slhc.o.d  -nostdinc -isystem /root/toolchains/hndtools-mipsel-linux-uclibc-4.1.2-32/bin/../lib/gcc/mipsel-linux-uclibc/4.1.2/include -D__KERNEL__ -Iinclude  -include include/linux/autoconf.h -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -I../../include -DBCMDRIVER -Dlinux -O2  -mabi=32 -G 0 -mno-abicalls -fno-pic -pipe -msoft-float -ggdb -ffreestanding  -march=mips32 -Wa,-mips32 -Wa,--trap  -Iinclude/asm-mips/mach-generic -fomit-frame-pointer  -fno-stack-protector -Wdeclaration-after-statement -Wno-pointer-sign -DHNDCTF -DCTFPOOL    -D"KBUILD_STR(s)=\#s" -D"KBUILD_BASENAME=KBUILD_STR(slhc)"  -D"KBUILD_MODNAME=KBUILD_STR(slhc)" -c -o drivers/net/.tmp_slhc.o drivers/net/slhc.c
+---
+> cmd_drivers/net/slhc.o := mipsel-uclibc-gcc -Wp,-MD,drivers/net/.slhc.o.d  -nostdinc -isystem /root/toolchains/hndtools-mipsel-linux-uclibc-4.1.2-32/bin/../lib/gcc/mipsel-linux-uclibc/4.1.2/include -D__KERNEL__ -Iinclude  -include include/linux/autoconf.h -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -I../../include -DBCMDRIVER -Dlinux -O2  -mabi=32 -G 0 -mno-abicalls -fno-pic -pipe -msoft-float -ggdb -ffreestanding  -march=mips32 -Wa,-mips32 -Wa,--trap  -Iinclude/asm-mips/mach-generic -fomit-frame-pointer  -fno-stack-protector -Wdeclaration-after-statement -Wno-pointer-sign -DHNDCTF -DCTFPOOL    -D"KBUILD_STR(s)=\#s" -D"KBUILD_BASENAME=KBUILD_STR(slhc)"  -D"KBUILD_MODNAME=KBUILD_STR(slhc)" -c -o drivers/net/.tmp_slhc.o drivers/net/slhc.c
+二元碼檔 net/Space.o 與 /root/brcm-2288/src/linux/linux-2.6/drivers/net/Space.o 不同
+diff -rt net/.Space.o.cmd /root/brcm-2288/src/linux/linux-2.6/drivers/net/.Space.o.cmd
+1c1
+< cmd_drivers/net/Space.o := mipsel-linux-gcc -Wp,-MD,drivers/net/.Space.o.d  -nostdinc -isystem /root/toolchains/hndtools-mipsel-linux-uclibc-4.1.2-32/bin/../lib/gcc/mipsel-linux-uclibc/4.1.2/include -D__KERNEL__ -Iinclude  -include include/linux/autoconf.h -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -I../../include -DBCMDRIVER -Dlinux -O2  -mabi=32 -G 0 -mno-abicalls -fno-pic -pipe -msoft-float -ggdb -ffreestanding  -march=mips32 -Wa,-mips32 -Wa,--trap  -Iinclude/asm-mips/mach-generic -fomit-frame-pointer  -fno-stack-protector -Wdeclaration-after-statement -Wno-pointer-sign -DHNDCTF -DCTFPOOL    -D"KBUILD_STR(s)=\#s" -D"KBUILD_BASENAME=KBUILD_STR(Space)"  -D"KBUILD_MODNAME=KBUILD_STR(Space)" -c -o drivers/net/.tmp_Space.o drivers/net/Space.c
+---
+> cmd_drivers/net/Space.o := mipsel-uclibc-gcc -Wp,-MD,drivers/net/.Space.o.d  -nostdinc -isystem /root/toolchains/hndtools-mipsel-linux-uclibc-4.1.2-32/bin/../lib/gcc/mipsel-linux-uclibc/4.1.2/include -D__KERNEL__ -Iinclude  -include include/linux/autoconf.h -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -I../../include -DBCMDRIVER -Dlinux -O2  -mabi=32 -G 0 -mno-abicalls -fno-pic -pipe -msoft-float -ggdb -ffreestanding  -march=mips32 -Wa,-mips32 -Wa,--trap  -Iinclude/asm-mips/mach-generic -fomit-frame-pointer  -fno-stack-protector -Wdeclaration-after-statement -Wno-pointer-sign -DHNDCTF -DCTFPOOL    -D"KBUILD_STR(s)=\#s" -D"KBUILD_BASENAME=KBUILD_STR(Space)"  -D"KBUILD_MODNAME=KBUILD_STR(Space)" -c -o drivers/net/.tmp_Space.o drivers/net/Space.c
+diff -rt net/wireless/.built-in.o.cmd /root/brcm-2288/src/linux/linux-2.6/drivers/net/wireless/.built-in.o.cmd
+1c1
+< cmd_drivers/net/wireless/built-in.o :=  rm -f drivers/net/wireless/built-in.o; mipsel-linux-ar rcs drivers/net/wireless/built-in.o
+---
+> cmd_drivers/net/wireless/built-in.o :=  rm -f drivers/net/wireless/built-in.o; mipsel-uclibc-ar rcs drivers/net/wireless/built-in.o
+diff -rt net/wl/.built-in.o.cmd /root/brcm-2288/src/linux/linux-2.6/drivers/net/wl/.built-in.o.cmd
+1c1
+< cmd_drivers/net/wl/built-in.o :=  rm -f drivers/net/wl/built-in.o; mipsel-linux-ar rcs drivers/net/wl/built-in.o
+---
+> cmd_drivers/net/wl/built-in.o :=  rm -f drivers/net/wl/built-in.o; mipsel-uclibc-ar rcs drivers/net/wl/built-in.o
+只在 /root/brcm-2288/src/linux/linux-2.6/drivers/net/wl 存在：wl_dbgsym.ko
+二元碼檔 net/wl/wl.ko 與 /root/brcm-2288/src/linux/linux-2.6/drivers/net/wl/wl.ko 不同
+diff -rt net/wl/.wl.ko.cmd /root/brcm-2288/src/linux/linux-2.6/drivers/net/wl/.wl.ko.cmd
+1c1
+< cmd_drivers/net/wl/wl.ko := mipsel-linux-ld  -m elf32ltsmip -r -o drivers/net/wl/wl.ko drivers/net/wl/wl.o drivers/net/wl/wl.mod.o
+---
+> cmd_drivers/net/wl/wl.ko := mipsel-uclibc-ld  -m elf32ltsmip -r -o drivers/net/wl/wl.ko drivers/net/wl/wl.o drivers/net/wl/wl.mod.o
+diff -rt net/wl/wl.mod.c /root/brcm-2288/src/linux/linux-2.6/drivers/net/wl/wl.mod.c
+54c54
+<         { 0x3c9de4cd, "alloc_netdev" },
+---
+>         { 0x615bf549, "alloc_netdev" },
+69c69
+<         { 0xda6a549e, "netif_rx" },
+---
+>         { 0x283b760a, "netif_rx" },
+84c84
+<         { 0x3289cdb0, "free_netdev" },
+---
+>         { 0xc184f15c, "free_netdev" },
+89c89
+<         { 0x1535eeb3, "register_netdev" },
+---
+>         { 0x643c7cd0, "register_netdev" },
+124c124
+<         { 0x2d42aa7a, "skb_under_panic" },
+---
+>         { 0x4b87a999, "skb_under_panic" },
+127c127
+<         { 0x1fd23449, "eth_type_trans" },
+---
+>         { 0xc8c63418, "eth_type_trans" },
+132c132
+<         { 0xfc93c1be, "ether_setup" },
+---
+>         { 0xc81ae607, "ether_setup" },
+151c151
+<         { 0x6e631e47, "unregister_netdev" },
+---
+>         { 0x8a81c0aa, "unregister_netdev" },
+158c158
+<         { 0x2665d55, "__netif_schedule" },
+---
+>         { 0x18e9636b, "__netif_schedule" },
+二元碼檔 net/wl/wl.mod.o 與 /root/brcm-2288/src/linux/linux-2.6/drivers/net/wl/wl.mod.o 不同
+diff -rt net/wl/.wl.mod.o.cmd /root/brcm-2288/src/linux/linux-2.6/drivers/net/wl/.wl.mod.o.cmd
+1c1
+< cmd_drivers/net/wl/wl.mod.o := mipsel-linux-gcc -Wp,-MD,drivers/net/wl/.wl.mod.o.d  -nostdinc -isystem /root/toolchains/hndtools-mipsel-linux-uclibc-4.1.2-32/bin/../lib/gcc/mipsel-linux-uclibc/4.1.2/include -D__KERNEL__ -Iinclude  -include include/linux/autoconf.h -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -I../../include -DBCMDRIVER -Dlinux -O2  -mabi=32 -G 0 -mno-abicalls -fno-pic -pipe -msoft-float -ggdb -ffreestanding  -march=mips32 -Wa,-mips32 -Wa,--trap  -Iinclude/asm-mips/mach-generic -fomit-frame-pointer  -fno-stack-protector -Wdeclaration-after-statement -Wno-pointer-sign -DHNDCTF -DCTFPOOL    -D"KBUILD_STR(s)=\#s" -D"KBUILD_BASENAME=KBUILD_STR(wl.mod)"  -D"KBUILD_MODNAME=KBUILD_STR(wl)" -DMODULE -mlong-calls -fno-common -c -o drivers/net/wl/wl.mod.o drivers/net/wl/wl.mod.c
+---
+> cmd_drivers/net/wl/wl.mod.o := mipsel-uclibc-gcc -Wp,-MD,drivers/net/wl/.wl.mod.o.d  -nostdinc -isystem /root/toolchains/hndtools-mipsel-linux-uclibc-4.1.2-32/bin/../lib/gcc/mipsel-linux-uclibc/4.1.2/include -D__KERNEL__ -Iinclude  -include include/linux/autoconf.h -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs -fno-strict-aliasing -fno-common -I../../include -DBCMDRIVER -Dlinux -O2  -mabi=32 -G 0 -mno-abicalls -fno-pic -pipe -msoft-float -ggdb -ffreestanding  -march=mips32 -Wa,-mips32 -Wa,--trap  -Iinclude/asm-mips/mach-generic -fomit-frame-pointer  -fno-stack-protector -Wdeclaration-after-statement -Wno-pointer-sign -DHNDCTF -DCTFPOOL    -D"KBUILD_STR(s)=\#s" -D"KBUILD_BASENAME=KBUILD_STR(wl.mod)"  -D"KBUILD_MODNAME=KBUILD_STR(wl)" -DMODULE -mlong-calls -fno-common -c -o drivers/net/wl/wl.mod.o drivers/net/wl/wl.mod.c
+diff -rt net/wl/.wl.o.cmd /root/brcm-2288/src/linux/linux-2.6/drivers/net/wl/.wl.o.cmd
+1c1
+< cmd_drivers/net/wl/wl.o := mipsel-linux-ld  -m elf32ltsmip  -r -o drivers/net/wl/wl.o drivers/net/wl/../../../../../wl/linux/wl_apsta.o
+---
+> cmd_drivers/net/wl/wl.o := mipsel-uclibc-ld  -m elf32ltsmip  -r -o drivers/net/wl/wl.o drivers/net/wl/../../../../../wl/linux/wl_apsta.o

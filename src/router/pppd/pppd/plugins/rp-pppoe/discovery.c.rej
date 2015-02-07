@@ -1,0 +1,17 @@
+***************
+*** 13,18 ****
+  
+  #include "pppoe.h"
+  
+  #ifdef HAVE_SYSLOG_H
+  #include <syslog.h>
+  #endif
+--- 13,20 ----
+  
+  #include "pppoe.h"
+  
++ void warn __P((char *, ...));   /* log a warning message */
++ 
+  #ifdef HAVE_SYSLOG_H
+  #include <syslog.h>
+  #endif

@@ -1,0 +1,25 @@
+/Makefile/1.1.1.1/Mon Jul 21 09:17:08 2008//
+/Makepkgs/1.1.1.1/Mon Jul 21 09:17:08 2008//
+/README/1.1.1.1/Mon Jul 21 09:17:08 2008//
+/VERSION/1.1.1.1/Mon Jul 21 09:17:08 2008//
+/aclocal.m4/1.1.1.1/Mon Jul 21 09:17:08 2008//
+/attr_build.log/1.1.1.1/Mon Jul 21 09:17:08 2008//
+/configure/1.1.1.1/Mon Jul 21 09:17:08 2008//
+/configure.in/1.1.1.1/Mon Jul 21 09:17:08 2008//
+/exports/1.1.1.1/Mon Jul 21 09:17:08 2008//
+/install-sh/1.1.1.1/Mon Jul 21 09:17:09 2008//
+/libtool/1.1.1.1/Mon Jul 21 09:17:09 2008//
+D/attr////
+D/build////
+D/debian////
+D/doc////
+D/examples////
+D/getfattr////
+D/include////
+D/libattr////
+D/libmisc////
+D/m4////
+D/man////
+D/po////
+D/setfattr////
+D/test////
