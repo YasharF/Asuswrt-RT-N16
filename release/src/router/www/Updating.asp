@@ -1,4 +1,4 @@
-﻿<html>
+<html>
 <head>
 <title>ASUS Wireless Router Web Manager</title>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
@@ -9,15 +9,23 @@
 </head>
 <body>
 <script>
+	var reboot_needed_time = eval("<% get_default_reboot_time(); %>");
 	parent.$("hiddenMask").style.visibility = "hidden";
-	if(parent.based_modelid == "RT-AC56U"
+	if(parent.based_modelid == "RT-AC56S"
+			|| parent.based_modelid == "RT-AC56U"
 			|| parent.based_modelid == "RT-AC66U"
-			|| parent.based_modelid == "RT-AC68U"){		//MODELDEP: RT-AC56U, RT-AC66U, RT-AC68U 2013.03
-			parent.showLoadingBar(90);
-			setTimeout("parent.detect_httpd();", 92000);
+			|| parent.based_modelid == "RT-AC68U"
+			|| parent.based_modelid == "RT-AC68U_V2"
+			|| parent.based_modelid == "RT-AC69U"){		//MODELDEP: RT-AC56S, RT-AC56U, RT-AC66U, RT-AC68U, RT-AC68U_V2, RT-AC69U 2014.01
+			reboot_needed_time += 30;
+			parent.showLoadingBar(reboot_needed_time);
+			reboot_needed_time += 2;
+			setTimeout("parent.detect_httpd();", reboot_needed_time*1000);
 	}else if(parent.based_modelid == "RT-AC52U"){			//MODELDEP: RT-AC52U
-			parent.showLoadingBar(120);
-			setTimeout("parent.detect_httpd();", 122000);
+			reboot_needed_time += 40;
+			parent.showLoadingBar(reboot_needed_time);
+			reboot_needed_time += 2;
+                        setTimeout("parent.detect_httpd();", reboot_needed_time*1000);
 	}else{
 			parent.showLoadingBar(270);
 			setTimeout("parent.detect_httpd();", 272000);		

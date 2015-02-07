@@ -1,3 +1,5 @@
+-include $(TOP)/.config
+
 ALL=gctwimax
 
 all: $(ALL)
@@ -30,6 +32,10 @@ FLAGS += -DIEEE8021X_EAPOL
 override CFLAGS += $(FLAGS)
 
 LDFLAGS += -L$(TOP)/wpa_supplicant-0.7.3/src/eap_peer -leap
+ifeq ($(RTCONFIG_BCMARM),y)
+# for libusb10
+LDFLAGS += -lpthread
+endif
 LDFLAGS += -L$(TOP)/libusb10/libusb/.libs -lusb-1.0
 LDFLAGS += -L$(TOP)/openssl -lcrypto -lssl
 LDFLAGS += -L$(TOP)/zlib -lz
@@ -39,7 +45,7 @@ LDFLAGS += -L$(TOP)/zlib -lz
 OBJS_ex = src/wimax.o src/protocol.o src/logging.o src/tap_dev.o src/eap_auth.o src/config.o
 
 gctwimax: $(OBJS_ex)
-	$(LDO) $(LDFLAGS) -o gctwimax $(OBJS_ex) $(LDFLAGS)
+	$(LDO) $(LDFLAGS) -o gctwimax $(OBJS_ex) $(CFLAGS)
 
 install:
 	cp ./gctwimax /sbin/gctwimax

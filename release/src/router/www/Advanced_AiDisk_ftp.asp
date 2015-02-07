@@ -70,7 +70,10 @@ function initial(){
 	
 	// the click event of the buttons
 	onEvent();
-	chech_usb();
+	if(!hadPlugged('storage')){
+		$("accountbtn").disabled = true;
+		$("sharebtn").disabled = true;	
+	}
 	
 	$("sharebtn").disabled = true;
 	$("accountbtn").disabled = true;
@@ -82,17 +85,6 @@ function enable_display(){
 	$("sharebtn").disabled = false;
 	$("accountbtn").disabled = false;
 	$("refreshbtn").disabled = false;
-}
-
-function chech_usb()
-{
-	var usb_path1 = '<% nvram_get("usb_path1"); %>';
-	var usb_path2 = '<% nvram_get("usb_path2"); %>';
-	
-	if (usb_path1 != "storage" && usb_path2 != "storage"){
-		$("accountbtn").disabled = true;
-		$("sharebtn").disabled = true;	
-	}
 }
 
 function get_disk_tree(){
@@ -734,7 +726,7 @@ function unload_body(){
 							<span class="formfonttitle"><#menu5_4#> - <#menu5_4_2#></span>
 						</td>
 						<td align="right">
-							<img onclick="go_setting('/APP_Installation.asp')" align="right" style="cursor:pointer;position:absolute;margin-left:-20px;margin-top:-30px;" title="Back to USB Extension" src="/images/backprev.png" onMouseOver="this.src='/images/backprevclick.png'" onMouseOut="this.src='/images/backprev.png'">
+							<img onclick="go_setting('/APP_Installation.asp')" align="right" style="cursor:pointer;position:absolute;margin-left:-20px;margin-top:-30px;" title="<#Menu_usb_application#>" src="/images/backprev.png" onMouseOver="this.src='/images/backprevclick.png'" onMouseOut="this.src='/images/backprev.png'">
 						</td>
 					</tr>
 				</table>

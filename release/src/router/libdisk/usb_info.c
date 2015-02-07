@@ -210,8 +210,8 @@ char *get_usb_node_by_string(const char *target_string, char *ret, const int ret
 	char *ptr, *ptr_end;
 	int len;
 
-	memset(usb_port, 0, 8);
-	if(get_usb_port_by_string(target_string, usb_port, 8) == NULL)
+	memset(usb_port, 0, sizeof(usb_port));
+	if(get_usb_port_by_string(target_string, usb_port, sizeof(usb_port)) == NULL)
 		return NULL;
 
 	if((ptr = strstr(target_string, usb_port)) == NULL)
@@ -222,11 +222,11 @@ char *get_usb_node_by_string(const char *target_string, char *ret, const int ret
 	if((ptr_end = strchr(ptr, ':')) == NULL)
 		return NULL;
 
-	len = strlen(ptr)-strlen(ptr_end);
-	if(len > 16)
-		len = 16;
+	len = ptr_end - ptr;
+	if(len >= sizeof(buf))
+		len = sizeof(buf)-1;
 
-	memset(buf, 0, 16);
+	memset(buf, 0, sizeof(buf));
 	strncpy(buf, ptr, len);
 
 	if((ptr = strrchr(buf, '/')) == NULL)
@@ -579,6 +579,31 @@ char *get_interface_by_device(const char *device_name, char *buf, const int buf_
 	return buf;
 }
 
+char *get_path_by_node(const char *usb_node, char *buf, const int buf_size){
+	char usb_port[8], *hub_path;
+	int port_num = 0, len;
+
+	if(usb_node == NULL || buf == NULL || buf_size <= 0)
+		return NULL;
+
+	// Get USB port.
+	if(get_usb_port_by_string(usb_node, usb_port, sizeof(usb_port)) == NULL)
+		return NULL;
+
+	port_num = get_usb_port_number(usb_port);
+	if(port_num == 0)
+		return NULL;
+
+	if(strlen(usb_node) > (len = strlen(usb_port))){
+		hub_path = usb_node+len;
+		snprintf(buf, buf_size, "%d%s", port_num, hub_path);
+	}
+	else
+		snprintf(buf, buf_size, "%d", port_num);
+
+	return buf;
+}
+
 char *get_usb_vid(const char *usb_node, char *buf, const int buf_size)
 {
 	FILE *fp;
@@ -871,11 +896,11 @@ int get_interface_Int_endpoint(const char *interface_name)
 	bNumEndpoints = get_interface_numendpoints(interface_name);
 	if(bNumEndpoints <= 0){
 		usb_dbg("(%s): No endpoints: %d.\n", interface_name, bNumEndpoints);
-		return 0;
+		goto leave;
 	}
 	else if(bNumEndpoints == 1){ // ex: GL04P
 		usb_dbg("(%s): It's a little impossible to be the control interface with a endpoint.\n", interface_name);
-		return 0;
+		goto leave;
 	}
 
 	end_count = 0;
@@ -897,7 +922,7 @@ int get_interface_Int_endpoint(const char *interface_name)
 		ptr = fgets(buf, sizeof(buf), fp);
 		fclose(fp);
 		if(ptr == NULL)
-			return 0;
+			goto leave;
 
 		if(!strncmp(buf, "03", 2)){
 			got_Int = 1;
@@ -906,6 +931,8 @@ int get_interface_Int_endpoint(const char *interface_name)
 		else if(end_count == bNumEndpoints)
 			break;
 	}
+
+leave:
 	closedir(interface_dir);
 
 	return got_Int;
@@ -975,7 +1002,7 @@ int hadACMModule(void)
 }
 
 // return 1 when there is a bound device.
-extern int hadRNDISModule(){
+int hadRNDISModule(){
 	DIR *module_dir;
 	struct dirent *file;
 	char buf[32];
@@ -1149,35 +1176,36 @@ int isGCTInterface(const char *interface_name){
 // 0: no modem, 1: has modem, 2: has modem but system isn't ready.
 int is_usb_modem_ready(void)
 {
-	int usb_port = 0;
-	char word[8], *next;
 	char prefix[32], tmp[32];
 	char usb_act[8], usb_vid[8];
+	char usb_node[32], port_path[8];
 
 	if(nvram_match("modem_enable", "0"))
 		return 0;
 
-	usb_port = 1;
-	foreach(word, nvram_safe_get("ehci_ports"), next){
-		memset(prefix, 0, 8);
-		sprintf(prefix, "usb_path%d", usb_port);
+	snprintf(usb_node, 32, "%s", nvram_safe_get("usb_modem_act_path"));
+	if(strlen(usb_node) <= 0)
+		return 0;
 
-		memset(usb_act, 0, 8);
-		strcpy(usb_act, nvram_safe_get(strcat_r(prefix, "_act", tmp)));
-		memset(usb_vid, 0, 8);
-		strcpy(usb_vid, nvram_safe_get(strcat_r(prefix, "_vid", tmp)));
+	if(get_path_by_node(usb_node, port_path, 8) == NULL)
+		return 0;
 
-		if(nvram_match(prefix, "modem") && strlen(usb_act) != 0){
-			// for the router dongle: Huawei E353, E3131.
-			if(!strncmp(usb_act, "eth", 3) && !strcmp(usb_vid, "12d1")){
-				if(!strncmp(nvram_safe_get("lan_ipaddr"), "192.168.1.", 10))
-					return 2;
-			}
+	memset(prefix, 0, 8);
+	sprintf(prefix, "usb_path%s", port_path);
 
-			return 1;
+	memset(usb_act, 0, 8);
+	strcpy(usb_act, nvram_safe_get(strcat_r(prefix, "_act", tmp)));
+	memset(usb_vid, 0, 8);
+	strcpy(usb_vid, nvram_safe_get(strcat_r(prefix, "_vid", tmp)));
+
+	if(nvram_match(prefix, "modem") && strlen(usb_act) != 0){
+		// for the router dongle: Huawei E353, E3131.
+		if(!strncmp(usb_act, "eth", 3) && !strcmp(usb_vid, "12d1")){
+			if(!strncmp(nvram_safe_get("lan_ipaddr"), "192.168.1.", 10))
+				return 2;
 		}
 
-		++usb_port;
+		return 1;
 	}
 
 	return 0;
@@ -1202,14 +1230,14 @@ int hadPrinterModule(void)
 
 int hadPrinterInterface(const char *usb_node)
 {
-	char check_usb_node[8], device_name[4];
+	char check_usb_node[32], device_name[4];
 	int printer_order, got_printer = 0;
 
-	for(printer_order = 0; printer_order < SCAN_PRINTER_NODE; ++printer_order){
+	for(printer_order = 0; printer_order < MAX_USB_PRINTER_NUM; ++printer_order){
 		memset(device_name, 0, 4);
 		sprintf(device_name, "lp%d", printer_order);
 
-		if(get_usb_node_by_device(device_name, check_usb_node, sizeof(check_usb_node)) == NULL)
+		if(get_usb_node_by_device(device_name, check_usb_node, 32) == NULL)
 			continue;
 
 		if(!strcmp(usb_node, check_usb_node)){

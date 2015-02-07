@@ -1,26 +1,8 @@
 ﻿var Untranslated = {
 	fw_size_higher_mem : 'Memory space is NOT enough to upgrade on internet. Please wait for rebooting.',
-	enable_macmode : "Enable MAC Filter",
-	WPS_hideSSID_hint : "WPS function will not be available if SSID is hidden",
-	cloud_list_password : "The length of password can't shorter than 8 characters",
-	DM_DisableHint: "You cannot use Download Master because Download Master is disabled!", 
 	the_array_is_end : "end here.",
-	ddns_home_link: "Get started",
-	select_wireless_MAC : "Select the MAC address of Wireless Clients.",
-	select_AP : "Select the Access Point",
-	select_MAC : "Select the MAC address of DHCP clients.",
-	select_IP : "Select the IP address of DHCP clients.",
-	select_network_host : "Select the network host.",
-	select_device_name : "Select the device name of DHCP clients.",
-	select_service : "Select the service name.",
-	select_client : "Select the client of DHCP clients.",
-	select_APN_service : "Select the APN service.",
-	Guest_Network_enable_ACL : "You must go to enable MAC filter",
-	WLANConfig11b_Channel_HighPower_desc1 : "To ensure the best wireless signal, we suggest to set the router channel with channel 2. If agree to access Channel 2, please click 'OK'. If disagree, please click 'Cancel'",
-	WLANConfig11b_Channel_HighPower_desc2 : "Due to local regulator limitation, Channel 1 can’t provide the best wireless coverage. If you insist to access Channel 1, please click 'OK'. If not, it will set to channel 2. Please click 'Cancel'",
-	WLANConfig11b_Channel_HighPower_desc3 : "To ensure the best wireless signal, we suggest to set the router channel with channel 10. If agree to access Channel 10, please click 'OK'. If disagree, please click 'Cancel'",
-	WLANConfig11b_Channel_HighPower_desc4 : "Due to local regulator limitation, Channel 11 can’t provide the best wireless coverage. If you insist to access Channel 11, please click 'OK'. If not, it will set to channel 10. Please click 'Cancel'",
-	WLANConfig11b_WDS_sectiondesc4 : "4. To get best performance, please go to advanced settings -> wireless -> general and make sure that every router in the network has the same channel bandwidth, control channel and extension channel."
+	Guest_Network_enable_ACL : "You must go to enable MAC filter",	
+	link_rate : "Link rate"
 };
 var clicked_help_string = "<#Help_init_word1#> <a class=\"hintstyle\" style=\"background-color:#7aa3bd\"><#Help_init_word2#></a> <#Help_init_word3#>";
 
@@ -31,6 +13,25 @@ function addNewScript_help(scriptName){
 	script.src = scriptName;
 	document.getElementsByTagName("head")[0].appendChild(script);
 }
+
+/* convert some special character for shown string */
+function handle_show_str(show_str)
+{
+	show_str = show_str.replace(/\&/g, "&amp;");
+	show_str = show_str.replace(/\</g, "&lt;");
+	show_str = show_str.replace(/\>/g, "&gt;");
+	show_str = show_str.replace(/\ /g, "&nbsp;");
+	return show_str;
+}
+
+
+function show_str_ssid(show_ssid)
+{
+	show_ssid = show_ssid.replace(/\%/g, "%25");
+	return show_ssid;
+}   
+
+
 function isMobile_help(){
 	return false; //disable mobile QIS temporary, Jieming added at 2013.08.12
 	
@@ -167,10 +168,19 @@ function overHint(itemNum){
 
 	// printer
 	if(itemNum == 6){
-		statusmenu = "<div class='StatusHint'><#Printing_button_item#></div>";
-		if(monoClient == "monoClient=")
-			monoClient = "monoClient=<#CTL_Disabled#>"
-		statusmenu += "<span>" + monoClient.substring(11, monoClient.length) + "</span>";
+		for(var i=0; i<usbDevices.length; i++){
+			if(usbDevices[i].deviceType != "printer") continue;
+
+			statusmenu += "<div class='StatusHint' style='margin-top:8px'>" + usbDevices[i].deviceName + ":</div>";
+			if(usbDevices[i].serialNum == '<% nvram_get("u2ec_serial"); %>'){
+				statusmenu += "<div><#CTL_Enabled#></div>";
+
+				if(monoClient != "monoClient=")
+					statusmenu += "<div><#Printing_button_item#>" + monoClient.substring(11, monoClient.length) + "</div>";
+			}
+			else
+				statusmenu += "<div><#CTL_Disabled#></div>";
+		}
 	}
 	if(itemNum == 5){
 		statusmenu = "<span class='StatusHint'><#no_printer_detect#></span>";	
@@ -187,9 +197,7 @@ function overHint(itemNum){
 
 				var show_str = gn_array_2g[i][1];
 				show_str = decodeURIComponent(show_str);
-				show_str = show_str.replace(/\&/g,"&amp;");
-				show_str = show_str.replace(/\</g,"&lt;");
-				show_str = show_str.replace(/\>/g,"&gt;");
+				show_str = handle_show_str(show_str);
 				statusmenu += "<span>" + show_str + " (";
 
 				if(gn_array_2g[i][11] == 0)
@@ -220,9 +228,7 @@ function overHint(itemNum){
 	
 					var show_str = gn_array_5g[i][1];
 					show_str = decodeURIComponent(show_str);
-					show_str = show_str.replace(/\&/g,"&amp;");
-					show_str = show_str.replace(/\</g,"&lt;");
-					show_str = show_str.replace(/\>/g,"&gt;");
+					show_str = handle_show_str(show_str);
 					statusmenu += "<span>" + show_str + " (";
 
 					if(gn_array_5g[i][11] == 0)
@@ -274,8 +280,13 @@ function overHint(itemNum){
 					statusmenu = "<span class='StatusHint'><#web_redirect_reason2_2#></span>";
 			}
 			else if(sw_mode == 2 || sw_mode == 4){
-				if(_wlc_state == "wlc_state=2")
-					statusmenu = "<span class='StatusHint'><#APSurvey_msg_connected#></span>";
+				if(_wlc_state == "wlc_state=2"){
+					statusmenu = "<span class='StatusHint'><#APSurvey_msg_connected#></span><br><br>";
+					if(wlc_band == 0)	
+						statusmenu += "<b>Link rate: </b>"+ data_rate_info_2g;
+					else
+						statusmenu += "<b>Link rate: </b>"+ data_rate_info_5g;
+				}	
 				else{
 					if(_wlc_sbstate == "wlc_sbstate=2")
 						statusmenu = "<span class='StatusHint'><#APSurvey_action_ConnectingStatus1#></span>";
@@ -288,54 +299,26 @@ function overHint(itemNum){
 
 	// usb storage
 	if(itemNum == 2){
-		var dmStatus = "<#download_nonInstall#>";
-		if(nodm_support){
-			var dmStatus = "Not support.";
-		}
-
-		var apps_dev = '<% nvram_get("apps_dev"); %>';
-
-		if(foreign_disk_total_mounted_number()[0] == null){
-			statusmenu = "<div class='StatusHint'><#no_usb_found#></div>";
-		}
-		else if(foreign_disk_total_mounted_number()[0] == "0" && foreign_disk_total_mounted_number()[foreign_disk_total_mounted_number().length-1] == "0"){
-			statusmenu = "<span class='StatusHint'><#DISK_UNMOUNTED#></span>";
-		}
+		if(!usbDevices.length){
+			statusmenu = "<div class='StatusHint'><#no_usb_found#></div>";}
 		else{
-			statusmenu = "<div class='StatusHint'>Download Master:</div>";				
-			if(getCookie_help("dm_install") == null || getCookie_help("dm_enable") == null || getCookie_help("hwaddr") != '<% nvram_get("et0macaddr"); %>')
-				dmStatus = "<#USB_Application_check#>";
-			else if(getCookie_help("dm_install") == "yes" && getCookie_help("dm_enable") == "yes"){
-				//dmStatus = "Enabled";
-				if(pool_devices() != ""){ //  avoid no disk error
-					partitions_array = pool_devices(); 
-					for(var i = 0; i < partitions_array.length; i++){
-						if(apps_dev == partitions_array[i]){
-							if(i > foreign_disk_total_mounted_number()[0]){
-								dmStatus = "" + decodeURIComponent(foreign_disks()[1]) + "";
-								DMDiskNum = foreign_disk_interface_names()[0];
-							}
-							else{
-								dmStatus = "" + decodeURIComponent(foreign_disks()[0]) + "";
-								DMDiskNum = foreign_disk_interface_names()[1];
-							}
-						}
-					}
-				}
-			}
-			else if(getCookie_help("dm_install") == "no"){
-				dmStatus = "<#download_nonInstall#>";		
-				if(nodm_support){
-					dmStatus = "Not support.";
-				}
-			}
-			else if(getCookie_help("dm_enable") == "no" && getCookie_help("dm_install") == "yes")
-				dmStatus = "Disabled";
-			statusmenu += "<span>"+ dmStatus +"</span>";
+			statusmenu = "";
+			for(var i=0; i<usbDevices.length; i++){
+				if(usbDevices[i].deviceType == "printer") continue;
 
-			if(usb_path1 == "usb=modem" || usb_path2 == "usb=modem"){
-				statusmenu += "<div class='StatusHint'><#HSDPAConfig_USBAdapter_itemname#>:</div>";
-				statusmenu += "<span>On</span>";
+				statusmenu += "<div class='StatusHint' style='margin-top:8px'>" + usbDevices[i].deviceName + ":</div>";
+				statusmenu += "<div>" + usbDevices[i].deviceType.charAt(0).toUpperCase() + usbDevices[i].deviceType.substring(1).toLowerCase() + "</div>";
+
+				if(usbDevices[i].deviceType == "storage" && usbDevices[i].mountNumber == 0)
+					statusmenu += "<div><#DISK_UNMOUNTED#></div>";
+				else if(usbDevices[i].hasErrPart)
+					statusmenu += "<div><#diskUtility_crash_found#></div>";
+				else{				
+					if(usbDevices[i].hasAppDev)
+						statusmenu += "<div><#menu5_4#></div>";
+					if(usbDevices[i].hasTM)
+						statusmenu += "<div>Time Machine</div>";
+				}
 			}
 		}
 	}
@@ -343,7 +326,6 @@ function overHint(itemNum){
 	return overlib(statusmenu, OFFSETX, -160, LEFT, DELAY, 400);
 }
 
-var usb_path_tmp = new Array('usb=<% nvram_get("usb_path1"); %>', 'usb=<% nvram_get("usb_path2"); %>');
 function openHint(hint_array_id, hint_show_id, flag){
 	if(hint_array_id == 24){
 		var _caption = "";
@@ -375,7 +357,7 @@ function openHint(hint_array_id, hint_show_id, flag){
 						statusmenu = "<span class='StatusClickHint' onclick='suspendconn(0);' onmouseout='this.className=\"StatusClickHint\"' onmouseover='this.className=\"StatusClickHint_mouseover\"'><#disconnect_internet#></span>";		
 				}					
 				else if(link_status == "5")
-					statusmenu = "<span class='StatusClickHint' onclick='suspendconn(1);' onmouseout='this.className=\"StatusClickHint\"' onmouseover='this.className=\"StatusClickHint_mouseover\"'>Resume internet</span>";
+					statusmenu = "<span class='StatusClickHint' onclick='suspendconn(1);' onmouseout='this.className=\"StatusClickHint\"' onmouseover='this.className=\"StatusClickHint_mouseover\"'><#reconnect_internet#></span>";
 				else{
 					if(link_auxstatus == "1")
 						statusmenu = "<span class='StatusHint'><#QKSet_detect_wanconnfault#></span>";
@@ -407,42 +389,22 @@ function openHint(hint_array_id, hint_show_id, flag){
 		else if(hint_show_id == 2){
 			var statusmenu = "";
 
-			if(foreign_disk_total_mounted_number()[0] == "0" && foreign_disk_total_mounted_number()[foreign_disk_total_mounted_number().length-1] == "0"){
-				return false;
-			}
-			else{
-				for(i=0; i<foreign_disk_interface_names().length; i++){
-					if(foreign_disk_total_mounted_number()[0] == ""){
-						statusmenu = "<span class='StatusHint'><#no_usb_found#></span>";
-						break;
-					}
-	
-					if(foreign_disk_interface_names()[i] == 1)
-						_foreign_disk_interface_name = 1;
-					else
-						_foreign_disk_interface_name = 2;
-	
-					var usb_path_curr = eval("usb_path"+_foreign_disk_interface_name);
-					if(foreign_disk_total_mounted_number()[i] != "0" && foreign_disk_total_mounted_number()[i] != "" && usb_path_curr != "usb=")
-						statusmenu += "<div style='margin-top:2px;' class='StatusClickHint' onclick='remove_disk("+parseInt(foreign_disk_interface_names()[i])+");' onmouseout='this.className=\"StatusClickHint\"' onmouseover='this.className=\"StatusClickHint_mouseover\"'><#Eject_usb_disk#> <span style='font-weight:normal'>"+ decodeURIComponent(foreign_disks()[i]) +"</span></div>";
-					else 
-						continue;
+			for(var i=0; i<usbDevices.length; i++){
+				if(usbDevices[i].mountNumber > 0){
+					statusmenu += "<div style='margin-top:2px;' class='StatusClickHint' onclick='remove_disk("+ usbDevices[i].node +");' onmouseout='this.className=\"StatusClickHint\"' onmouseover='this.className=\"StatusClickHint_mouseover\"'>";
+					statusmenu += "<#Eject_usb_disk#> <span style='font-weight:normal'>"+ usbDevices[i].deviceName +"</span></div>";
 				}
-				if(current_url!="index.asp" && current_url!=""){
-					if((usb_path_tmp[0] != usb_path1) && usb_path1 != "usb=" && usb_path1 != "usb=printer")
-						statusmenu += "<div style='margin-top:2px;' class='StatusClickHint' onclick='remove_disk(1);' onmouseout='this.className=\"StatusClickHint\"' onmouseover='this.className=\"StatusClickHint_mouseover\"'><#Eject_usb_disk#> <span style='font-weight:normal'>USB Disk 1</span></div>";
-					if((usb_path_tmp[1] != usb_path2) && usb_path2 != "usb=" && usb_path2 != "usb=printer")
-						statusmenu += "<div style='margin-top:2px;' class='StatusClickHint' onclick='remove_disk(2);' onmouseout='this.className=\"StatusClickHint\"' onmouseover='this.className=\"StatusClickHint_mouseover\"'><#Eject_usb_disk#> <span style='font-weight:normal'>USB Disk 2</span></div>";
-				}
-
-				if(statusmenu.howMany("remove_disk") == 2)
-					statusmenu += "<div style='margin-top:2px;' class='StatusClickHint' onclick='remove_disk(\"all\");' onmouseout='this.className=\"StatusClickHint\"' onmouseover='this.className=\"StatusClickHint_mouseover\"'>Eject all USB disks</div>";
 			}
 
-			_caption = "USB storage";
+			if(statusmenu == "")
+				statusmenu = "<span class='StatusHint'><#DISK_UNMOUNTED#></span>";
+			else if(statusmenu.howMany("remove_disk") > 1)
+				statusmenu += "<div style='margin-top:2px;' class='StatusClickHint' onclick='remove_disk(\"all\");' onmouseout='this.className=\"StatusClickHint\"' onmouseover='this.className=\"StatusClickHint_mouseover\"'>Eject all USB disks</div>";
+
+				_caption = "USB storage";
 		}
 		else if(hint_show_id == 1){
-			if(usb_path1 == "usb=printer" || usb_path2 == "usb=printer")
+			if(hadPlugged("printer"))
 				statusmenu = "<span class='StatusClickHint' onclick='enableMonomode();' onmouseout='this.className=\"StatusClickHint\"' onmouseover='this.className=\"StatusClickHint_mouseover\"'>Enable Monopoly mode</span>";
 			else
 				statusmenu = "<span class='StatusHint'><#no_printer_detect#></span>";	
@@ -2200,11 +2162,11 @@ function chkPass(pwd, flag) {
 		
 		/* Determine complexity based on overall score */
 		if (nScore > 100) { nScore = 100; } else if (nScore < 0) { nScore = 0; }
-		if (nScore >= 0 && nScore < 20) { sComplexity = "Very Weak"; }
-		else if (nScore >= 20 && nScore < 40) { sComplexity = "Weak"; }
-		else if (nScore >= 40 && nScore < 60) { sComplexity = "Good"; }
-		else if (nScore >= 60 && nScore < 80) { sComplexity = "Strong"; }
-		else if (nScore >= 80 && nScore <= 100) { sComplexity = "Very Strong"; }
+		if (nScore >= 0 && nScore < 20) { sComplexity = "<#PASS_score0#>"; }
+		else if (nScore >= 20 && nScore < 40) { sComplexity = "<#PASS_score1#>"; }
+		else if (nScore >= 40 && nScore < 60) { sComplexity = "<#PASS_score2#>"; }
+		else if (nScore >= 60 && nScore < 80) { sComplexity = "<#PASS_score3#>"; }
+		else if (nScore >= 80 && nScore <= 100) { sComplexity = "<#PASS_score4#>"; }
 		
 		/* Display updated score criteria to client */
 		$('scorebarBorder').style.display = "";
@@ -2214,7 +2176,7 @@ function chkPass(pwd, flag) {
 	else {
 		/* Display default score criteria to client */
 		if(flag == 'http_passwd'){
-				orig_pwd = "<% nvram_get("http_passwd"); %>";
+				orig_pwd = decodeURIComponent("<% nvram_char_to_ascii("", "http_passwd"); %>");
 				chkPass(orig_pwd, 'http_passwd');
 		}
 	}

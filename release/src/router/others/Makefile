@@ -28,7 +28,13 @@ endif
 # chpasswd script
 	install -m 0700 chpasswd.sh $(INSTALLDIR)/usr/sbin
 
-ifeq ($(RTN14U)$(RTAC52U),y)
+# OpenVPN
+ifeq ($(RTCONFIG_OPENVPN),y)
+	install -m 0700 setuprsa.sh $(INSTALLDIR)/usr/sbin
+	install -m 0700 -D updown.sh $(INSTALLDIR)/usr/sbin
+endif
+
+ifeq ($(RTN14U)$(RTAC52U)$(RTAC51U),y)
 # for read/write Ralink PHY registers
 	install -D mii_mgr $(INSTALLDIR)/bin/mii_mgr
 endif

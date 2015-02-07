@@ -653,10 +653,8 @@ function pass_checked(obj){
 <form method="post" name="form" id="ruleForm" action="/start_apply.htm" target="hidden_frame">
 <input type="hidden" name="productid" value="<% nvram_get("productid"); %>">
 <input type="hidden" name="support_cdma" value="<% nvram_get("support_cdma"); %>">
-
 <input type="hidden" name="current_page" value="Advanced_WAN_Content.asp">
 <input type="hidden" name="next_page" value="">
-<input type="hidden" name="next_host" value="">
 <input type="hidden" name="group_id" value="">
 <input type="hidden" name="modified" value="0">
 <input type="hidden" name="action_mode" value="apply">
@@ -698,11 +696,11 @@ function pass_checked(obj){
 						<table id="WANscap" width="100%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3" class="FormTable">
 							<thead>
 							<tr>
-								<td colspan="2">WAN index</td>
+								<td colspan="2"><#wan_index#></td>
 							</tr>
 							</thead>							
 							<tr>
-								<th>WAN Type</th>
+								<th><#wan_type#></th>
 								<td align="left">
 									<select id="" class="input_option" name="wan_unit" onchange="change_wan_unit();"></select>
 								</td>
@@ -909,11 +907,11 @@ function pass_checked(obj){
         	</tr>
 
 		<tr>
-		<th><a class="hintstyle" href="javascript:void(0);" onClick="openHint(7,30);">DHCP query frequency</a></th>
+		<th><a class="hintstyle" href="javascript:void(0);" onClick="openHint(7,30);"><#DHCP_query_freq#></a></th>
 		<td>
 		<select name="dhcpc_mode" class="input_option">
-			<option value="0" <% nvram_match(" dhcpc_mode", "0","selected"); %>>Normal Mode</option>
-			<option value="1" <% nvram_match(" dhcpc_mode", "1","selected"); %>>Aggressive Mode</option>
+			<option value="0" <% nvram_match(" dhcpc_mode", "0","selected"); %>><#DHCPnormal#></option>
+			<option value="1" <% nvram_match(" dhcpc_mode", "1","selected"); %>><#DHCPaggressive#></option>
 		</select>
 		</td>
 		</tr>

@@ -40,17 +40,9 @@ var wireless = [<% wl_auth_list(); %>];	// [[MAC, associated, authorized], ...]
 wl_channel_list_2g = '<% channel_list_2g(); %>';
 wl_channel_list_5g = '<% channel_list_5g(); %>';
 
-function handle_show_str(show_str)
-{
-	show_str = show_str.replace(/\&/g, "&amp;");
-	show_str = show_str.replace(/\</g, "&lt;");
-	show_str = show_str.replace(/\>/g, "&gt;");
-	return show_str;
-}
-
 function initial(){
 	$('ACL_disabled_hint').innerHTML = Untranslated.Guest_Network_enable_ACL;
-	$('enable_macfilter').innerHTML = Untranslated.enable_macmode;
+	$('enable_macfilter').innerHTML = "<#enable_macmode#>";
 	show_menu();	
 	//insertExtChannelOption();		
 
@@ -561,7 +553,11 @@ function genBWTable(_unit){
 				<br/>
 				<br/>
 		    </div>
-		  <div class="drImg"><img src="images/alertImg.png"></div>
+			<div id="wireless_client_detect" style="margin-left:10px;position:absolute;display:none">
+				<img src="images/loading.gif">
+				<div style="margin:-45px 0 0 75px;"><#QKSet_Internet_Setup_fail_method1#></div>
+			</div>
+			<div class="drImg"><img src="images/alertImg.png"></div>
 			<div style="height:70px; "></div>
 		</td>
 		</tr>
@@ -585,7 +581,6 @@ function genBWTable(_unit){
 <input type="hidden" name="wan_nat_x" value="<% nvram_get("wan_nat_x"); %>" disabled>
 <input type="hidden" name="current_page" value="Guest_network.asp">
 <input type="hidden" name="next_page" value="Guest_network.asp">
-<input type="hidden" name="next_host" value="">
 <input type="hidden" name="modified" value="0">
 <input type="hidden" name="action_mode" value="apply_new">
 <input type="hidden" name="action_script" value="restart_wireless">

@@ -1056,6 +1056,39 @@ int SetSRA(int EnumSRAValue, int FromAteCmd)
     return 0;
 }
 
+/* Paul add start 2013/10/23, for Bitswap control. */
+int SetBitswap(int EnumBitswapValue, int FromAteCmd)
+{
+    declare_resp_handling_vars(pRespBuf, pRespLen, RespPktNum, tok, pRespStr);
+    char InputCmd[10];
+    char UserCmd[64];
+		InputCmd[0] = '\0';
+		UserCmd[0] = '\0';
+    
+    //SET :0/1:OlrOff/OlrOn
+    sprintf(InputCmd, "%d", EnumBitswapValue);
+    strcpy(UserCmd, SET_Bitswap_ADSL2);
+    strcat(UserCmd, InputCmd);
+    strcat(UserCmd, "\x0d\x0a");
+    
+    SendCmdAndWaitResp(pRespBuf, MAX_RESP_BUF_SIZE, pRespLen, MAX_RESP_BUF_NUM, &RespPktNum, m_AdslMacAddr,
+        MAC_RTS_CONSOLE_CMD, (PUCHAR)UserCmd, strlen(UserCmd), 0);
+
+		UserCmd[0] = '\0';
+		strcpy(UserCmd, SET_Bitswap_ADSL1);
+		if(EnumBitswapValue == 0)
+			strcat(UserCmd, "off off");
+		else
+			strcat(UserCmd, "on on");
+		
+		strcat(UserCmd, "\x0d\x0a");
+
+    SendCmdAndWaitResp(pRespBuf, MAX_RESP_BUF_SIZE, pRespLen, MAX_RESP_BUF_NUM, &RespPktNum, m_AdslMacAddr,
+        MAC_RTS_CONSOLE_CMD, (PUCHAR)UserCmd, strlen(UserCmd), 0);
+
+    return 0;
+}
+
 typedef struct {
     char FwVer[80];
     char AdslFwVer[80];

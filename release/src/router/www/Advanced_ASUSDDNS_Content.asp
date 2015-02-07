@@ -29,7 +29,6 @@ var $j = jQuery.noConflict();
 
 function init(){
 		ddns_load_body();	
-		$('linkToHome').innerHTML = Untranslated.ddns_home_link;  // remove this line when translated string is done
 }
 
 function valid_wan_ip() {
@@ -306,7 +305,6 @@ function cleandef(){
 
 <input type="hidden" name="current_page" value="Advanced_ASUSDDNS_Content.asp">
 <input type="hidden" name="next_page" value="">
-<input type="hidden" name="next_host" value="">
 <input type="hidden" name="group_id" value="">
 <input type="hidden" name="modified" value="0">
 <input type="hidden" name="action_wait" value="">
@@ -367,7 +365,7 @@ function cleandef(){
 					<option value="WWW.NO-IP.COM" <% nvram_match("ddns_server_x", "WWW.NO-IP.COM","selected"); %>>WWW.NO-IP.COM</option>
                   		</select>
 				<a id="link" href="javascript:openLink('x_DDNSServer')" style=" margin-left:5px; text-decoration: underline;"><#LANHostConfig_x_DDNSServer_linkname#></a>
-				<a id="linkToHome" href="javascript:openLink('x_DDNSServer')" style=" margin-left:5px; text-decoration: underline;"></a>
+				<a id="linkToHome" href="javascript:openLink('x_DDNSServer')" style=" margin-left:5px; text-decoration: underline;"><#ddns_home_link#></a>
 				</td>
 			</tr>
 			<tr id="ddns_hostname_tr">

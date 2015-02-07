@@ -62,7 +62,10 @@ typedef struct {
 DECLARE_LHASH_OF(FUNCTION);
 
 FUNCTION functions[] = {
+	{FUNC_TYPE_GENERAL,"verify",verify_main},
+	{FUNC_TYPE_GENERAL,"version",version_main},
 	{FUNC_TYPE_GENERAL,"req",req_main},
+	{FUNC_TYPE_GENERAL,"ca",ca_main},
 #ifndef OPENSSL_NO_RSA
 	{FUNC_TYPE_GENERAL,"rsa",rsa_main},
 #endif
@@ -92,24 +95,62 @@ FUNCTION functions[] = {
 #ifndef OPENSSL_NO_AES
 	{FUNC_TYPE_CIPHER,"aes-256-ecb",enc_main},
 #endif
+#ifndef OPENSSL_NO_DH
+	{FUNC_TYPE_GENERAL,"dhparam",dhparam_main},
+#endif
+#ifndef OPENSSL_NO_CAMELLIA
+	{FUNC_TYPE_CIPHER,"camellia-128-cbc",enc_main},
+#endif
+#ifndef OPENSSL_NO_CAMELLIA
+	{FUNC_TYPE_CIPHER,"camellia-192-cbc",enc_main},
+#endif
+#ifndef OPENSSL_NO_CAMELLIA
+	{FUNC_TYPE_CIPHER,"camellia-256-cbc",enc_main},
+#endif
+#ifndef OPENSSL_NO_DES
+	{FUNC_TYPE_CIPHER,"des-cbc",enc_main},
+#endif
+#ifndef OPENSSL_NO_DES
+	{FUNC_TYPE_CIPHER,"des-ede-cbc",enc_main},
+#endif
+#ifndef OPENSSL_NO_DES
+	{FUNC_TYPE_CIPHER,"des-ede3-cbc",enc_main},
+#endif
+#ifndef OPENSSL_NO_CAST
+	{FUNC_TYPE_CIPHER,"cast5-cbc",enc_main},
+#endif
+#ifndef OPENSSL_NO_RC2
+	{FUNC_TYPE_CIPHER,"rc2-cbc",enc_main},
+#endif
+#ifndef OPENSSL_NO_RC2
+	{FUNC_TYPE_CIPHER,"rc2-40-cbc",enc_main},
+#endif
+#ifndef OPENSSL_NO_RC2
+	{FUNC_TYPE_CIPHER,"rc2-64-cbc",enc_main},
+#endif
+#ifndef OPENSSL_NO_RC5
+	{FUNC_TYPE_CIPHER,"rc5-cbc",enc_main},
+#endif
+#ifndef OPENSSL_NO_IDEA
+	{FUNC_TYPE_CIPHER,"idea-cbc",enc_main},
+#endif
+#ifndef OPENSSL_NO_SEED
+	{FUNC_TYPE_CIPHER,"seed-cbc",enc_main},
+#endif
+
 
 #if 0
 
-	{FUNC_TYPE_GENERAL,"verify",verify_main},
 	{FUNC_TYPE_GENERAL,"asn1parse",asn1parse_main},
 	{FUNC_TYPE_GENERAL,"dgst",dgst_main},
 #ifndef OPENSSL_NO_DH
 	{FUNC_TYPE_GENERAL,"dh",dh_main},
-#endif
-#ifndef OPENSSL_NO_DH
-	{FUNC_TYPE_GENERAL,"dhparam",dhparam_main},
 #endif
 	{FUNC_TYPE_GENERAL,"passwd",passwd_main},
 #ifndef OPENSSL_NO_DH
 	{FUNC_TYPE_GENERAL,"gendh",gendh_main},
 #endif
 	{FUNC_TYPE_GENERAL,"errstr",errstr_main},
-	{FUNC_TYPE_GENERAL,"ca",ca_main},
 	{FUNC_TYPE_GENERAL,"crl",crl_main},
 #ifndef OPENSSL_NO_RSA
 	{FUNC_TYPE_GENERAL,"rsautl",rsautl_main},
@@ -145,7 +186,6 @@ FUNCTION functions[] = {
 #if !defined(OPENSSL_NO_SOCK) && !(defined(OPENSSL_NO_SSL2) && defined(OPENSSL_NO_SSL3))
 	{FUNC_TYPE_GENERAL,"s_time",s_time_main},
 #endif
-	{FUNC_TYPE_GENERAL,"version",version_main},
 	{FUNC_TYPE_GENERAL,"pkcs7",pkcs7_main},
 #ifndef OPENSSL_NO_CMS
 	{FUNC_TYPE_GENERAL,"cms",cms_main},
@@ -196,19 +236,10 @@ FUNCTION functions[] = {
 	{FUNC_TYPE_MD,"rmd160",dgst_main},
 #endif
 #ifndef OPENSSL_NO_CAMELLIA
-	{FUNC_TYPE_CIPHER,"camellia-128-cbc",enc_main},
-#endif
-#ifndef OPENSSL_NO_CAMELLIA
 	{FUNC_TYPE_CIPHER,"camellia-128-ecb",enc_main},
 #endif
 #ifndef OPENSSL_NO_CAMELLIA
-	{FUNC_TYPE_CIPHER,"camellia-192-cbc",enc_main},
-#endif
-#ifndef OPENSSL_NO_CAMELLIA
 	{FUNC_TYPE_CIPHER,"camellia-192-ecb",enc_main},
-#endif
-#ifndef OPENSSL_NO_CAMELLIA
-	{FUNC_TYPE_CIPHER,"camellia-256-cbc",enc_main},
 #endif
 #ifndef OPENSSL_NO_CAMELLIA
 	{FUNC_TYPE_CIPHER,"camellia-256-ecb",enc_main},
@@ -216,21 +247,6 @@ FUNCTION functions[] = {
 	{FUNC_TYPE_CIPHER,"base64",enc_main},
 #ifdef ZLIB
 	{FUNC_TYPE_CIPHER,"zlib",enc_main},
-#endif
-#ifndef OPENSSL_NO_DES
-	{FUNC_TYPE_CIPHER,"des",enc_main},
-#endif
-#ifndef OPENSSL_NO_DES
-	{FUNC_TYPE_CIPHER,"des3",enc_main},
-#endif
-#ifndef OPENSSL_NO_DES
-	{FUNC_TYPE_CIPHER,"desx",enc_main},
-#endif
-#ifndef OPENSSL_NO_IDEA
-	{FUNC_TYPE_CIPHER,"idea",enc_main},
-#endif
-#ifndef OPENSSL_NO_SEED
-	{FUNC_TYPE_CIPHER,"seed",enc_main},
 #endif
 #ifndef OPENSSL_NO_RC4
 	{FUNC_TYPE_CIPHER,"rc4",enc_main},
@@ -260,15 +276,6 @@ FUNCTION functions[] = {
 	{FUNC_TYPE_CIPHER,"des-ede3",enc_main},
 #endif
 #ifndef OPENSSL_NO_DES
-	{FUNC_TYPE_CIPHER,"des-cbc",enc_main},
-#endif
-#ifndef OPENSSL_NO_DES
-	{FUNC_TYPE_CIPHER,"des-ede-cbc",enc_main},
-#endif
-#ifndef OPENSSL_NO_DES
-	{FUNC_TYPE_CIPHER,"des-ede3-cbc",enc_main},
-#endif
-#ifndef OPENSSL_NO_DES
 	{FUNC_TYPE_CIPHER,"des-cfb",enc_main},
 #endif
 #ifndef OPENSSL_NO_DES
@@ -287,9 +294,6 @@ FUNCTION functions[] = {
 	{FUNC_TYPE_CIPHER,"des-ede3-ofb",enc_main},
 #endif
 #ifndef OPENSSL_NO_IDEA
-	{FUNC_TYPE_CIPHER,"idea-cbc",enc_main},
-#endif
-#ifndef OPENSSL_NO_IDEA
 	{FUNC_TYPE_CIPHER,"idea-ecb",enc_main},
 #endif
 #ifndef OPENSSL_NO_IDEA
@@ -297,9 +301,6 @@ FUNCTION functions[] = {
 #endif
 #ifndef OPENSSL_NO_IDEA
 	{FUNC_TYPE_CIPHER,"idea-ofb",enc_main},
-#endif
-#ifndef OPENSSL_NO_SEED
-	{FUNC_TYPE_CIPHER,"seed-cbc",enc_main},
 #endif
 #ifndef OPENSSL_NO_SEED
 	{FUNC_TYPE_CIPHER,"seed-ecb",enc_main},
@@ -311,9 +312,6 @@ FUNCTION functions[] = {
 	{FUNC_TYPE_CIPHER,"seed-ofb",enc_main},
 #endif
 #ifndef OPENSSL_NO_RC2
-	{FUNC_TYPE_CIPHER,"rc2-cbc",enc_main},
-#endif
-#ifndef OPENSSL_NO_RC2
 	{FUNC_TYPE_CIPHER,"rc2-ecb",enc_main},
 #endif
 #ifndef OPENSSL_NO_RC2
@@ -322,20 +320,11 @@ FUNCTION functions[] = {
 #ifndef OPENSSL_NO_RC2
 	{FUNC_TYPE_CIPHER,"rc2-ofb",enc_main},
 #endif
-#ifndef OPENSSL_NO_RC2
-	{FUNC_TYPE_CIPHER,"rc2-64-cbc",enc_main},
-#endif
-#ifndef OPENSSL_NO_RC2
-	{FUNC_TYPE_CIPHER,"rc2-40-cbc",enc_main},
-#endif
 #ifndef OPENSSL_NO_BF
 	{FUNC_TYPE_CIPHER,"bf-cfb",enc_main},
 #endif
 #ifndef OPENSSL_NO_BF
 	{FUNC_TYPE_CIPHER,"bf-ofb",enc_main},
-#endif
-#ifndef OPENSSL_NO_CAST
-	{FUNC_TYPE_CIPHER,"cast5-cbc",enc_main},
 #endif
 #ifndef OPENSSL_NO_CAST
 	{FUNC_TYPE_CIPHER,"cast5-ecb",enc_main},
@@ -349,9 +338,7 @@ FUNCTION functions[] = {
 #ifndef OPENSSL_NO_CAST
 	{FUNC_TYPE_CIPHER,"cast-cbc",enc_main},
 #endif
-#ifndef OPENSSL_NO_RC5
-	{FUNC_TYPE_CIPHER,"rc5-cbc",enc_main},
-#endif
+
 #ifndef OPENSSL_NO_RC5
 	{FUNC_TYPE_CIPHER,"rc5-ecb",enc_main},
 #endif

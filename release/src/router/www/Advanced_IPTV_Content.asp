@@ -276,7 +276,7 @@ function applyRule(){
 				}
 			}
 			if (port_conflict) {
-				alert("IPTV port number is same as dual wan LAN port number");
+				alert("<#RouterConfig_IPTV_conflict#>");
 				return;
 			}
 		}
@@ -379,7 +379,6 @@ function validate_range_null(o, min, max, def) {		//Viz add 2013.03 allow to set
 <input type="hidden" name="productid" value="<% nvram_get("productid"); %>">
 <input type="hidden" name="current_page" value="/Advanced_IPTV_Content.asp">
 <input type="hidden" name="next_page" value="/Advanced_IPTV_Content.asp">
-<input type="hidden" name="next_host" value="">
 <input type="hidden" name="group_id" value="">
 <input type="hidden" name="modified" value="0">
 <input type="hidden" name="action_mode" value="apply_new">
@@ -553,7 +552,7 @@ function validate_range_null(o, min, max, def) {		//Viz add 2013.03 allow to set
 			</tr>
 
 					<tr id="enable_eff_multicast_forward" style="display:none;">
-						<th>Enable efficient multicast forwarding (IGMP Snooping)</th>
+						<th><#WLANConfig11b_x_Emf_itemname#></th>
 						<td>
                   				<select name="emf_enable" class="input_option">
                     					<option value="0" <% nvram_match("emf_enable", "0","selected"); %> ><#WLANConfig11b_WirelessCtrl_buttonname#></option>

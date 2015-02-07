@@ -351,6 +351,18 @@
 	border-width:0;
 	color:#FFFFFF;
 }
+.input_30_table{
+	margin-left:2px;
+	padding-left:0.4em;
+	height:23px;
+	width:315px;
+	line-height:23px \9;	/*IE*/
+	font-size:12px;
+	font-family: Lucida Console;
+	background-image:url(/images/New_ui/inputbg.png);
+	border-width:0;
+	color:#FFFFFF;
+}
 .input_25_table{
 	margin-left:2px;	
 	padding-left:0.4em;
@@ -628,10 +640,6 @@
 
 form{ 
 	margin:0px;
-}
-
-textarea{
-	width:99%;	
 }
 
 .hint_word{
@@ -1445,6 +1453,25 @@ padding-top:1px;
 	cursor: pointer;
 }
 
+.vpnstatuson{
+	background-image:url(/images/New_ui/vpnstatus.png);
+	background-repeat:no-repeat;	
+	background-position:2px 2px;
+	height:29px;
+	width:30px;
+	cursor: pointer;
+	display: none;
+}
+.vpnstatusoff{
+	background-image:url(/images/New_ui/vpnstatus.png);
+	background-repeat:no-repeat;	
+	background-position:2px -48px;
+	height:29px;
+	width:30px;
+	cursor: pointer;
+	display: none;
+}
+
 .wifihwswstatuson{
 	background-image:url(/images/wifi_hw_sw.png);
 	background-repeat:no-repeat;	
@@ -2017,4 +2044,23 @@ padding-top:1px;
 	*margin-left:103px;
 	height:40px;
 	width:20px;
+}
+
+.textarea_ssh_table{
+	color: #FFFFFF;
+	background-color: #475A5F;
+}
+
+.vpnClientTitle_td_unclick{
+	background-color: #000;
+	height: 30px;
+	cursor: pointer;
+	border: 1px solid #222;
+}
+
+.vpnClientTitle_td_click{
+	background-color: #4D595D;
+	height: 30px;
+	cursor: pointer;
+	border: 1px solid #222;
 }

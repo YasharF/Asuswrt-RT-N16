@@ -9,7 +9,7 @@
 # or duplicated in any form, in whole or in part, without the prior
 # written permission of Broadcom Corporation.
 #
-# $Id: Makefile 394451 2013-04-02 18:21:38Z $
+# $Id: Makefile 428284 2013-10-08 09:07:30Z $
 #
 
 CFLAGS	+= -I. -I$(TOP)/shared -I$(SRCBASE)/include -I$(SRCBASE)/common/include -Wall -Werror
@@ -48,5 +48,5 @@ ${OBJS}: acsd.h acsd_svr.h acs_dfsr.h
 acsd: bcmutils.o ${OBJS}
 	$(CC) $(CFLAGS) $^ -o $@  $(LDFLAGS)
 
-acs_cli: acsd_cli.o acsd_utils.o
+acs_cli: acsd_cli.o acsd_utils.o bcmwifi_channels.o
 	$(CC) $(CFLAGS) $^ -o $@  $(LDFLAGS)

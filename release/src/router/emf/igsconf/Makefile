@@ -15,7 +15,7 @@ CCFLAGS = -Os -Wall -I$(SRCBASE)/include -I../../shared -I$(SRCBASE)/include/emf
 
 ifeq ($(wildcard ./*.c),)
 all:
-	-cp prebuild/igs igs
+	-cp prebuilt/igs igs
 else
 all: igs
 endif

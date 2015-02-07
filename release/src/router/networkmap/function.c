@@ -8,6 +8,7 @@
 #include <string.h>
 #include <errno.h>
 #include <sys/time.h>
+#include <bcmnvram.h>
 #include "networkmap.h"
 
 #include <netinet/in.h>
@@ -18,6 +19,7 @@
 #include <signal.h>
 #include "endianness.h"
 #include <iboxcom.h>
+#include "../shared/shutils.h"
 
 extern int scan_count;//from networkmap;
 
@@ -39,15 +41,13 @@ char NetBIOS_name[16]={0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,
 		       0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20}; //for SMB NBSS request
 char SMB_OS[10];
 char SMB_PriDomain[10];
-char copy[16];
 
-char *fixstr(const char *buf)
+void fixstr(const char *buf)
 {
         char *p;
         int i;
 
-        memcpy(copy, buf, 16);
-        p = (char *) copy;
+        p = (char *) buf;
 
         for (i = 0; i < 16; i++)
         {
@@ -58,7 +58,7 @@ char *fixstr(const char *buf)
                 p++;
         }
 
-        return copy;
+        return;
 }
 
 /***** Http Server detect function *****/
@@ -557,7 +557,7 @@ int ctrlpt(unsigned char *dest_ip)
                                                                                                                                              
         create_msearch_ctrlpt(3);
         signal(SIGALRM, interrupt);
-        alarm(2);
+        alarm(4);
                                                                                                                                              
         global_exit = FALSE; //reset timeout flag
         memset(&description, 0, sizeof(struct device_info)); //reset description
@@ -748,6 +748,7 @@ int process_device_response(char *msg)
         int i;
         char *descri = NULL;
         int len;
+	struct timeval timeout={10, 0};
 
         //search "\r\n\r\n" or "\r\n" first appear place and judge whether msg have blank.
         if( (body = strstr(msg, "\r\n\r\n")) != NULL)
@@ -764,7 +765,8 @@ int process_device_response(char *msg)
                 line = strsep(&p, "\r\n");      //divide up string
                 if((strncmp(line, "LOCATION:", 9) == 0) || (strncmp(line, "Location:", 9) == 0))
                 {
-                        location = strip_chars(&line[10], "\t");
+                        location = strip_chars(&line[9], "\t");
+                        location = strip_chars(&line[9], " ");
                         break;
                 }
         }
@@ -813,7 +815,8 @@ int process_device_response(char *msg)
                                                                                                                                              
         //receive data of http socket
         len = 0;
-        while((nbytes = recv(http_fd, data,1500, MSG_WAITALL)) > 0)
+	setsockopt(http_fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(struct timeval));
+	while((nbytes = recv(http_fd, data,1500, 0)) > 0)
         {
                 len += nbytes;
                 if(len > 6000)
@@ -1819,6 +1822,7 @@ int FindAllApp(unsigned char *src_ip, P_CLIENT_DETAIL_INFO_TABLE p_client_detail
         	bzero(SMB_OS, 16);
 	        bzero(SMB_PriDomain, 10);
 		sleep(1);
+
 		lock = file_lock("networkmap");
 		if(!SendSMBReq(dest_ip, &my_dvinfo))
         	{
@@ -1844,6 +1848,52 @@ int FindAllApp(unsigned char *src_ip, P_CLIENT_DETAIL_INFO_TABLE p_client_detail
                         NMP_DEBUG("Find: Nothing!\n");
                 }
 		file_unlock(lock);
+	}
+
+	return 1;
+}
+
+
+int FindHostname(P_CLIENT_DETAIL_INFO_TABLE p_client_detail_info_tab)
+{
+	unsigned char *dest_ip = p_client_detail_info_tab->ip_addr[p_client_detail_info_tab->detail_info_num];
+	char ipaddr[16];
+	sprintf(ipaddr, "%d.%d.%d.%d",(int)*(dest_ip),(int)*(dest_ip+1),(int)*(dest_ip+2),(int)*(dest_ip+3));
+
+	char *nv, *nvp, *b;
+	char *mac, *ip, *name, *expire;
+	FILE *fp;
+	char line[256];
+	char *next;
+
+// Get current hostname from DHCP leases
+	if (!nvram_get_int("dhcp_enable_x") || !nvram_match("sw_mode", "1"))
+		return 0;
+
+	if ((fp = fopen("/var/lib/misc/dnsmasq.leases", "r"))) {
+		while ((next = fgets(line, sizeof(line), fp)) != NULL) {
+			if (vstrsep(next, " ", &expire, &mac, &ip, &name) == 4) {
+				if ((!strcmp(ipaddr, ip)) &&
+				    (strlen(name) > 0) &&
+				    (!strchr(name, '*')) &&	// Ensure it's not a clientid in
+				    (!strchr(name, ':')))	// case device didn't have a hostname
+						strncpy(p_client_detail_info_tab->device_name[p_client_detail_info_tab->detail_info_num], name, 15);
+			}
+		}
+		fclose(fp);
+	}
+
+// Get names from static lease list, overruling anything else
+	nv = nvp = strdup(nvram_safe_get("dhcp_staticlist"));
+
+	 if (nv) {
+		while ((b = strsep(&nvp, "<")) != NULL) {
+			if ((vstrsep(b, ">", &mac, &ip, &name) == 3) && (strlen(ip) > 0) && (strlen(name) > 0)) {
+				if (!strcmp(ipaddr, ip))
+					strncpy(p_client_detail_info_tab->device_name[p_client_detail_info_tab->detail_info_num], name, 15);
+			}
+		}
+		free(nv);
 	}
 
 	return 1;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013, Broadcom Corporation
+ * Copyright (C) 2012, Broadcom Corporation
  * All Rights Reserved.
  * 
  * This is UNPUBLISHED PROPRIETARY SOURCE CODE of Broadcom Corporation;
@@ -14,19 +14,18 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <errno.h>
 #include "epivers.h"
 #include "trace.h"
 #include "dsp.h"
 #include "wlu_api.h"
-#include "bcm_gas.h"
-#include "bcm_encode_ie.h"
-#include "bcm_encode_anqp.h"
-#include "bcm_encode_hspot_anqp.h"
-#include "bcm_encode_wnm.h"
-#include "bcm_decode_anqp.h"
-#include "bcm_decode_hspot_anqp.h"
-#include "bcm_decode_ie.h"
+#include "proGas.h"
+#include "pktEncodeIe.h"
+#include "pktEncodeAnqp.h"
+#include "pktEncodeHspotAnqp.h"
+#include "pktEncodeWnm.h"
+#include "pktDecodeAnqp.h"
+#include "pktDecodeHspotAnqp.h"
+#include "pktDecodeIe.h"
 #include "tcp_srv.h"
 #include "proto/bcmeth.h"
 #include "proto/bcmevent.h"
@@ -43,9 +42,6 @@
 #define MIH_PROTOCOL_ID	1
 #define MAX_PLMN_NUM	16
 
-/* Proxy ARP for WNM bit mask */
-#define WNM_DEFAULT_BITMASK (WL_WNM_BSSTRANS | WL_WNM_NOTIF)
-
 typedef struct {
 	uint32 pktflag;
 	int ieLength;
@@ -60,17 +56,16 @@ typedef struct {
 /* enable testing mode */
 #define TESTING_MODE	0
 
-static bcm_decode_anqp_plmn_t gTMobilePlmn = {"310", "026"};
+static pktAnqpPlmnT gTMobilePlmn = {"310", "026"};
 
 /* home realm */
 #define HOME_REALM	"example.com"
 
 /* local buffer size */
 #define BUFFER_SIZE				256
-#define BUFFER_SIZE1			512
 
 /* query request buffer size */
-#define QUERY_REQUEST_BUFFER	(64 * 1024)
+#define QUERY_REQUEST_BUFFER	1024
 
 typedef struct
 {
@@ -78,8 +73,6 @@ typedef struct
 	void *ifr;
 
 	char prefix[16];
-	char* osu_server_uri;
-	char* osu_ssid;
 
 	/* DGAF disabled flag */
 	bool isDgafDisabled;
@@ -96,9 +89,8 @@ typedef struct
 	vendorIeT vendorIeHSI;
 	/* P2P vendor IEs added */
 	vendorIeT vendorIeP2P;
-
-	/* dialog token */
-	uint8 dialogToken;
+    
+    uint8 dialogToken;
 
 	/* for testing */
 	int isGasPauseForServerResponse;
@@ -129,11 +121,11 @@ typedef struct
 	uint8 rc_oiNum;
 
 	/* 3G Cellular Network Information */
-	bcm_decode_anqp_plmn_t Plmn[MAX_PLMN_NUM];
+	pktAnqpPlmnT Plmn[MAX_PLMN_NUM];
 	uint8 numPlmn;
 
 	/* domain list */
-	bcm_decode_anqp_domain_name_t domain[BCM_DECODE_ANQP_MAX_DOMAIN];
+	pktAnqpDomainNameT domain[MAX_DOMAIN];
 	uint8 numDomain;
 
 	/* add or remove hotspot 2.0 indication element */
@@ -159,7 +151,6 @@ typedef struct
 	uint8 opclass_id;
 	uint8 home_id;
 	uint8 nat_id;
-	uint8 osup_id;
 
 	bool useDefaultANQPValue;
 	bool useDefaultPLMNValue;
@@ -183,20 +174,20 @@ static int update_ap_ie(hspotApT *hspotap);
 int hspot_send_BTM_Req_frame(hspotApT *hspotap, struct ether_addr *da)
 {
 	int err = 0;
-	dot11_bsstrans_req_t *transreq;
+	dot11_bss_trans_req_t *transreq;
 	wnm_url_t *url;
 	uint16 len;
 
-	len = DOT11_BSSTRANS_REQ_LEN + hspotap->url_len + 1;
-	transreq = (dot11_bsstrans_req_t *)malloc(len);
+	len = DOT11_BSS_TRANS_REQ_LEN + hspotap->url_len + 1;
+	transreq = (dot11_bss_trans_req_t *)malloc(len);
 	if (transreq == NULL) {
 		printf("malloc failed\n");
 		return -1;
 	}
 	transreq->category = DOT11_ACTION_CAT_WNM;
-	transreq->action = DOT11_WNM_ACTION_BSSTRANS_REQ;
+	transreq->action = DOT11_WNM_ACTION_BSS_TRANS_REQ;
 	transreq->token = hspotap->req_token;
-	transreq->reqmode = DOT11_BSSTRANS_REQMODE_ESS_DISASSOC_IMNT;
+	transreq->reqmode = DOT11_BSS_TRNS_REQMODE_ESS_DISASSOC_IMNT;
 	transreq->disassoc_tmr = 0;
 	transreq->validity_intrvl = 0;
 	url = (wnm_url_t *)&transreq->data[0];
@@ -242,35 +233,13 @@ static char *afStr(char *buf, int af, int length, uint8 fragmentId)
 	return buf;
 }
 
-int reallocateString(char** string, const char* newstring)
-{
-	int newlength = 0;
-
-	if(newstring)	
-		newlength = strlen(newstring);
-
-	if(*string)
-		free(*string);
-	
-	if(newlength <= 0)
-		return 0;
-
-	*string = (char*)malloc(newlength+1);
-	if (*string == 0)
-		return 0;
-
-	strcpy(*string, newstring);
-
-	return 1;
-}
-
-void hspotPrintGasEvent(bcm_gas_event_t *event)
+void hspotPrintGasEvent(proGasEventT *event)
 {
 	char buf[32];
 
-	if ((event->type == BCM_GAS_EVENT_TX &&
+	if ((event->type == PRO_GAS_EVENT_TX &&
 		event->tx.gasActionFrame == GAS_REQUEST_ACTION_FRAME) ||
-		(event->type == BCM_GAS_EVENT_RX &&
+		(event->type == PRO_GAS_EVENT_RX &&
 		event->rx.gasActionFrame == GAS_REQUEST_ACTION_FRAME)) {
 		printf("\npeer MAC     : %02X:%02X:%02X:%02X:%02X:%02X\n",
 			event->peer.octet[0], event->peer.octet[1], event->peer.octet[2],
@@ -278,20 +247,20 @@ void hspotPrintGasEvent(bcm_gas_event_t *event)
 		printf("dialog token : %d\n\n", event->dialogToken);
 	}
 
-	if (event->type == BCM_GAS_EVENT_QUERY_REQUEST) {
-		TRACE(TRACE_DEBUG, "   BCM_GAS_EVENT_QUERY_REQUEST\n");
+	if (event->type == PRO_GAS_EVENT_QUERY_REQUEST) {
+		TRACE(TRACE_DEBUG, "   PRO_GAS_EVENT_QUERY_REQUEST\n");
 	}
-	else if (event->type == BCM_GAS_EVENT_TX) {
+	else if (event->type == PRO_GAS_EVENT_TX) {
 		printf("%30s  ----->\n",
 			afStr(buf, event->tx.gasActionFrame,
 			event->tx.length, event->tx.fragmentId));
 	}
-	else if (event->type == BCM_GAS_EVENT_RX) {
+	else if (event->type == PRO_GAS_EVENT_RX) {
 		printf("%30s  <-----  %s\n", "",
 			afStr(buf, event->rx.gasActionFrame,
 			event->rx.length, event->rx.fragmentId));
 	}
-	else if (event->type == BCM_GAS_EVENT_STATUS) {
+	else if (event->type == PRO_GAS_EVENT_STATUS) {
 		char *str;
 
 		switch (event->status.statusCode)
@@ -360,46 +329,10 @@ static hspotApT *getHspotApByIfname(char *ifname)
 	return NULL;
 }
 
-static bool strToEther(char *str, struct ether_addr *bssid)
-{
-	int hex[ETHER_ADDR_LEN];
-	int i;
-
-	if (sscanf(str, "%02x:%02x:%02x:%02x:%02x:%02x",
-		&hex[0], &hex[1], &hex[2], &hex[3], &hex[4], &hex[5]) != 6)
-		return FALSE;
-
-	for (i = 0; i < ETHER_ADDR_LEN; i++)
-		bssid->octet[i] = hex[i];
-
-	return TRUE;
-}
-
-static hspotApT *getHspotApByHESSID(char *HESSIDstr)
-{
-	struct ether_addr da;
-	int i;
-
-	if (HESSIDstr == NULL)
-		return hspotaps[0];
-
-	if (!strToEther(HESSIDstr, &da)) {
-		printf("wrong format parameter in command dest\n");
-		return hspotaps[0];
-	}
-
-	for (i = 0; i < hspotap_num; i++) {
-		if (bcmp(da.octet, hspotaps[i]->iw_HESSID.octet, ETHER_ADDR_LEN) == 0)
-			return hspotaps[i];
-	}
-
-	return hspotaps[0];
-}
-
-static void encodeAnqpCapabilityList(hspotApT *hspotap, bcm_encode_t *pkt)
+static void encodeAnqpCapabilityList(hspotApT *hspotap, pktEncodeT *pkt)
 {
 	uint8 buffer[BUFFER_SIZE];
-	bcm_encode_t vendor;
+	pktEncodeT vendor;
 	uint8 vendorCap[] = {
 		HSPOT_SUBTYPE_QUERY_LIST,
 		HSPOT_SUBTYPE_CAPABILITY_LIST,
@@ -407,13 +340,13 @@ static void encodeAnqpCapabilityList(hspotApT *hspotap, bcm_encode_t *pkt)
 		HSPOT_SUBTYPE_WAN_METRICS,
 		HSPOT_SUBTYPE_CONNECTION_CAPABILITY,
 		HSPOT_SUBTYPE_NAI_HOME_REALM_QUERY,
-		HSPOT_SUBTYPE_OPERATING_CLASS_INDICATION,
-		HSPOT_SUBTYPE_ONLINE_SIGNUP_PROVIDERS,
-		HSPOT_SUBTYPE_ANONYMOUS_NAI,
-		HSPOT_SUBTYPE_ICON_REQUEST,
-		HSPOT_SUBTYPE_ICON_BINARY_FILE };
-
-	uint16 cap[] = {
+        HSPOT_SUBTYPE_OPERATING_CLASS_INDICATION,
+        HSPOT_SUBTYPE_ONLINE_SIGNUP_PROVIDERS, 
+        HSPOT_SUBTYPE_ANONYMOUS_NAI, 
+        HSPOT_SUBTYPE_ICON_REQUEST, 
+        HSPOT_SUBTYPE_ICON_BINARY_FILE };
+        
+    uint16 cap[] = {
 		ANQP_ID_QUERY_LIST,
 		ANQP_ID_CAPABILITY_LIST,
 		ANQP_ID_VENUE_NAME_INFO,
@@ -431,27 +364,26 @@ static void encodeAnqpCapabilityList(hspotApT *hspotap, bcm_encode_t *pkt)
 		ANQP_ID_EMERGENCY_NAI };
 
 	if (hspotap->emptyANQPInfo) {
-		bcm_encode_anqp_capability_list(pkt, 0, 0, 0, 0);
+		pktEncodeAnqpCapabilityList(pkt, 0, 0, 0, 0);
 		return;
 	}
 
 	/* encode vendor specific capability */
-	bcm_encode_init(&vendor, sizeof(buffer), buffer);
-	bcm_encode_hspot_anqp_capability_list(&vendor,
-	sizeof(vendorCap) / sizeof(uint8), vendorCap);
+	pktEncodeInit(&vendor, sizeof(buffer), buffer);
+	pktEncodeHspotAnqpCapabilityList(&vendor, sizeof(vendorCap) / sizeof(uint8), vendorCap);
 
 	/* encode capability with vendor specific appended */
-	bcm_encode_anqp_capability_list(pkt, sizeof(cap) / sizeof(uint16), cap,
-	bcm_encode_length(&vendor), bcm_encode_buf(&vendor));
+	pktEncodeAnqpCapabilityList(pkt, sizeof(cap) / sizeof(uint16), cap,
+	pktEncodeLength(&vendor), pktEncodeBuf(&vendor));
 }
 
-static void encodeVenueName(hspotApT *hspotap, bcm_encode_t *pkt)
+static void encodeVenueName(hspotApT *hspotap, pktEncodeT *pkt)
 {
 #define WIFI_VENUE 	"Wi-Fi Alliance\n2989 Copper Road\nSanta Clara, CA 95051, USA"
 #define ENGLISH	"eng"
 #define CHINESE "chi"
 	uint8 buffer[BUFFER_SIZE];
-	bcm_encode_t duple;
+	pktEncodeT duple;
 	uint8 chinese_venue_name[] = {0x57, 0x69, 0x2d, 0x46, 0x69, 0xe8, 0x81, 0x94,
 		0xe7, 0x9b, 0x9f, 0xe5, 0xae, 0x9e, 0xe9, 0xaa,
 		0x8c, 0xe5, 0xae, 0xa4, 0x0a, 0xe4, 0xba, 0x8c,
@@ -464,321 +396,268 @@ static void encodeVenueName(hspotApT *hspotap, bcm_encode_t *pkt)
 		0xe4, 0xba, 0x9a, 0x39, 0x35, 0x30, 0x35, 0x31,
 		0x2c, 0x20, 0xe7, 0xbe, 0x8e, 0xe5, 0x9b, 0xbd};
 
-	bcm_encode_init(&duple, sizeof(buffer), buffer);
+	pktEncodeInit(&duple, sizeof(buffer), buffer);
 
 	if (hspotap->emptyANQPInfo) {
-		bcm_encode_anqp_venue_name(pkt, 0, 0,
-			bcm_encode_length(&duple), bcm_encode_buf(&duple));
+		pktEncodeAnqpVenueName(pkt, 0, 0,
+			pktEncodeLength(&duple), pktEncodeBuf(&duple));
 		return;
 	}
 
 	if (hspotap->venue_id == 1) {
-		bcm_encode_anqp_venue_duple(&duple, strlen(ENGLISH), ENGLISH,
+		pktEncodeAnqpVenueDuple(&duple, strlen(ENGLISH), ENGLISH,
 			strlen(WIFI_VENUE), WIFI_VENUE);
-		bcm_encode_anqp_venue_duple(&duple, strlen(CHINESE), CHINESE,
+		pktEncodeAnqpVenueDuple(&duple, strlen(CHINESE), CHINESE,
 			sizeof(chinese_venue_name), (char *)chinese_venue_name);
-		bcm_encode_anqp_venue_name(pkt, VENUE_BUSINESS, 8,
-			bcm_encode_length(&duple), bcm_encode_buf(&duple));
+		pktEncodeAnqpVenueName(pkt, VENUE_BUSINESS, 8,
+			pktEncodeLength(&duple), pktEncodeBuf(&duple));
 	} else {
-		bcm_encode_anqp_venue_name(pkt, 0, 0,
-			bcm_encode_length(&duple), bcm_encode_buf(&duple));
+		pktEncodeAnqpVenueName(pkt, 0, 0,
+			pktEncodeLength(&duple), pktEncodeBuf(&duple));
 	}
 }
 
-static void encodeNetworkAuthenticationType(hspotApT *hspotap, bcm_encode_t *pkt)
+static void encodeNetworkAuthenticationType(hspotApT *hspotap, pktEncodeT *pkt)
 {
 	#define URL 	"https://tandc-server.wi-fi.org"
 	uint8 buffer[BUFFER_SIZE];
-	bcm_encode_t network;
+	pktEncodeT network;
 
-	bcm_encode_init(&network, sizeof(buffer), buffer);
+	pktEncodeInit(&network, sizeof(buffer), buffer);
 	if (!hspotap->emptyANQPInfo) {
 		if (hspotap->nat_id == 1) {
-			bcm_encode_anqp_network_authentication_unit(&network,
+			pktEncodeAnqpNetworkAuthenticationUnit(&network,
 				NATI_ACCEPTANCE_OF_TERMS_CONDITIONS, 0, 0);
-			bcm_encode_anqp_network_authentication_unit(&network,
+			pktEncodeAnqpNetworkAuthenticationUnit(&network,
 				NATI_HTTP_HTTPS_REDIRECTION, strlen(URL), URL);
-		}
-		if (hspotap->nat_id == 2) {
-			bcm_encode_anqp_network_authentication_unit(&network,
-				NATI_ONLINE_ENROLLMENT_SUPPORTED, 0, 0);
+            pktEncodeAnqpNetworkAuthenticationUnit(&network,
+                    NATI_ONLINE_ENROLLMENT_SUPPORTED, 0, 0);
 		}
 	}
-	bcm_encode_anqp_network_authentication_type(pkt,
-		bcm_encode_length(&network), bcm_encode_buf(&network));
+	pktEncodeAnqpNetworkAuthenticationType(pkt,
+		pktEncodeLength(&network), pktEncodeBuf(&network));
 }
 
-static void encodeRoamingConsortium(hspotApT *hspotap, bcm_encode_t *pkt)
+static void encodeRoamingConsortium(hspotApT *hspotap, pktEncodeT *pkt)
 {
 	uint8 buffer[BUFFER_SIZE];
-	bcm_encode_t oi;
+	pktEncodeT oi;
 
-	bcm_encode_init(&oi, sizeof(buffer), buffer);
+	pktEncodeInit(&oi, sizeof(buffer), buffer);
 	if (!hspotap->emptyANQPInfo) {
 		if (hspotap->useDefaultANQPValue) {
-			bcm_encode_anqp_oi_duple(&oi, strlen(WFA_OUI), (uint8 *)WFA_OUI);
-			bcm_encode_anqp_oi_duple(&oi, 3, (uint8 *)"\x00\x50\xf2");
+			pktEncodeAnqpOiDuple(&oi, strlen(WFA_OUI), (uint8 *)WFA_OUI);
+			pktEncodeAnqpOiDuple(&oi, 3, (uint8 *)"\x00\x50\xf2");
 		}
 		else {
 			int i;
 			for (i = 0; i < hspotap->rc_oiNum; i++) {
-				bcm_encode_anqp_oi_duple(&oi, hspotap->rc_oi[i].len,
+				pktEncodeAnqpOiDuple(&oi, hspotap->rc_oi[i].len,
 					hspotap->rc_oi[i].data);
 			}
 		}
 	}
-	bcm_encode_anqp_roaming_consortium(pkt,
-		bcm_encode_length(&oi), bcm_encode_buf(&oi));
+	pktEncodeAnqpRoamingConsortium(pkt,
+		pktEncodeLength(&oi), pktEncodeBuf(&oi));
 }
 
-static void encodeIpAddressType(hspotApT *hspotap, bcm_encode_t *pkt)
+static void encodeIpAddressType(hspotApT *hspotap, pktEncodeT *pkt)
 {
 	if (hspotap->emptyANQPInfo)
-		bcm_encode_anqp_ip_type_availability(pkt,
+		pktEncodeAnqpIpTypeAvailability(pkt,
 			IPA_IPV6_NOT_AVAILABLE, IPA_IPV4_NOT_AVAILABLE);
 	else if (hspotap->ipa_id == 1)
-		bcm_encode_anqp_ip_type_availability(pkt,
+		pktEncodeAnqpIpTypeAvailability(pkt,
 			IPA_IPV6_NOT_AVAILABLE, IPA_IPV4_SINGLE_NAT);
 	else
-		bcm_encode_anqp_ip_type_availability(pkt,
+		pktEncodeAnqpIpTypeAvailability(pkt,
 			hspotap->ipv6_addr_type, hspotap->ipv4_addr_type);
 }
 
-static void encodeNaiRealmList(hspotApT *hspotap, bcm_encode_t *pkt)
+static void encodeNaiRealmList(hspotApT *hspotap, pktEncodeT *pkt)
 {
 	#define MAIL		"mail.example.com"
 	#define CISCO		"cisco.com"
 	#define WIFI		"wi-fi.org"
-	#define RUCKUS		"ruckuswireless.com"
 	#define EXAMPLE4	"example.com"
 	uint8 ttlsAuthBuf[BUFFER_SIZE];
-	bcm_encode_t ttlsAuth;
+	pktEncodeT ttlsAuth;
 	uint8 ttlsEapBuf[BUFFER_SIZE];
-	bcm_encode_t ttlsEap;
+	pktEncodeT ttlsEap;
 	uint8 tlsAuthBuf[BUFFER_SIZE];
-	bcm_encode_t tlsAuth;
+	pktEncodeT tlsAuth;
 	uint8 tlsEapBuf[BUFFER_SIZE];
-	bcm_encode_t tlsEap;
+	pktEncodeT tlsEap;
 	uint8 simAuthBuf[BUFFER_SIZE];
-	bcm_encode_t simAuth;
+	pktEncodeT simAuth;
 	uint8 simEapBuf[BUFFER_SIZE];
-	bcm_encode_t simEap;
+	pktEncodeT simEap;
 	uint8 realmBuf[BUFFER_SIZE];
-	bcm_encode_t realm;
+	pktEncodeT realm;
 	uint8 inner;
 	uint8 credential;
 	int numRealm;
 
-	bcm_encode_init(&realm, sizeof(realmBuf), realmBuf);
+	pktEncodeInit(&realm, sizeof(realmBuf), realmBuf);
 	numRealm = 0;
 
 	if ((!hspotap->isRealmDisabled) && (!hspotap->emptyANQPInfo)) {
 		if (hspotap->nai_id == 1) {
 			/* TTLS - MSCHAPv2, username & password */
-			bcm_encode_init(&ttlsAuth, sizeof(ttlsAuthBuf), ttlsAuthBuf);
+			pktEncodeInit(&ttlsAuth, sizeof(ttlsAuthBuf), ttlsAuthBuf);
 			inner = REALM_MSCHAPV2;
 			credential = REALM_USERNAME_PASSWORD;
-			bcm_encode_anqp_authentication_subfield(&ttlsAuth,
+			pktEncodeAnqpAuthenticationSubfield(&ttlsAuth,
 				REALM_NON_EAP_INNER_AUTHENTICATION, sizeof(inner), &inner);
-			bcm_encode_anqp_authentication_subfield(&ttlsAuth,
+			pktEncodeAnqpAuthenticationSubfield(&ttlsAuth,
 				REALM_CREDENTIAL, sizeof(credential), &credential);
-			bcm_encode_init(&ttlsEap, sizeof(ttlsEapBuf), ttlsEapBuf);
-			bcm_encode_anqp_eap_method_subfield(&ttlsEap, REALM_EAP_TTLS,
-				2, bcm_encode_length(&ttlsAuth), bcm_encode_buf(&ttlsAuth));
+			pktEncodeInit(&ttlsEap, sizeof(ttlsEapBuf), ttlsEapBuf);
+			pktEncodeAnqpEapMethodSubfield(&ttlsEap, REALM_EAP_TTLS,
+				2, pktEncodeLength(&ttlsAuth), pktEncodeBuf(&ttlsAuth));
 
 			/* TLS - certificate */
-			bcm_encode_init(&tlsAuth, sizeof(tlsAuthBuf), tlsAuthBuf);
+			pktEncodeInit(&tlsAuth, sizeof(tlsAuthBuf), tlsAuthBuf);
 			credential = REALM_CERTIFICATE;
-			bcm_encode_anqp_authentication_subfield(&tlsAuth,
+			pktEncodeAnqpAuthenticationSubfield(&tlsAuth,
 				REALM_CREDENTIAL, sizeof(credential), &credential);
-			bcm_encode_init(&tlsEap, sizeof(tlsEapBuf), tlsEapBuf);
-			bcm_encode_anqp_eap_method_subfield(&tlsEap, REALM_EAP_TLS,
-				1, bcm_encode_length(&tlsAuth), bcm_encode_buf(&tlsAuth));
+			pktEncodeInit(&tlsEap, sizeof(tlsEapBuf), tlsEapBuf);
+			pktEncodeAnqpEapMethodSubfield(&tlsEap, REALM_EAP_TLS,
+				1, pktEncodeLength(&tlsAuth), pktEncodeBuf(&tlsAuth));
 
 			/* SIM */
-			bcm_encode_init(&simAuth, sizeof(simAuthBuf), simAuthBuf);
+			pktEncodeInit(&simAuth, sizeof(simAuthBuf), simAuthBuf);
 			credential = REALM_SIM;
-			bcm_encode_anqp_authentication_subfield(&simAuth,
+			pktEncodeAnqpAuthenticationSubfield(&simAuth,
 				REALM_CREDENTIAL, sizeof(credential), &credential);
-			bcm_encode_init(&simEap, sizeof(simEapBuf), simEapBuf);
-			bcm_encode_anqp_eap_method_subfield(&simEap, REALM_EAP_SIM,
-				1, bcm_encode_length(&simAuth), bcm_encode_buf(&simAuth));
+			pktEncodeInit(&simEap, sizeof(simEapBuf), simEapBuf);
+			pktEncodeAnqpEapMethodSubfield(&simEap, REALM_EAP_SIM,
+				1, pktEncodeLength(&simAuth), pktEncodeBuf(&simAuth));
 
 			/* mail */
 			if (!hspotap->useSim) {
-				bcm_encode_anqp_nai_realm_data(&realm, REALM_ENCODING_RFC4282,
+				pktEncodeAnqpNaiRealmData(&realm, REALM_ENCODING_RFC4282,
 					strlen(MAIL), (uint8 *)MAIL, 1,
-					bcm_encode_length(&ttlsEap), bcm_encode_buf(&ttlsEap));
+					pktEncodeLength(&ttlsEap), pktEncodeBuf(&ttlsEap));
 				numRealm++;
 			}
 
 			/* cisco */
-			bcm_encode_anqp_nai_realm_data(&realm, REALM_ENCODING_RFC4282,
+			pktEncodeAnqpNaiRealmData(&realm, REALM_ENCODING_RFC4282,
 				strlen(CISCO), (uint8 *)CISCO, 1,
-				bcm_encode_length(&ttlsEap), bcm_encode_buf(&ttlsEap));
+				pktEncodeLength(&ttlsEap), pktEncodeBuf(&ttlsEap));
 			numRealm++;
 
 			/* append EAP-TLS to EAP_TTLS buffer */
-			bcm_encode_anqp_eap_method_subfield(&ttlsEap, REALM_EAP_TLS,
-				1, bcm_encode_length(&tlsAuth), bcm_encode_buf(&tlsAuth));
+			pktEncodeAnqpEapMethodSubfield(&ttlsEap, REALM_EAP_TLS,
+				1, pktEncodeLength(&tlsAuth), pktEncodeBuf(&tlsAuth));
 
 			/* wifi */
-			bcm_encode_anqp_nai_realm_data(&realm, REALM_ENCODING_RFC4282,
+			pktEncodeAnqpNaiRealmData(&realm, REALM_ENCODING_RFC4282,
 				strlen(WIFI), (uint8 *)WIFI, 2,
-				bcm_encode_length(&ttlsEap), bcm_encode_buf(&ttlsEap));
+				pktEncodeLength(&ttlsEap), pktEncodeBuf(&ttlsEap));
 			numRealm++;
 
 			/* example4 */
-			bcm_encode_anqp_nai_realm_data(&realm, REALM_ENCODING_RFC4282,
+			pktEncodeAnqpNaiRealmData(&realm, REALM_ENCODING_RFC4282,
 				strlen(EXAMPLE4), (uint8 *)EXAMPLE4, 1,
-				bcm_encode_length(&tlsEap), bcm_encode_buf(&tlsEap));
+				pktEncodeLength(&tlsEap), pktEncodeBuf(&tlsEap));
 			numRealm++;
 
 			/* sim */
 			if (hspotap->useSim) {
-				bcm_encode_anqp_nai_realm_data(&realm, REALM_ENCODING_RFC4282,
+				pktEncodeAnqpNaiRealmData(&realm, REALM_ENCODING_RFC4282,
 					strlen(MAIL), (uint8 *)MAIL, 1,
-					bcm_encode_length(&simEap), bcm_encode_buf(&simEap));
+					pktEncodeLength(&simEap), pktEncodeBuf(&simEap));
 				numRealm++;
 			}
 		} else if (hspotap->nai_id == 2) {
 			/* TTLS - MSCHAPv2, username & password */
-			bcm_encode_init(&ttlsAuth, sizeof(ttlsAuthBuf), ttlsAuthBuf);
+			pktEncodeInit(&ttlsAuth, sizeof(ttlsAuthBuf), ttlsAuthBuf);
 			inner = REALM_MSCHAPV2;
 			credential = REALM_USERNAME_PASSWORD;
-			bcm_encode_anqp_authentication_subfield(&ttlsAuth,
+			pktEncodeAnqpAuthenticationSubfield(&ttlsAuth,
 				REALM_NON_EAP_INNER_AUTHENTICATION, sizeof(inner), &inner);
-			bcm_encode_anqp_authentication_subfield(&ttlsAuth,
+			pktEncodeAnqpAuthenticationSubfield(&ttlsAuth,
 				REALM_CREDENTIAL, sizeof(credential), &credential);
-			bcm_encode_init(&ttlsEap, sizeof(ttlsEapBuf), ttlsEapBuf);
-			bcm_encode_anqp_eap_method_subfield(&ttlsEap, REALM_EAP_TTLS,
-				2, bcm_encode_length(&ttlsAuth), bcm_encode_buf(&ttlsAuth));
+			pktEncodeInit(&ttlsEap, sizeof(ttlsEapBuf), ttlsEapBuf);
+			pktEncodeAnqpEapMethodSubfield(&ttlsEap, REALM_EAP_TTLS,
+				2, pktEncodeLength(&ttlsAuth), pktEncodeBuf(&ttlsAuth));
 
 			/* wifi */
-			bcm_encode_anqp_nai_realm_data(&realm, REALM_ENCODING_RFC4282,
+			pktEncodeAnqpNaiRealmData(&realm, REALM_ENCODING_RFC4282,
 				strlen(WIFI), (uint8 *)WIFI, 1,
-				bcm_encode_length(&ttlsEap), bcm_encode_buf(&ttlsEap));
+				pktEncodeLength(&ttlsEap), pktEncodeBuf(&ttlsEap));
 			numRealm++;
 		} else if (hspotap->nai_id == 3) {
 			/* TTLS - MSCHAPv2, username & password */
-			bcm_encode_init(&ttlsAuth, sizeof(ttlsAuthBuf), ttlsAuthBuf);
+			pktEncodeInit(&ttlsAuth, sizeof(ttlsAuthBuf), ttlsAuthBuf);
 			inner = REALM_MSCHAPV2;
 			credential = REALM_USERNAME_PASSWORD;
-			bcm_encode_anqp_authentication_subfield(&ttlsAuth,
+			pktEncodeAnqpAuthenticationSubfield(&ttlsAuth,
 				REALM_NON_EAP_INNER_AUTHENTICATION, sizeof(inner), &inner);
-			bcm_encode_anqp_authentication_subfield(&ttlsAuth,
+			pktEncodeAnqpAuthenticationSubfield(&ttlsAuth,
 				REALM_CREDENTIAL, sizeof(credential), &credential);
-			bcm_encode_init(&ttlsEap, sizeof(ttlsEapBuf), ttlsEapBuf);
-			bcm_encode_anqp_eap_method_subfield(&ttlsEap, REALM_EAP_TTLS,
-				2, bcm_encode_length(&ttlsAuth), bcm_encode_buf(&ttlsAuth));
+			pktEncodeInit(&ttlsEap, sizeof(ttlsEapBuf), ttlsEapBuf);
+			pktEncodeAnqpEapMethodSubfield(&ttlsEap, REALM_EAP_TTLS,
+				2, pktEncodeLength(&ttlsAuth), pktEncodeBuf(&ttlsAuth));
 
 			/* TLS - certificate */
-			bcm_encode_init(&tlsAuth, sizeof(tlsAuthBuf), tlsAuthBuf);
+			pktEncodeInit(&tlsAuth, sizeof(tlsAuthBuf), tlsAuthBuf);
 			credential = REALM_CERTIFICATE;
-			bcm_encode_anqp_authentication_subfield(&tlsAuth,
+			pktEncodeAnqpAuthenticationSubfield(&tlsAuth,
 				REALM_CREDENTIAL, sizeof(credential), &credential);
-			bcm_encode_init(&tlsEap, sizeof(tlsEapBuf), tlsEapBuf);
-			bcm_encode_anqp_eap_method_subfield(&tlsEap, REALM_EAP_TLS,
-				1, bcm_encode_length(&tlsAuth), bcm_encode_buf(&tlsAuth));
+			pktEncodeInit(&tlsEap, sizeof(tlsEapBuf), tlsEapBuf);
+			pktEncodeAnqpEapMethodSubfield(&tlsEap, REALM_EAP_TLS,
+				1, pktEncodeLength(&tlsAuth), pktEncodeBuf(&tlsAuth));
 
 			/* cisco */
-			bcm_encode_anqp_nai_realm_data(&realm, REALM_ENCODING_RFC4282,
+			pktEncodeAnqpNaiRealmData(&realm, REALM_ENCODING_RFC4282,
 				strlen(CISCO), (uint8 *)CISCO, 1,
-				bcm_encode_length(&ttlsEap), bcm_encode_buf(&ttlsEap));
+				pktEncodeLength(&ttlsEap), pktEncodeBuf(&ttlsEap));
 			numRealm++;
 
 			/* append EAP-TLS to EAP_TTLS buffer */
-			bcm_encode_anqp_eap_method_subfield(&ttlsEap, REALM_EAP_TLS,
-				1, bcm_encode_length(&tlsAuth), bcm_encode_buf(&tlsAuth));
+			pktEncodeAnqpEapMethodSubfield(&ttlsEap, REALM_EAP_TLS,
+				1, pktEncodeLength(&tlsAuth), pktEncodeBuf(&tlsAuth));
 
 			/* wifi */
-			bcm_encode_anqp_nai_realm_data(&realm, REALM_ENCODING_RFC4282,
+			pktEncodeAnqpNaiRealmData(&realm, REALM_ENCODING_RFC4282,
 				strlen(WIFI), (uint8 *)WIFI, 2,
-				bcm_encode_length(&ttlsEap), bcm_encode_buf(&ttlsEap));
+				pktEncodeLength(&ttlsEap), pktEncodeBuf(&ttlsEap));
 			numRealm++;
 
 			/* example4 */
-			bcm_encode_anqp_nai_realm_data(&realm, REALM_ENCODING_RFC4282,
+			pktEncodeAnqpNaiRealmData(&realm, REALM_ENCODING_RFC4282,
 				strlen(EXAMPLE4), (uint8 *)EXAMPLE4, 1,
-				bcm_encode_length(&tlsEap), bcm_encode_buf(&tlsEap));
+				pktEncodeLength(&tlsEap), pktEncodeBuf(&tlsEap));
 			numRealm++;
 		} else if (hspotap->nai_id == 4) {
 			/* TTLS - MSCHAPv2, username & password */
-			bcm_encode_init(&ttlsAuth, sizeof(ttlsAuthBuf), ttlsAuthBuf);
+			pktEncodeInit(&ttlsAuth, sizeof(ttlsAuthBuf), ttlsAuthBuf);
 			inner = REALM_MSCHAPV2;
 			credential = REALM_USERNAME_PASSWORD;
-			bcm_encode_anqp_authentication_subfield(&ttlsAuth,
+			pktEncodeAnqpAuthenticationSubfield(&ttlsAuth,
 				REALM_NON_EAP_INNER_AUTHENTICATION, sizeof(inner), &inner);
-			bcm_encode_anqp_authentication_subfield(&ttlsAuth,
+			pktEncodeAnqpAuthenticationSubfield(&ttlsAuth,
 				REALM_CREDENTIAL, sizeof(credential), &credential);
-			bcm_encode_init(&ttlsEap, sizeof(ttlsEapBuf), ttlsEapBuf);
-			bcm_encode_anqp_eap_method_subfield(&ttlsEap, REALM_EAP_TTLS,
-				2, bcm_encode_length(&ttlsAuth), bcm_encode_buf(&ttlsAuth));
+			pktEncodeInit(&ttlsEap, sizeof(ttlsEapBuf), ttlsEapBuf);
+			pktEncodeAnqpEapMethodSubfield(&ttlsEap, REALM_EAP_TTLS,
+				2, pktEncodeLength(&ttlsAuth), pktEncodeBuf(&ttlsAuth));
 
 			/* TLS - certificate */
-			bcm_encode_init(&tlsAuth, sizeof(tlsAuthBuf), tlsAuthBuf);
+			pktEncodeInit(&tlsAuth, sizeof(tlsAuthBuf), tlsAuthBuf);
 			credential = REALM_CERTIFICATE;
-			bcm_encode_anqp_authentication_subfield(&tlsAuth,
+			pktEncodeAnqpAuthenticationSubfield(&tlsAuth,
 				REALM_CREDENTIAL, sizeof(credential), &credential);
 
 			/* append EAP-TLS to EAP_TTLS buffer */
-			bcm_encode_anqp_eap_method_subfield(&ttlsEap, REALM_EAP_TLS,
-				1, bcm_encode_length(&tlsAuth), bcm_encode_buf(&tlsAuth));
+			pktEncodeAnqpEapMethodSubfield(&ttlsEap, REALM_EAP_TLS,
+				1, pktEncodeLength(&tlsAuth), pktEncodeBuf(&tlsAuth));
 
 			/* mail */
-			bcm_encode_anqp_nai_realm_data(&realm, REALM_ENCODING_RFC4282,
+			pktEncodeAnqpNaiRealmData(&realm, REALM_ENCODING_RFC4282,
 				strlen(MAIL), (uint8 *)MAIL, 2,
-				bcm_encode_length(&ttlsEap), bcm_encode_buf(&ttlsEap));
-
-			numRealm++;
-		} else if (hspotap->nai_id == 5) {
-			/* TTLS - MSCHAPv2, username & password */
-			bcm_encode_init(&ttlsAuth, sizeof(ttlsAuthBuf), ttlsAuthBuf);
-			inner = REALM_MSCHAPV2;
-			credential = REALM_USERNAME_PASSWORD;
-			bcm_encode_anqp_authentication_subfield(&ttlsAuth,
-				REALM_NON_EAP_INNER_AUTHENTICATION, sizeof(inner), &inner);
-			bcm_encode_anqp_authentication_subfield(&ttlsAuth,
-				REALM_CREDENTIAL, sizeof(credential), &credential);
-			bcm_encode_init(&ttlsEap, sizeof(ttlsEapBuf), ttlsEapBuf);
-			bcm_encode_anqp_eap_method_subfield(&ttlsEap, REALM_EAP_TTLS,
-				2, bcm_encode_length(&ttlsAuth), bcm_encode_buf(&ttlsAuth));
-
-			/* wifi */
-			bcm_encode_anqp_nai_realm_data(&realm, REALM_ENCODING_RFC4282,
-				strlen(WIFI), (uint8 *)WIFI, 1,
-				bcm_encode_length(&ttlsEap), bcm_encode_buf(&ttlsEap));
-			numRealm++;
-
-			/* ruckus */
-			bcm_encode_anqp_nai_realm_data(&realm, REALM_ENCODING_RFC4282,
-				strlen(RUCKUS), (uint8 *)RUCKUS, 1,
-				bcm_encode_length(&ttlsEap), bcm_encode_buf(&ttlsEap));
-
-			numRealm++;
-		} else if (hspotap->nai_id == 6) {
-			/* TTLS - MSCHAPv2, username & password */
-			bcm_encode_init(&ttlsAuth, sizeof(ttlsAuthBuf), ttlsAuthBuf);
-			inner = REALM_MSCHAPV2;
-			credential = REALM_USERNAME_PASSWORD;
-			bcm_encode_anqp_authentication_subfield(&ttlsAuth,
-				REALM_NON_EAP_INNER_AUTHENTICATION, sizeof(inner), &inner);
-			bcm_encode_anqp_authentication_subfield(&ttlsAuth,
-				REALM_CREDENTIAL, sizeof(credential), &credential);
-			bcm_encode_init(&ttlsEap, sizeof(ttlsEapBuf), ttlsEapBuf);
-			bcm_encode_anqp_eap_method_subfield(&ttlsEap, REALM_EAP_TTLS,
-				2, bcm_encode_length(&ttlsAuth), bcm_encode_buf(&ttlsAuth));
-
-			/* wifi */
-			bcm_encode_anqp_nai_realm_data(&realm, REALM_ENCODING_RFC4282,
-				strlen(WIFI), (uint8 *)WIFI, 1,
-				bcm_encode_length(&ttlsEap), bcm_encode_buf(&ttlsEap));
-			numRealm++;
-
-			/* mail */
-			bcm_encode_anqp_nai_realm_data(&realm, REALM_ENCODING_RFC4282,
-				strlen(MAIL), (uint8 *)MAIL, 1,
-				bcm_encode_length(&ttlsEap), bcm_encode_buf(&ttlsEap));
+				pktEncodeLength(&ttlsEap), pktEncodeBuf(&ttlsEap));
 
 			numRealm++;
 		}
@@ -787,36 +666,36 @@ static void encodeNaiRealmList(hspotApT *hspotap, bcm_encode_t *pkt)
 		}
 	}
 
-	bcm_encode_anqp_nai_realm(pkt, numRealm,
-		bcm_encode_length(&realm), bcm_encode_buf(&realm));
+	pktEncodeAnqpNaiRealm(pkt, numRealm,
+		pktEncodeLength(&realm), pktEncodeBuf(&realm));
 }
 
-static void encode3GppCellularNetwork(hspotApT *hspotap, bcm_encode_t *pkt)
+static void encode3GppCellularNetwork(hspotApT *hspotap, pktEncodeT *pkt)
 {
 	uint8 plmnBuf[BUFFER_SIZE];
-	bcm_encode_t plmn;
+	pktEncodeT plmn;
 	int plmnCount = 0;
 
-	bcm_encode_init(&plmn, BUFFER_SIZE, plmnBuf);
+	pktEncodeInit(&plmn, BUFFER_SIZE, plmnBuf);
 	if ((!hspotap->is3GppDisabled) && (!hspotap->emptyANQPInfo)) {
 		if (hspotap->useDefaultPLMNValue) {
 			plmnCount++;
-			bcm_encode_anqp_plmn(&plmn, gTMobilePlmn.mcc, gTMobilePlmn.mnc);
+			pktEncodeAnqpPlmn(&plmn, gTMobilePlmn.mcc, gTMobilePlmn.mnc);
 			plmnCount++;
-			bcm_encode_anqp_plmn(&plmn, "208", "00");
+			pktEncodeAnqpPlmn(&plmn, "208", "00");
 			plmnCount++;
-			bcm_encode_anqp_plmn(&plmn, "208", "01");
+			pktEncodeAnqpPlmn(&plmn, "208", "01");
 			plmnCount++;
-			bcm_encode_anqp_plmn(&plmn, "208", "02");
+			pktEncodeAnqpPlmn(&plmn, "208", "02");
 			plmnCount++;
-			bcm_encode_anqp_plmn(&plmn, "450", "02");
+			pktEncodeAnqpPlmn(&plmn, "450", "02");
 			plmnCount++;
-			bcm_encode_anqp_plmn(&plmn, "450", "04");
+			pktEncodeAnqpPlmn(&plmn, "450", "04");
 		}
 		else {
 			int i;
 			for (i = 0; i < hspotap->numPlmn; i++) {
-				if (bcm_encode_anqp_plmn(&plmn, hspotap->Plmn[i].mcc,
+				if (pktEncodeAnqpPlmn(&plmn, hspotap->Plmn[i].mcc,
 					hspotap->Plmn[i].mnc))
 					plmnCount++;
 			}
@@ -824,36 +703,36 @@ static void encode3GppCellularNetwork(hspotApT *hspotap, bcm_encode_t *pkt)
 	}
 	printf("numPlmn %d, %d, %d, %d\n", hspotap->numPlmn,
 		plmnCount, hspotap->is3GppDisabled, hspotap->emptyANQPInfo);
-	bcm_encode_anqp_3gpp_cellular_network(pkt,
-		plmnCount, bcm_encode_length(&plmn), bcm_encode_buf(&plmn));
+	pktEncodeAnqp3GppCellularNetwork(pkt,
+		plmnCount, pktEncodeLength(&plmn), pktEncodeBuf(&plmn));
 }
 
-static void encodeDomainNameList(hspotApT *hspotap, bcm_encode_t *pkt)
+static void encodeDomainNameList(hspotApT *hspotap, pktEncodeT *pkt)
 {
 	#define WIFI		"wi-fi.org"
 	uint8 buffer[BUFFER_SIZE];
-	bcm_encode_t name;
+	pktEncodeT name;
 
-	bcm_encode_init(&name, sizeof(buffer), buffer);
+	pktEncodeInit(&name, sizeof(buffer), buffer);
 	if (!hspotap->emptyANQPInfo) {
 		if (hspotap->useDefaultANQPValue) {
-			bcm_encode_anqp_domain_name(&name, strlen(WIFI), WIFI);
+			pktEncodeAnqpDomainName(&name, strlen(WIFI), WIFI);
 		}
 		else {
 			if (hspotap->numDomain) {
 				int i;
 				for (i = 0; i < hspotap->numDomain; i++) {
-					bcm_encode_anqp_domain_name(&name, hspotap->domain[i].len,
+					pktEncodeAnqpDomainName(&name, hspotap->domain[i].len,
 						hspotap->domain[i].name);
 				}
 			}
 		}
 	}
-	bcm_encode_anqp_domain_name_list(pkt,
-		bcm_encode_length(&name), bcm_encode_buf(&name));
+	pktEncodeAnqpDomainNameList(pkt,
+		pktEncodeLength(&name), pktEncodeBuf(&name));
 }
 
-static void encodeHspotCapabilityList(hspotApT *hspotap, bcm_encode_t *pkt)
+static void encodeHspotCapabilityList(hspotApT *hspotap, pktEncodeT *pkt)
 {
 	uint8 cap[] = {
 		HSPOT_SUBTYPE_QUERY_LIST,
@@ -862,36 +741,36 @@ static void encodeHspotCapabilityList(hspotApT *hspotap, bcm_encode_t *pkt)
 		HSPOT_SUBTYPE_WAN_METRICS,
 		HSPOT_SUBTYPE_CONNECTION_CAPABILITY,
 		HSPOT_SUBTYPE_NAI_HOME_REALM_QUERY,
-		HSPOT_SUBTYPE_OPERATING_CLASS_INDICATION,
-		HSPOT_SUBTYPE_ONLINE_SIGNUP_PROVIDERS,
-		HSPOT_SUBTYPE_ANONYMOUS_NAI,
-		HSPOT_SUBTYPE_ICON_REQUEST,
-		HSPOT_SUBTYPE_ICON_BINARY_FILE };
+        HSPOT_SUBTYPE_OPERATING_CLASS_INDICATION,
+        HSPOT_SUBTYPE_ONLINE_SIGNUP_PROVIDERS, 
+        HSPOT_SUBTYPE_ANONYMOUS_NAI, 
+        HSPOT_SUBTYPE_ICON_REQUEST, 
+        HSPOT_SUBTYPE_ICON_BINARY_FILE };
 	if (hspotap->emptyANQPInfo)
-		bcm_encode_hspot_anqp_capability_list(pkt, 0, cap);
+		pktEncodeHspotAnqpCapabilityList(pkt, 0, cap);
 	else
-		bcm_encode_hspot_anqp_capability_list(pkt, sizeof(cap) / sizeof(uint8), cap);
+		pktEncodeHspotAnqpCapabilityList(pkt, sizeof(cap) / sizeof(uint8), cap);
 }
 
-static void encodeHspotOperatingClassIndication(hspotApT *hspotap, bcm_encode_t *pkt)
+static void encodeHspotOperatingClassIndication(hspotApT *hspotap, pktEncodeT *pkt)
 {
 	uint8 opClass [2] = {81, 115};
 	uint8 opClass1 [1] = {81};
 	uint8 opClass2 [1] = {115};
 
 	if (hspotap->emptyANQPInfo)
-		bcm_encode_hspot_anqp_operating_class_indication(pkt, 0, opClass);
+		pktEncodeHspotAnqpOperatingClassIndication(pkt, 0, opClass);
 	else if (hspotap->opclass_id == 3)
-		bcm_encode_hspot_anqp_operating_class_indication(pkt, sizeof(opClass), opClass);
+		pktEncodeHspotAnqpOperatingClassIndication(pkt, sizeof(opClass), opClass);
 	else if (hspotap->opclass_id == 2)
-		bcm_encode_hspot_anqp_operating_class_indication(pkt, sizeof(opClass2), opClass2);
+		pktEncodeHspotAnqpOperatingClassIndication(pkt, sizeof(opClass2), opClass2);
 	else if (hspotap->opclass_id == 1)
-		bcm_encode_hspot_anqp_operating_class_indication(pkt, sizeof(opClass1), opClass1);
+		pktEncodeHspotAnqpOperatingClassIndication(pkt, sizeof(opClass1), opClass1);
 	else
-		bcm_encode_hspot_anqp_operating_class_indication(pkt, 0, opClass);
+		pktEncodeHspotAnqpOperatingClassIndication(pkt, 0, opClass);
 }
 
-static void encodeOperatorFriendlyName(hspotApT *hspotap, bcm_encode_t *pkt)
+static void encodeOperatorFriendlyName(hspotApT *hspotap, pktEncodeT *pkt)
 {
 	#define ENGLISH					"eng"
 	#define ENGLISH_FRIENDLY_NAME 	"Wi-Fi Alliance"
@@ -899,251 +778,191 @@ static void encodeOperatorFriendlyName(hspotApT *hspotap, bcm_encode_t *pkt)
 	#define CHINESE_FRIENDLY_NAME 	"\x57\x69\x2d\x46\x69\xe8\x81\x94\xe7\x9b\x9f"
 
 	uint8 buffer[BUFFER_SIZE];
-	bcm_encode_t name;
+	pktEncodeT name;
 
-	bcm_encode_init(&name, sizeof(buffer), buffer);
+	pktEncodeInit(&name, sizeof(buffer), buffer);
 	if (!hspotap->emptyANQPInfo) {
 		if (hspotap->oper_id == 1) {
-			bcm_encode_hspot_anqp_operator_name_duple(&name,
+			pktEncodeHspotAnqpOperatorNameDuple(&name,
 				strlen(ENGLISH), ENGLISH, strlen(ENGLISH_FRIENDLY_NAME),
 				ENGLISH_FRIENDLY_NAME);
-			bcm_encode_hspot_anqp_operator_name_duple(&name,
+			pktEncodeHspotAnqpOperatorNameDuple(&name,
 				strlen(CHINESE), CHINESE, strlen(CHINESE_FRIENDLY_NAME),
 				CHINESE_FRIENDLY_NAME);
 		}
 	}
-	bcm_encode_hspot_anqp_operator_friendly_name(pkt,
-		bcm_encode_length(&name), bcm_encode_buf(&name));
+	pktEncodeHspotAnqpOperatorFriendlyName(pkt,
+		pktEncodeLength(&name), pktEncodeBuf(&name));
 }
 
-static void encodeHspotOsuProviders(hspotApT *hspotap, bcm_encode_t *pkt)
+static void encodeHspotOsuProviders(hspotApT *hspotap, pktEncodeT *pkt) 
 {
-	#define OSU_SSID				"OSU-Broadcom"
-	#define ENGLISH					"eng"
-	#define KOREAN					"kor"
-	#define ENGLISH_OPERATOR_NAME	"Wi-Fi Alliance OSU"
-	#define OSU_SERVER				"https://osu-server.R2-testbed.wi-fi.org"
 	uint8 nameBuf1[BUFFER_SIZE];
-	bcm_encode_t name1;
+	pktEncodeT name1;
 	uint8 nameBuf2[BUFFER_SIZE];
-	bcm_encode_t name2;
+	pktEncodeT name2;
 	uint8 iconBuf[BUFFER_SIZE];
-	bcm_encode_t icon;
-	uint8 osuBuf[BUFFER_SIZE1];
+	pktEncodeT icon;
+	uint8 osuBuf[BUFFER_SIZE];
 	uint8 descBuf1[BUFFER_SIZE];
-	bcm_encode_t desc1;
+	pktEncodeT desc1;
 	uint8 descBuf2[BUFFER_SIZE];
-	bcm_encode_t desc2;
-	bcm_encode_t osu;
+	pktEncodeT desc2;
+	pktEncodeT osu;
 	uint8 soap = HSPOT_OSU_METHOD_SOAP_XML;
 	uint8 omadm = HSPOT_OSU_METHOD_OMA_DM;
-	uint8 korean_operator_name[] = {0xec, 0x99,
-		0x80, 0xec, 0x9d, 0xb4, 0xed, 0x8c, 0x8c,
-		0xec, 0x9d, 0xb4, 0x20, 0xeb, 0x8f, 0x99,
-		0xeb, 0xa7, 0xb9, 0x20, 0x4f, 0x53, 0x55};
-	uint8 korean_desc_name[] = {0xed, 0x85, 0x8c,
-		0xec, 0x8a, 0xa4, 0xed, 0x8a, 0xb8, 0x20,
-		0xeb, 0xaa, 0xa9, 0xec, 0xa0, 0x81, 0xec,
-		0x9c, 0xbc, 0xeb, 0xa1, 0x9c, 0x20, 0xeb,
-		0xac, 0xb4, 0xeb, 0xa3, 0x8c, 0x20, 0xec,
-		0x84, 0x9c, 0xeb, 0xb9, 0x84, 0xec, 0x8a,
-		0xa4};
 
-	if (!hspotap->emptyANQPInfo) {
-		if (hspotap->osup_id == 1) {
-			bcm_encode_init(&name1, sizeof(nameBuf1), nameBuf1);
-			bcm_encode_hspot_anqp_operator_name_duple(&name1,
-				strlen(ENGLISH), ENGLISH,
-				strlen(ENGLISH_OPERATOR_NAME),
-				ENGLISH_OPERATOR_NAME);
-			bcm_encode_hspot_anqp_operator_name_duple(&name1,
-				strlen(KOREAN), KOREAN,
-				sizeof(korean_operator_name),
-				(char *)korean_operator_name);
+    pktEncodeInit(&name1, BUFFER_SIZE, nameBuf1); 
+    pktEncodeHspotAnqpOperatorNameDuple(&name1, 2, "EN", 9, "provider1"); 
 
-			bcm_encode_init(&icon, sizeof(iconBuf), iconBuf);
-			bcm_encode_hspot_anqp_icon_metadata(&icon, 128, 128, ENGLISH,
-				9, (uint8 *)"image/png", 15, (uint8 *)"1357161475_wifi");
+	pktEncodeInit(&name2, BUFFER_SIZE, nameBuf2);
+	pktEncodeHspotAnqpOperatorNameDuple(&name2, 2, "EN", 9, "provider2");
+    
+	pktEncodeInit(&icon, BUFFER_SIZE, iconBuf);
+	pktEncodeHspotAnqpIconMetadata(&icon, 1, 2, "EN",
+		5, (uint8 *)"image", 13, (uint8 *)"iconfile1.txt");
+	pktEncodeHspotAnqpIconMetadata(&icon, 3, 4, "EN",
+		5, (uint8 *)"image", 13, (uint8 *)"iconfile2.txt");
 
-			bcm_encode_init(&desc1, sizeof(descBuf1), descBuf1);
-			bcm_encode_hspot_anqp_operator_name_duple(&desc1,
-				strlen(ENGLISH), ENGLISH,
-				29, "Free service for test purpose");
-			bcm_encode_hspot_anqp_operator_name_duple(&desc1,
-				strlen(KOREAN), KOREAN,
-				sizeof(korean_desc_name),
-				(char *)korean_desc_name);
+	pktEncodeInit(&desc1, BUFFER_SIZE, descBuf1);
+	pktEncodeHspotAnqpOperatorNameDuple(&desc1, 2, "EN", 12, "SOAP-XML OSU");
+	pktEncodeInit(&desc2, BUFFER_SIZE, descBuf2);
+	pktEncodeHspotAnqpOperatorNameDuple(&desc2, 2, "EN", 10, "OMA-DM OSU");
+	
+	pktEncodeInit(&osu, BUFFER_SIZE, osuBuf);
+	pktEncodeHspotAnqpOsuProvider(&osu,
+		pktEncodeLength(&name1), pktEncodeBuf(&name1),
+		6, (uint8 *)"myuri1", 1, &soap,
+		pktEncodeLength(&icon), pktEncodeBuf(&icon),
+		strlen(HOME_REALM), (uint8 *)HOME_REALM,
+		pktEncodeLength(&desc1), pktEncodeBuf(&desc1));
+	pktEncodeHspotAnqpOsuProvider(&osu,
+		pktEncodeLength(&name2), pktEncodeBuf(&name2),
+		6, (uint8 *)"myuri2", 1, &omadm,
+		pktEncodeLength(&icon), pktEncodeBuf(&icon),
+		strlen(HOME_REALM), (uint8 *)HOME_REALM,
+		pktEncodeLength(&desc2), pktEncodeBuf(&desc2));
 
-			bcm_encode_init(&osu, sizeof(osuBuf), osuBuf);
-			bcm_encode_hspot_anqp_osu_provider(&osu,
-				bcm_encode_length(&name1), bcm_encode_buf(&name1),
-//				strlen(OSU_SERVER), (uint8 *)OSU_SERVER,
-				strlen(hspotap->osu_server_uri), (uint8 *)hspotap->osu_server_uri,
-				1, &soap,
-				bcm_encode_length(&icon), bcm_encode_buf(&icon),
-				0, (uint8 *)"",
-				bcm_encode_length(&desc1), bcm_encode_buf(&desc1));
-
-			bcm_encode_hspot_anqp_osu_provider_list(pkt,
-//				strlen(OSU_SSID), (uint8 *)OSU_SSID, 1,
-				strlen(hspotap->osu_ssid), (uint8 *)hspotap->osu_ssid, 1,
-				bcm_encode_length(&osu), bcm_encode_buf(&osu));
-		}
-	}
-	else
-	{
-		bcm_encode_init(&name1, sizeof(nameBuf1), nameBuf1);
-		bcm_encode_hspot_anqp_operator_name_duple(&name1, 2, "EN", 9, "provider1");
-
-		bcm_encode_init(&name2, sizeof(nameBuf2), nameBuf2);
-		bcm_encode_hspot_anqp_operator_name_duple(&name2, 2, "EN", 9, "provider2");
-
-		bcm_encode_init(&icon, sizeof(iconBuf), iconBuf);
-		bcm_encode_hspot_anqp_icon_metadata(&icon, 1, 2, "EN",
-			5, (uint8 *)"image", 13, (uint8 *)"iconfile1.txt");
-		bcm_encode_hspot_anqp_icon_metadata(&icon, 3, 4, "EN",
-			5, (uint8 *)"image", 13, (uint8 *)"iconfile2.txt");
-
-		bcm_encode_init(&desc1, sizeof(descBuf1), descBuf1);
-		bcm_encode_hspot_anqp_operator_name_duple(&desc1, 2, "EN", 12, "SOAP-XML OSU");
-		bcm_encode_init(&desc2, sizeof(descBuf2), descBuf2);
-		bcm_encode_hspot_anqp_operator_name_duple(&desc2, 2, "EN", 10, "OMA-DM OSU");
-
-		bcm_encode_init(&osu, sizeof(osuBuf), osuBuf);
-		bcm_encode_hspot_anqp_osu_provider(&osu,
-			bcm_encode_length(&name1), bcm_encode_buf(&name1),
-			6, (uint8 *)"myuri1", 1, &soap,
-			bcm_encode_length(&icon), bcm_encode_buf(&icon),
-			strlen(HOME_REALM), (uint8 *)HOME_REALM,
-			bcm_encode_length(&desc1), bcm_encode_buf(&desc1));
-		bcm_encode_hspot_anqp_osu_provider(&osu,
-			bcm_encode_length(&name2), bcm_encode_buf(&name2),
-			6, (uint8 *)"myuri2", 1, &omadm,
-			bcm_encode_length(&icon), bcm_encode_buf(&icon),
-			strlen(HOME_REALM), (uint8 *)HOME_REALM,
-			bcm_encode_length(&desc2), bcm_encode_buf(&desc2));
-		bcm_encode_hspot_anqp_osu_provider_list(pkt,
-			7, (uint8 *)"osussid", 2,
-			bcm_encode_length(&osu), bcm_encode_buf(&osu));
-	}
+	pktEncodeHspotAnqpOsuProviderList(pkt, 0, 0, 0, 0,
+		pktEncodeLength(&osu), pktEncodeBuf(&osu));
 }
 
-static void encodeHspotAnonymousNai(hspotApT *hspotap, bcm_encode_t *pkt)
-{
-	char *nai = "anonymous.com";
-	bcm_encode_hspot_anqp_anonymous_nai(pkt, strlen(nai), (uint8 *)nai);
+static void encodeHspotAnonymousNai(hspotApT *hspotap, pktEncodeT *pkt) 
+{ 
+    char *nai = "anonymous.com"; 
+    pktEncodeHspotAnqpAnonymousNai(pkt, strlen(nai), (uint8 *)nai); 
 }
 
-static void encodeWanMetrics(hspotApT *hspotap, bcm_encode_t *pkt)
+static void encodeWanMetrics(hspotApT *hspotap, pktEncodeT *pkt)
 {
 	if (hspotap->emptyANQPInfo)
-		bcm_encode_hspot_anqp_wan_metrics(pkt,
+		pktEncodeHspotAnqpWanMetrics(pkt,
 			0, 0, 0, 0, 0, 0, 0, 0);
 	else if (hspotap->wanm_id == 1)
-		bcm_encode_hspot_anqp_wan_metrics(pkt,
+		pktEncodeHspotAnqpWanMetrics(pkt,
 			HSPOT_WAN_LINK_UP, HSPOT_WAN_NOT_SYMMETRIC_LINK, HSPOT_WAN_NOT_AT_CAPACITY,
 			2500, 384, 0, 0, 0);
 	else
-		bcm_encode_hspot_anqp_wan_metrics(pkt,
+		pktEncodeHspotAnqpWanMetrics(pkt,
 			0, 0, 0, 0, 0, 0, 0, 0);
 }
 
-static void encodeConnectionCapability(hspotApT *hspotap, bcm_encode_t *pkt)
+static void encodeConnectionCapability(hspotApT *hspotap, pktEncodeT *pkt)
 {
 	uint8 buffer[BUFFER_SIZE];
-	bcm_encode_t cap;
+	pktEncodeT cap;
 
-	bcm_encode_init(&cap, sizeof(buffer), buffer);
+	pktEncodeInit(&cap, sizeof(buffer), buffer);
 	if (!hspotap->emptyANQPInfo) {
 		if (hspotap->conn_id == 1) {
-			bcm_encode_hspot_anqp_proto_port_tuple(&cap,
+			pktEncodeHspotAnqpProtoPortTuple(&cap,
 				0x1, 0x0, HSPOT_CC_STATUS_CLOSED);
-			bcm_encode_hspot_anqp_proto_port_tuple(&cap,
+			pktEncodeHspotAnqpProtoPortTuple(&cap,
 				0x6, 0x14, HSPOT_CC_STATUS_OPEN);
-			bcm_encode_hspot_anqp_proto_port_tuple(&cap,
+			pktEncodeHspotAnqpProtoPortTuple(&cap,
 				0x6, 0x16, HSPOT_CC_STATUS_CLOSED);
-			bcm_encode_hspot_anqp_proto_port_tuple(&cap,
+			pktEncodeHspotAnqpProtoPortTuple(&cap,
 				0x6, 0x50, HSPOT_CC_STATUS_OPEN);
-			bcm_encode_hspot_anqp_proto_port_tuple(&cap,
+			pktEncodeHspotAnqpProtoPortTuple(&cap,
 				0x6, 0x1bb, HSPOT_CC_STATUS_OPEN);
-			bcm_encode_hspot_anqp_proto_port_tuple(&cap,
+			pktEncodeHspotAnqpProtoPortTuple(&cap,
 				0x6, 0x6bb, HSPOT_CC_STATUS_CLOSED);
-			bcm_encode_hspot_anqp_proto_port_tuple(&cap,
+			pktEncodeHspotAnqpProtoPortTuple(&cap,
 				0x6, 0x13c4, HSPOT_CC_STATUS_CLOSED);
-			bcm_encode_hspot_anqp_proto_port_tuple(&cap,
+			pktEncodeHspotAnqpProtoPortTuple(&cap,
 				0x11, 0x1f4, HSPOT_CC_STATUS_OPEN);
-			bcm_encode_hspot_anqp_proto_port_tuple(&cap,
+			pktEncodeHspotAnqpProtoPortTuple(&cap,
 				0x11, 0x13c4, HSPOT_CC_STATUS_CLOSED);
-			bcm_encode_hspot_anqp_proto_port_tuple(&cap,
+			pktEncodeHspotAnqpProtoPortTuple(&cap,
 				0x11, 0x1194, HSPOT_CC_STATUS_OPEN);
-			bcm_encode_hspot_anqp_proto_port_tuple(&cap,
+			pktEncodeHspotAnqpProtoPortTuple(&cap,
 				0x32, 0x0, HSPOT_CC_STATUS_OPEN);
 		}
 	}
-	bcm_encode_hspot_anqp_connection_capability(pkt,
-		bcm_encode_length(&cap), bcm_encode_buf(&cap));
+	pktEncodeHspotAnqpConnectionCapability(pkt,
+		pktEncodeLength(&cap), pktEncodeBuf(&cap));
 }
 
-static void encodeNaiHomeRealmQuery(hspotApT *hspotap, bcm_encode_t *pkt)
+static void encodeNaiHomeRealmQuery(hspotApT *hspotap, pktEncodeT *pkt)
 {
 	uint8 buffer[BUFFER_SIZE];
-	bcm_encode_t name;
+	pktEncodeT name;
 	int count = 0;
 
-	bcm_encode_init(&name, sizeof(buffer), buffer);
+	pktEncodeInit(&name, sizeof(buffer), buffer);
 	if (!hspotap->emptyANQPInfo) {
 		if (hspotap->home_id == 1) {
-			bcm_encode_hspot_anqp_nai_home_realm_name(&name, REALM_ENCODING_RFC4282,
+			pktEncodeHspotAnqpNaiHomeRealmName(&name, REALM_ENCODING_RFC4282,
 				strlen(HOME_REALM), HOME_REALM);
 			count++;
 		}
 	}
 	pktEncodeHspotAnqpNaiHomeRealmQuery(pkt, count,
-		bcm_encode_length(&name), bcm_encode_buf(&name));
+		pktEncodeLength(&name), pktEncodeBuf(&name));
 }
 
-static void encodeHomeRealm(hspotApT *hspotap, bcm_encode_t *pkt)
+static void encodeHomeRealm(hspotApT *hspotap, pktEncodeT *pkt)
 {
 	uint8 tlsAuthBuf[BUFFER_SIZE];
-	bcm_encode_t tlsAuth;
+	pktEncodeT tlsAuth;
 	uint8 tlsEapBuf[BUFFER_SIZE];
-	bcm_encode_t tlsEap;
+	pktEncodeT tlsEap;
 	uint8 realmBuf[BUFFER_SIZE];
-	bcm_encode_t realm;
+	pktEncodeT realm;
 	uint8 credential;
 
 	if (hspotap->emptyANQPInfo) {
-		bcm_encode_anqp_nai_realm(pkt, 0, 0, realmBuf);
+		pktEncodeAnqpNaiRealm(pkt, 0, 0, realmBuf);
 		return;
 	}
 
 	/* TLS - certificate */
-	bcm_encode_init(&tlsAuth, sizeof(tlsAuthBuf), tlsAuthBuf);
+	pktEncodeInit(&tlsAuth, sizeof(tlsAuthBuf), tlsAuthBuf);
 	credential = REALM_CERTIFICATE;
-	bcm_encode_anqp_authentication_subfield(&tlsAuth,
+	pktEncodeAnqpAuthenticationSubfield(&tlsAuth,
 		REALM_CREDENTIAL, sizeof(credential), &credential);
-	bcm_encode_init(&tlsEap, sizeof(tlsEapBuf), tlsEapBuf);
-	bcm_encode_anqp_eap_method_subfield(&tlsEap, REALM_EAP_TLS,
-		1, bcm_encode_length(&tlsAuth), bcm_encode_buf(&tlsAuth));
+	pktEncodeInit(&tlsEap, sizeof(tlsEapBuf), tlsEapBuf);
+	pktEncodeAnqpEapMethodSubfield(&tlsEap, REALM_EAP_TLS,
+		1, pktEncodeLength(&tlsAuth), pktEncodeBuf(&tlsAuth));
 
-	bcm_encode_init(&realm, sizeof(realmBuf), realmBuf);
+	pktEncodeInit(&realm, sizeof(realmBuf), realmBuf);
 
 	/* example */
-	bcm_encode_anqp_nai_realm_data(&realm, REALM_ENCODING_RFC4282,
+	pktEncodeAnqpNaiRealmData(&realm, REALM_ENCODING_RFC4282,
 		strlen(HOME_REALM), (uint8 *)HOME_REALM, 1,
-		bcm_encode_length(&tlsEap), bcm_encode_buf(&tlsEap));
-	bcm_encode_anqp_nai_realm(pkt, 1,
-		bcm_encode_length(&realm), bcm_encode_buf(&realm));
+		pktEncodeLength(&tlsEap), pktEncodeBuf(&tlsEap));
+	pktEncodeAnqpNaiRealm(pkt, 1,
+		pktEncodeLength(&realm), pktEncodeBuf(&realm));
 }
 
 static void processQueryRequest(hspotApT *hspotap,
-	bcm_gas_t *gas, int len, uint8 *data)
+	proGasT *gas, int len, uint8 *data)
 {
 	int bufferSize = QUERY_REQUEST_BUFFER;
 	uint8 *buffer;
-	bcm_decode_t pkt;
-	bcm_decode_anqp_t anqp;
-	bcm_encode_t rsp;
+	pktDecodeT pkt;
+	pktDecodeAnqpT anqp;
+	pktEncodeT rsp;
 	int responseSize;
 
 	TRACE_HEX_DUMP(TRACE_DEBUG, "query request", len, data);
@@ -1158,21 +977,21 @@ static void processQueryRequest(hspotApT *hspotap,
 
 	memset(buffer, 0, bufferSize);
 
-	bcm_encode_init(&rsp, bufferSize, buffer);
+	pktEncodeInit(&rsp, bufferSize, buffer);
 
 	/* decode ANQP */
-	bcm_decode_init(&pkt, len, data);
-	bcm_decode_anqp(&pkt, &anqp);
+	pktDecodeInit(&pkt, len, data);
+	pktDecodeAnqp(&pkt, &anqp);
 
 	/* decode query list and encode response */
 	if (anqp.anqpQueryListLength > 0) {
-		bcm_decode_t ie;
-		bcm_decode_anqp_query_list_t queryList;
+		pktDecodeT ie;
+		pktAnqpQueryListT queryList;
 		int i;
 
-		bcm_decode_init(&ie, anqp.anqpQueryListLength, anqp.anqpQueryListBuffer);
-		if (bcm_decode_anqp_query_list(&ie, &queryList))
-			bcm_decode_anqp_query_list_print(&queryList);
+		pktDecodeInit(&ie, anqp.anqpQueryListLength, anqp.anqpQueryListBuffer);
+		if (pktDecodeAnqpQueryList(&ie, &queryList))
+			pktDecodeAnqpQueryListPrint(&queryList);
 		else
 			printf("failed to decode query list\n");
 
@@ -1226,13 +1045,13 @@ static void processQueryRequest(hspotApT *hspotap,
 	}
 
 	if (anqp.hspot.queryListLength > 0) {
-		bcm_decode_t ie;
-		bcm_decode_hspot_anqp_query_list_t queryList;
+		pktDecodeT ie;
+		pktHspotAnqpQueryListT queryList;
 		int i;
 
-		bcm_decode_init(&ie, anqp.hspot.queryListLength, anqp.hspot.queryListBuffer);
-		if (bcm_decode_hspot_anqp_query_list(&ie, &queryList))
-			bcm_decode_hspot_anqp_query_list_print(&queryList);
+		pktDecodeInit(&ie, anqp.hspot.queryListLength, anqp.hspot.queryListBuffer);
+		if (pktDecodeHspotAnqpQueryList(&ie, &queryList))
+			pktDecodeHspotAnqpQueryListPrint(&queryList);
 		else
 			printf("failed to decode hotspot query list\n");
 
@@ -1259,14 +1078,12 @@ static void processQueryRequest(hspotApT *hspotap,
 			case HSPOT_SUBTYPE_OPERATING_CLASS_INDICATION:
 				encodeHspotOperatingClassIndication(hspotap, &rsp);
 				break;
-			case HSPOT_SUBTYPE_ONLINE_SIGNUP_PROVIDERS:
-				encodeHspotOsuProviders(hspotap, &rsp);
-				break;
-			case HSPOT_SUBTYPE_ANONYMOUS_NAI:
-				encodeHspotAnonymousNai(hspotap, &rsp);
-				break;
-			case HSPOT_SUBTYPE_ICON_BINARY_FILE:
-				break;
+            case HSPOT_SUBTYPE_ONLINE_SIGNUP_PROVIDERS:
+                encodeHspotOsuProviders(hspotap, &rsp); 
+                break; 
+            case HSPOT_SUBTYPE_ANONYMOUS_NAI:
+                encodeHspotAnonymousNai(hspotap, &rsp); 
+                break;
 			default:
 				break;
 			}
@@ -1275,15 +1092,15 @@ static void processQueryRequest(hspotApT *hspotap,
 
 	if (anqp.hspot.naiHomeRealmQueryLength > 0) {
 		if (!hspotap->isRealmDisabled) {
-			bcm_decode_t ie;
-			bcm_decode_hspot_anqp_nai_home_realm_query_t realm;
+			pktDecodeT ie;
+			pktHspotAnqpNaiHomeRealmQueryT realm;
 			int i;
 			int isMatch = FALSE;
 
-			bcm_decode_init(&ie, anqp.hspot.naiHomeRealmQueryLength,
+			pktDecodeInit(&ie, anqp.hspot.naiHomeRealmQueryLength,
 				anqp.hspot.naiHomeRealmQueryBuffer);
-			if (bcm_decode_hspot_anqp_nai_home_realm_query(&ie, &realm))
-				bcm_decode_hspot_anqp_nai_home_realm_query_print(&realm);
+			if (pktDecodeHspotAnqpNaiHomeRealmQuery(&ie, &realm))
+				pktDecodeHspotAnqpNaiHomeRealmQueryPrint(&realm);
 			else
 				printf("failed to decode hotspot home realm query\n");
 
@@ -1295,54 +1112,28 @@ static void processQueryRequest(hspotApT *hspotap,
 			if (isMatch)
 				encodeHomeRealm(hspotap, &rsp);
 			else
-				bcm_encode_anqp_nai_realm(&rsp, 0, 0, 0);
+				pktEncodeAnqpNaiRealm(&rsp, 0, 0, 0);
 		}
 		else {
-			bcm_encode_anqp_nai_realm(&rsp, 0, 0, 0);
+			pktEncodeAnqpNaiRealm(&rsp, 0, 0, 0);
 		}
 	}
-
-	if (anqp.hspot.iconRequestLength > 0) {
-		bcm_decode_t ie;
-		bcm_decode_hspot_anqp_icon_request_t request;
-
-		bcm_decode_init(&ie, anqp.hspot.iconRequestLength,
-			anqp.hspot.iconRequestBuffer);
-		if (bcm_decode_hspot_anqp_icon_request(&ie, &request)) {
-			int size;
-			uint8 *buf;
-
-			bcm_decode_hspot_anqp_icon_request_print(&request);
-
-			char *fullpath = NULL;
-			char* pathname = "/bin/";
-
-			if (request.filename != NULL) {
-				fullpath = malloc(strlen(pathname) + strlen(request.filename) + 1);
-				if (fullpath != NULL) {
-					strcpy(fullpath, pathname);
-					strcat(fullpath, request.filename);
-					if (hspotReadFile(fullpath, &size, &buf)) {
-						bcm_encode_hspot_anqp_icon_binary_file(&rsp,
-							HSPOT_ICON_STATUS_SUCCESS, 9,
-							(uint8 *)"image/png", size, buf);
-							free(buf);
-					}
-					else {
-						bcm_encode_hspot_anqp_icon_binary_file(&rsp,
-						HSPOT_ICON_STATUS_FILE_NOT_FOUND, 0, 0, 0, 0);
-					}
-					free(fullpath);
-				}
-				else {
-					printf("Error in memory allocation for Icon Path\n");
-				}
-			}
-			else
-				printf("Icon File name is Empty\n");
-		}
-	}
-	responseSize = bcm_encode_length(&rsp);
+    
+    if (anqp.hspot.iconRequestLength > 0)
+    { 
+        uint8 iconData[256]; 
+        int i;  
+        TRACE_HEX_DUMP(TRACE_PRINTF, "icon request", 
+                                    anqp.hspot.iconRequestLength,
+                                    anqp.hspot.iconRequestBuffer); 
+    
+        for (i = 0; i < (int)sizeof(iconData); i++) 
+        iconData[i] = i; 
+        pktEncodeHspotAnqpIconBinaryFile(&rsp, HSPOT_ICON_STATUS_SUCCESS, 
+                                         4, (uint8 *)"type",
+                                         sizeof(iconData), iconData); 
+    }
+	responseSize = pktEncodeLength(&rsp);
 
 	/* pad response to testResponseSize */
 	if (hspotap->testResponseSize > responseSize) {
@@ -1353,67 +1144,27 @@ static void processQueryRequest(hspotApT *hspotap,
 		responseSize, hspotap->disable_ANQP_response);
 
 	if (!hspotap->disable_ANQP_response)
-		bcm_gas_set_query_response(gas, responseSize, bcm_encode_buf(&rsp));
+		proGasSetQueryResponse(gas, responseSize, pktEncodeBuf(&rsp));
 
 	free(buffer);
 }
 
-/* malloc'ed buffer returned must be freed by caller */
-int hspotReadFile(char *filename, int *bufSize, uint8 **buf)
-{
-	int ret = FALSE;
-	FILE *fp;
-	long int size;
-	uint8 *buffer;
-	size_t result;
-
-	fp = fopen(filename, "rb");
-	if (fp == 0) {
-		printf("error %d opening %s\n", errno, filename);
-		/*free(filename); */
-		return ret;
-	}
-
-	fseek(fp, 0, SEEK_END);
-	size = ftell(fp);
-	rewind(fp);
-
-	buffer = malloc(size);
-	if (buffer == 0) {
-		goto done;
-	}
-
-	result = fread(buffer, 1, size, fp);
-	if ((int)result != size) {
-		goto done;
-	}
-
-	printf("read %d bytes from %s\n", (int)size, filename);
-	*bufSize = size;
-	*buf = buffer;
-	ret = TRUE;
-
-	done:
-	fclose(fp);
-	return ret;
-}
-
-static int gasEventHandler(hspotApT *hspotap, bcm_gas_event_t *event, uint16 *status)
+static int gasEventHandler(hspotApT *hspotap, proGasEventT *event, uint16 *status)
 {
 	hspotPrintGasEvent(event);
 
-	if (event->type == BCM_GAS_EVENT_QUERY_REQUEST) {
+	if (event->type == PRO_GAS_EVENT_QUERY_REQUEST) {
 		processQueryRequest(hspotap, event->gas,
 			event->queryReq.len, event->queryReq.data);
 	}
-	else if (event->type == BCM_GAS_EVENT_STATUS) {
+	else if (event->type == PRO_GAS_EVENT_STATUS) {
 #if TESTING_MODE
 		/* toggle setting */
 		hspotap->isGasPauseForServerResponse =
 			hspotap->isGasPauseForServerResponse ? FALSE : TRUE;
 		TRACE(TRACE_DEBUG, "pause for server response: %s\n",
 			hspotap->isGasPauseForServerResponse ? "TRUE" : "FALSE");
-		bcm_gas_set_if_gas_pause(hspotap->isGasPauseForServerResponse, hspotap->ifr);
+		proGasSetIfGASPause(hspotap->isGasPauseForServerResponse, hspotap->ifr);
 #endif
 		if (status != 0)
 			*status = event->status.statusCode;
@@ -1423,11 +1174,11 @@ static int gasEventHandler(hspotApT *hspotap, bcm_gas_event_t *event, uint16 *st
 	return FALSE;
 }
 
-static void gasEventCallback(void *context, bcm_gas_t *gas, bcm_gas_event_t *event)
+static void gasEventCallback(void *context, proGasT *gas, proGasEventT *event)
 {
 	(void)context;
 	hspotApT *hspotap;
-	hspotap = getHspotApByWlif(bcm_gas_get_drv(gas));
+	hspotap = getHspotApByWlif(proGasGetDrv(gas));
 	if (hspotap == NULL) {
 		printf("can't find matched hspotap\n");
 		return;
@@ -1435,7 +1186,7 @@ static void gasEventCallback(void *context, bcm_gas_t *gas, bcm_gas_event_t *eve
 
 	if (gasEventHandler(hspotap, event, 0))
 	{
-		printf("EVENT_GAS_DONE\n");
+		printf("GAS_DONE\n");
 	}
 }
 
@@ -1443,11 +1194,11 @@ static void addIes(hspotApT *hspotap)
 {
 	vendorIeT *vendorIeHSI = &hspotap->vendorIeHSI;
 	vendorIeT *vendorIeP2P = &hspotap->vendorIeP2P;
-	bcm_encode_t ie;
+	pktEncodeT ie;
 	/* encode hotspot vendor IE */
-	bcm_encode_init(&ie, sizeof(vendorIeHSI->ieData), vendorIeHSI->ieData);
-	bcm_encode_ie_hotspot_indication2(&ie, !hspotap->isDgafDisabled, HSPOT_RELEASE_2);
-	vendorIeHSI->ieLength = bcm_encode_length(&ie);
+	pktEncodeInit(&ie, sizeof(vendorIeHSI->ieData), vendorIeHSI->ieData);
+	pktEncodeIeHotspotIndication2(&ie, !hspotap->isDgafDisabled, FALSE, HSPOT_RELEASE_2);
+	vendorIeHSI->ieLength = pktEncodeLength(&ie);
 
 	/* add to beacon and probe response */
 	vendorIeHSI->pktflag = VNDR_IE_BEACON_FLAG | VNDR_IE_PRBRSP_FLAG;
@@ -1456,8 +1207,8 @@ static void addIes(hspotApT *hspotap)
 	wl_del_vndr_ie(hspotap->ifr, DEFAULT_BSSCFG_INDEX, vendorIeHSI->pktflag,
 		vendorIeHSI->ieLength - 2, vendorIeHSI->ieData + 2);
 
-	bcm_encode_init(&ie, sizeof(vendorIeHSI->ieData), vendorIeHSI->ieData);
-	bcm_encode_ie_hotspot_indication2(&ie, hspotap->isDgafDisabled, HSPOT_RELEASE_2);
+	pktEncodeInit(&ie, sizeof(vendorIeHSI->ieData), vendorIeHSI->ieData);
+	pktEncodeIeHotspotIndication2(&ie, hspotap->isDgafDisabled, FALSE, HSPOT_RELEASE_2);
 
 	/* delete IEs first if not a clean shutdown */
 	wl_del_vndr_ie(hspotap->ifr, DEFAULT_BSSCFG_INDEX, vendorIeHSI->pktflag,
@@ -1503,16 +1254,14 @@ static void addIes(hspotApT *hspotap)
 		vendorIeP2P->ieLength - 2, vendorIeP2P->ieData + 2) < 0)
 		TRACE(TRACE_ERROR, "failed to add vendor IE\n");
 
-	if (hspotap->hs_ie_enabled)
-	{
-		update_iw_ie(hspotap, TRUE);
+	update_iw_ie(hspotap, TRUE);
 
-		update_rc_ie(hspotap);
+	update_rc_ie(hspotap);
 
-		hspotap->ap_ANQPenabled = TRUE;
-		hspotap->ap_MIHenabled = FALSE;
-		update_ap_ie(hspotap);
-	}
+	hspotap->ap_ANQPenabled = TRUE;
+	hspotap->ap_MIHenabled = FALSE;
+	update_ap_ie(hspotap);
+
 }
 
 static void deleteIes(hspotApT *hspotap)
@@ -1614,26 +1363,21 @@ static int update_l2_traffic_inspect(hspotApT *hspotap)
 static void init_wlan_hspot(hspotApT *hspotap)
 {
 	/* delete interworking IE */
-	if (hspotap->hs_ie_enabled)
-	{
-		if (wl_bssload(hspotap->ifr, 1) < 0)
-			TRACE(TRACE_ERROR, "wl_bssload failed\n");
-	}
-	else if (wl_bssload(hspotap->ifr, 0) < 0)
-    	TRACE(TRACE_ERROR, "wl_bssload failed\n");
+	if (wl_bssload(hspotap->ifr, 1) < 0)
+		TRACE(TRACE_ERROR, "wl_bssload failed\n");
 
 	if (wl_dls(hspotap->ifr, 1) < 0)
 		TRACE(TRACE_ERROR, "wl_dls failed\n");
 
-	if (wl_wnm(hspotap->ifr, WNM_DEFAULT_BITMASK) < 0)
+	if (wl_wnm(hspotap->ifr, WL_WNM_BSSTRANS | WL_WNM_NOTIF) < 0)
 		TRACE(TRACE_ERROR, "wl_wnm failed\n");
 	if (wl_interworking(hspotap->ifr, 1) < 0)
 		TRACE(TRACE_ERROR, "wl_interworking failed\n");
 
 	if (wl_probresp_sw(hspotap->ifr, 1) < 0)
 		TRACE(TRACE_ERROR, "wl_probresp_sw failed\n");
-	/* enable proxy ARP */
-	if (wl_wnm(hspotap->ifr, WNM_DEFAULT_BITMASK | WL_WNM_PROXYARP) < 0)
+
+	if (wl_proxy_arp(hspotap->ifr, 1) < 0)
 		TRACE(TRACE_ERROR, "wl_proxy_arp failed\n");
 
 	if (wl_grat_arp(hspotap->ifr, 1) < 0)
@@ -1652,18 +1396,18 @@ static int update_iw_ie(hspotApT *hspotap, bool disable)
 {
 	int err = 0;
 	if (hspotap->iw_enabled) {
-		bcm_encode_t ie;
+		pktEncodeT ie;
 		uint8 buffer[BUFFER_SIZE];
 		/* encode interworking IE */
-		bcm_encode_init(&ie, sizeof(buffer), buffer);
-		bcm_encode_ie_interworking(&ie, hspotap->iw_ANT, hspotap->iw_isInternet,
+		pktEncodeInit(&ie, sizeof(buffer), buffer);
+		pktEncodeIeInterworking(&ie, hspotap->iw_ANT, hspotap->iw_isInternet,
 			FALSE, FALSE, FALSE,
 			TRUE, hspotap->iw_VG, hspotap->iw_VT,
 			hspotap->iw_isHESSIDPresent ? &hspotap->iw_HESSID : 0);
 
 		/* add interworking IE */
 		err = wl_ie(hspotap->ifr, DOT11_MNG_INTERWORKING_ID,
-		bcm_encode_length(&ie) - 2, bcm_encode_buf(&ie) + 2);
+		pktEncodeLength(&ie) - 2, pktEncodeBuf(&ie) + 2);
 		if (err)
 			TRACE(TRACE_ERROR, "failed add IW IE\n");
 	}
@@ -1680,11 +1424,11 @@ static int update_rc_ie(hspotApT *hspotap)
 {
 	int err = 0;
 	if (hspotap->rc_oiNum) {
-		bcm_encode_t ie;
+		pktEncodeT ie;
 		uint8 buffer[BUFFER_SIZE];
 		/* encode roaming consortium IE */
-		bcm_encode_init(&ie, sizeof(buffer), buffer);
-		bcm_encode_ie_roaming_consortium(&ie,
+		pktEncodeInit(&ie, sizeof(buffer), buffer);
+		pktEncodeIeRoamingConsortium(&ie,
 			hspotap->rc_oiNum > 3 ? (hspotap->rc_oiNum - 3) : 0,
 			hspotap->rc_oiNum > 0 ? hspotap->rc_oi[0].len : 0, hspotap->rc_oi[0].data,
 			hspotap->rc_oiNum > 1 ? hspotap->rc_oi[1].len : 0, hspotap->rc_oi[1].data,
@@ -1692,7 +1436,7 @@ static int update_rc_ie(hspotApT *hspotap)
 
 		/* add roaming consortium IE */
 		err = wl_ie(hspotap->ifr, DOT11_MNG_ROAM_CONSORT_ID,
-		bcm_encode_length(&ie) - 2, bcm_encode_buf(&ie) + 2);
+		pktEncodeLength(&ie) - 2, pktEncodeBuf(&ie) + 2);
 		if (err)
 			TRACE(TRACE_ERROR, "failed add RC IE\n");
 	}
@@ -1709,22 +1453,21 @@ static int update_ap_ie(hspotApT *hspotap)
 {
 	int err = 0;
 	if (hspotap->ap_ANQPenabled || hspotap->ap_MIHenabled) {
-		bcm_encode_t ie;
+		pktEncodeT ie;
 		uint8 buffer[BUFFER_SIZE];
 		uint8 adBuffer[BUFFER_SIZE];
-		bcm_encode_t ad;
+		pktEncodeT ad;
 
 		/* encode advertisement protocol IE */
-		bcm_encode_init(&ie, sizeof(buffer), buffer);
-		bcm_encode_init(&ad, sizeof(adBuffer), adBuffer);
-		bcm_encode_ie_advertisement_protocol_tuple(&ad, 0x7f, FALSE,
+		pktEncodeInit(&ie, sizeof(buffer), buffer);
+		pktEncodeInit(&ad, sizeof(adBuffer), adBuffer);
+		pktEncodeIeAdvertisementProtocolTuple(&ad, 0x7f, FALSE,
 			hspotap->ap_ANQPenabled ? ADVP_ANQP_PROTOCOL_ID : MIH_PROTOCOL_ID);
-		bcm_encode_ie_advertisement_protocol_from_tuple(&ie,
-			bcm_encode_length(&ad), bcm_encode_buf(&ad));
+		pktEncodeIeAdvertiseProtocol(&ie, pktEncodeLength(&ad), pktEncodeBuf(&ad));
 
 		/* add advertisement protocol IE */
 		err = wl_ie(hspotap->ifr, DOT11_MNG_ADVERTISEMENT_ID,
-		bcm_encode_length(&ie) - 2, bcm_encode_buf(&ie) + 2);
+		pktEncodeLength(&ie) - 2, pktEncodeBuf(&ie) + 2);
 		if (err)
 			TRACE(TRACE_ERROR, "failed add AP IE\n");
 	}
@@ -1735,6 +1478,21 @@ static int update_ap_ie(hspotApT *hspotap)
 			TRACE(TRACE_ERROR, "failed delete AP IE\n");
 	}
 	return err;
+}
+
+static bool strToEther(char *str, struct ether_addr *bssid)
+{
+	int hex[ETHER_ADDR_LEN];
+	int i;
+
+	if (sscanf(str, "%02x:%02x:%02x:%02x:%02x:%02x",
+		&hex[0], &hex[1], &hex[2], &hex[3], &hex[4], &hex[5]) != 6)
+		return FALSE;
+
+	for (i = 0; i < ETHER_ADDR_LEN; i++)
+		bssid->octet[i] = hex[i];
+
+	return TRUE;
 }
 
 static int
@@ -1936,58 +1694,6 @@ static int hspot_cmd_hessid_handler(hspotApT *hspotap,
 	return err;
 }
 
-static int hspot_cmd_osu_server_uri_handler(hspotApT *hspotap,
-	char **argv, char *txData, bool *set_tx_data)
-{
-	int err = 0;
-//	char varname[NVRAM_MAX_PARAM_LEN];
-//	int ret;
-
-	if (argv[0] == NULL) {
-		printf("missing parameter in command osu_server_uri\n");
-		reallocateString(&hspotap->osu_server_uri, "https://osu-server.R2-testbed.wi-fi.org");
-	}
-	else {
-		reallocateString(&hspotap->osu_server_uri, argv[0]);
-
-//		ret = nvram_set(strcat_r(hspotap->prefix, "osu_server_uri", varname), argv[0]);
-//		if (ret) {
-//			printf("nvram_set %s=%s failure\n", varname, argv[0]);
-//		}
-//		nvram_commit();
-	}
-
-	printf("osu_server_uri = %s\n", hspotap->osu_server_uri);
-
-	return err;
-}
-
-static int hspot_cmd_osu_ssid_handler(hspotApT *hspotap,
-	char **argv, char *txData, bool *set_tx_data)
-{
-	int err = 0;
-//	char varname[NVRAM_MAX_PARAM_LEN];
-//	int ret;
-
-	if (argv[0] == NULL) {
-		printf("missing parameter in command osu_ssid\n");
-		reallocateString(&hspotap->osu_ssid, "OSU-Broadcom");
-	}
-	else {
-		reallocateString(&hspotap->osu_ssid, argv[0]);
-
-//		ret = nvram_set(strcat_r(hspotap->prefix, "osu_ssid", varname), argv[0]);
-//		if (ret) {
-//			printf("nvram_set %s=%s failure\n", varname, argv[0]);
-//		}
-//		nvram_commit();
-	}
-
-	printf("osu_ssid = %s\n", hspotap->osu_ssid);
-
-	return err;
-}
-
 static int hspot_cmd_roaming_cons_handler(hspotApT *hspotap,
 	char **argv, char *txData, bool *set_tx_data)
 {
@@ -2085,7 +1791,7 @@ static int hspot_cmd_dgaf_disable_handler(hspotApT *hspotap,
 {
 	int err = 0;
 	vendorIeT *vendorIeHSI = &hspotap->vendorIeHSI;
-	bcm_encode_t ie;
+	pktEncodeT ie;
 	bool isDgafDisabled;
 	char varvalue[NVRAM_MAX_PARAM_LEN];
 	char varname[NVRAM_MAX_PARAM_LEN];
@@ -2117,8 +1823,8 @@ static int hspot_cmd_dgaf_disable_handler(hspotApT *hspotap,
 			vendorIeHSI->ieLength - 2, vendorIeHSI->ieData + 2);
 
 	/* encode hotspot vendor IE */
-	bcm_encode_init(&ie, sizeof(vendorIeHSI->ieData), vendorIeHSI->ieData);
-	bcm_encode_ie_hotspot_indication2(&ie, hspotap->isDgafDisabled, HSPOT_RELEASE_2);
+	pktEncodeInit(&ie, sizeof(vendorIeHSI->ieData), vendorIeHSI->ieData);
+	pktEncodeIeHotspotIndication2(&ie, hspotap->isDgafDisabled, FALSE, HSPOT_RELEASE_2);
 
 	if (hspotap->hs_ie_enabled) {
 		/* don't need first 2 bytes (0xdd + len) */
@@ -2198,7 +1904,7 @@ static int hspot_cmd_plmn_mcc_handler(hspotApT *hspotap,
 	int err = 0;
 	hspotap->numPlmn = 0;
 	while (*argv) {
-		if (strlen(argv[0]) > BCM_DECODE_ANQP_MCC_LENGTH) {
+		if (strlen(argv[0]) > MCC_LENGTH) {
 			printf("wrong MCC length %d\n", strlen(argv[0]));
 			hspotap->numPlmn = 0;
 			return -1;
@@ -2224,7 +1930,7 @@ static int hspot_cmd_plmn_mnc_handler(hspotApT *hspotap,
 	int err = 0;
 	hspotap->numPlmn = 0;
 	while (*argv) {
-		if (strlen(argv[0]) > BCM_DECODE_ANQP_MNC_LENGTH) {
+		if (strlen(argv[0]) > MNC_LENGTH) {
 			printf("wrong MNC length %d\n", strlen(argv[0]));
 			hspotap->numPlmn = 0;
 			return -1;
@@ -2248,20 +1954,19 @@ static int hspot_cmd_proxy_arp_handler(hspotApT *hspotap,
 	char **argv, char *txData, bool *set_tx_data)
 {
 	int err = 0;
-	int proxy_arp = 0;
+	bool proxy_arp;
 	if (argv[0] == NULL) {
 		printf("missing parameter in proxy_arp\n");
 		return -1;
 	}
 
-	proxy_arp = (atoi(argv[0]) != 0) ? WL_WNM_PROXYARP : 0;
+	proxy_arp = (atoi(argv[0]) != 0);
 	printf("proxy_arp %d\n", proxy_arp);
 
-	if (wl_wnm(hspotap->ifr, WNM_DEFAULT_BITMASK | proxy_arp) < 0) {
+	if (wl_proxy_arp(hspotap->ifr, proxy_arp) < 0) {
 		err = -1;
 		TRACE(TRACE_ERROR, "wl_proxy_arp failed\n");
 	}
-
 	if (wl_grat_arp(hspotap->ifr, proxy_arp) < 0) {
 		err = -1;
 		TRACE(TRACE_ERROR, "wl_grat_arp failed\n");
@@ -2307,12 +2012,12 @@ static int hspot_cmd_gas_cb_delay_handler(hspotApT *hspotap,
 	printf("gas_cb_delay %d\n", gas_cb_delay);
 	if (gas_cb_delay) {
 		hspotap->isGasPauseForServerResponse = FALSE;
-		bcm_gas_set_if_cb_delay_unpause(gas_cb_delay, hspotap->ifr);
+		proGasSetIfCBDelayUnpause(gas_cb_delay, hspotap->ifr);
 	}
 	else {
 		hspotap->isGasPauseForServerResponse = TRUE;
 	}
-	bcm_gas_set_if_gas_pause(hspotap->isGasPauseForServerResponse, hspotap->ifr);
+	proGasSetIfGASPause(hspotap->isGasPauseForServerResponse, hspotap->ifr);
 
 	hspotap->gas_cb_delay = gas_cb_delay;
 
@@ -2341,7 +2046,7 @@ static int hspot_cmd_4_frame_gas_handler(hspotApT *hspotap,
 
 	hspotap->isGasPauseForServerResponse = (atoi(argv[0]) == 0);
 	printf("4_frame_gas %d\n", !(hspotap->isGasPauseForServerResponse));
-	bcm_gas_set_if_gas_pause(hspotap->isGasPauseForServerResponse, hspotap->ifr);
+	proGasSetIfGASPause(hspotap->isGasPauseForServerResponse, hspotap->ifr);
 
 	snprintf(varvalue, sizeof(varvalue), "%d", (!(hspotap->isGasPauseForServerResponse)));
 	ret = nvram_set(strcat_r(hspotap->prefix, "4_frame_gas", varname), varvalue);
@@ -2364,7 +2069,7 @@ static int hspot_cmd_domain_list_handler(hspotApT *hspotap,
 		printf("missing parameter in command domain_list\n");
 		return -1;
 	}
-	while ((i < BCM_DECODE_ANQP_MAX_DOMAIN) &&
+	while ((i < MAX_DOMAIN) &&
 	       ((token = argv[i]) != NULL)) {
 		strcpy(hspotap->domain[i].name, token);
 		hspotap->domain[i].len = strlen(token);
@@ -2448,19 +2153,7 @@ static int hspot_cmd_hs2_handler(hspotApT *hspotap,
 	int ret;
 
 	if (argv[0] == NULL) {
-		printf("missing parameter 1 in command hs2\n");
-		return -1;
-	}
-
-	hspotap = getHspotApByHESSID(argv[0]);
-	if (hspotap == NULL) {
-		printf("wrong HESSID %s\n", argv[0]);
-		return -1;
-	}
-	argv++;
-
-	if (argv[0] == NULL) {
-		printf("missing parameter 2 in command hs2\n");
+		printf("missing parameter in command hs2\n");
 		return -1;
 	}
 
@@ -2485,7 +2178,7 @@ static int hspot_cmd_hs2_handler(hspotApT *hspotap,
 	}
 
 	snprintf(varvalue, sizeof(varvalue), "%d", hspotap->hs_ie_enabled);
-	ret = nvram_set(strcat_r(hspotap->prefix, "bss_hs2_enabled", varname), varvalue);
+	ret = nvram_set(strcat_r(hspotap->prefix, "hs2_ie", varname), varvalue);
 	if (ret) {
 		printf("nvram_set %s=%s failure\n", varname, varvalue);
 	}
@@ -2556,7 +2249,7 @@ static int hspot_cmd_hs_reset_handler(hspotApT *hspotap,
 {
 	vendorIeT *vendorIeHSI = &hspotap->vendorIeHSI;
 	vendorIeT *vendorIeP2P = &hspotap->vendorIeP2P;
-	bcm_encode_t ie;
+	pktEncodeT ie;
 	int err = 0;
 	char varvalue[NVRAM_MAX_PARAM_LEN];
 	char varname[NVRAM_MAX_PARAM_LEN];
@@ -2596,9 +2289,9 @@ static int hspot_cmd_hs_reset_handler(hspotApT *hspotap,
 			wl_del_vndr_ie(hspotap->ifr, DEFAULT_BSSCFG_INDEX, vendorIeHSI->pktflag,
 				vendorIeHSI->ieLength - 2, vendorIeHSI->ieData + 2);
 		/* encode hotspot vendor IE */
-		bcm_encode_init(&ie, sizeof(vendorIeHSI->ieData), vendorIeHSI->ieData);
-		bcm_encode_ie_hotspot_indication2(&ie,
-			hspotap->isDgafDisabled, HSPOT_RELEASE_2);
+		pktEncodeInit(&ie, sizeof(vendorIeHSI->ieData), vendorIeHSI->ieData);
+		pktEncodeIeHotspotIndication2(&ie,
+			hspotap->isDgafDisabled, FALSE, HSPOT_RELEASE_2);
 		hspotap->hs_ie_enabled = FALSE;
 		update_dgaf_disable(hspotap);
 	}
@@ -2613,13 +2306,12 @@ static int hspot_cmd_hs_reset_handler(hspotApT *hspotap,
 	}
 
 	hspotap->numPlmn = 0;
-	/* disable proxy ARP */
-	wl_wnm(hspotap->ifr, WNM_DEFAULT_BITMASK);
+	wl_proxy_arp(hspotap->ifr, 0);
 	wl_grat_arp(hspotap->ifr, 0);
-	bcm_gas_set_if_cb_delay_unpause(1000, hspotap->ifr);
-	bcm_gas_set_comeback_delay_response_pause(1);
+	proGasSetIfCBDelayUnpause(1000, hspotap->ifr);
+	proGasSetComebackDelayResponsePause(1);
 	hspotap->isGasPauseForServerResponse = TRUE;
-	bcm_gas_set_if_gas_pause(hspotap->isGasPauseForServerResponse, hspotap->ifr);
+	proGasSetIfGASPause(hspotap->isGasPauseForServerResponse, hspotap->ifr);
 	hspotap->gas_cb_delay = 0;
 	hspotap->numDomain = 0;
 	wl_wnm_url(hspotap->ifr, 0, 0);
@@ -2721,7 +2413,7 @@ static int hspot_cmd_hs_reset_handler(hspotApT *hspotap,
 	}
 
 	snprintf(varvalue, sizeof(varvalue), "%d", hspotap->hs_ie_enabled);
-	ret = nvram_set(strcat_r(hspotap->prefix, "bss_hs2_enabled", varname), varvalue);
+	ret = nvram_set(strcat_r(hspotap->prefix, "hs2_ie", varname), varvalue);
 	if (ret) {
 		printf("nvram_set %s=%s failure\n", varname, varvalue);
 	}
@@ -2833,22 +2525,6 @@ static int hspot_cmd_net_auth_type_handler(hspotApT *hspotap,
 	return err;
 }
 
-static int hspot_cmd_osu_provider_list_handler(hspotApT *hspotap,
-	char **argv, char *txData, bool *set_tx_data)
-{
-	int err = 0;
-
-	if (argv[0] == NULL) {
-		printf("missing parameter in command osu_provider_list\n");
-		return -1;
-	}
-
-	hspotap->osup_id = 1;//atoi(argv[0]);
-	printf("osu_provider_list id %d\n", hspotap->osup_id);
-
-	return err;
-}
-
 static int hspot_cmd_plmn_default_handler(hspotApT *hspotap,
 	char **argv, char *txData, bool *set_tx_data)
 {
@@ -2940,7 +2616,7 @@ static int hspot_cmd_pause_handler(hspotApT *hspotap,
 	}
 
 	hspotap->isGasPauseForServerResponse = (atoi(argv[0]) != 0);
-	bcm_gas_set_if_gas_pause(hspotap->isGasPauseForServerResponse, hspotap->ifr);
+	proGasSetIfGASPause(hspotap->isGasPauseForServerResponse, hspotap->ifr);
 	printf("isGasPauseForServerResponse %d\n", hspotap->isGasPauseForServerResponse);
 
 	return err;
@@ -3007,7 +2683,7 @@ static int hspot_cmd_pause_cb_delay_handler(hspotApT *hspotap,
 
 	pause_cb_delay = atoi(argv[0]);
 	printf("pause_cb_delay %d\n", pause_cb_delay);
-	bcm_gas_set_comeback_delay_response_pause(pause_cb_delay);
+	proGasSetComebackDelayResponsePause(pause_cb_delay);
 	return err;
 }
 
@@ -3120,18 +2796,6 @@ static int processCommand(hspotApT *hspotap, char **argv, char *txData)
 		argv++;
 		err = hspot_cmd_hs2_handler(hspotap, argv, txData, &set_tx_data);
 	}
-	else if (strcmp(argv[0], "osu_provider_list") == 0) {
-		argv++;
-		err = hspot_cmd_osu_provider_list_handler(hspotap, argv, txData, &set_tx_data);
-	}
-	else if (strcmp(argv[0], "osu_server_uri") == 0) {
-		argv++;
-		err = hspot_cmd_osu_server_uri_handler(hspotap, argv, txData, &set_tx_data);
-	}
-	else if (strcmp(argv[0], "osu_ssid") == 0) {
-		argv++;
-		err = hspot_cmd_osu_ssid_handler(hspotap, argv, txData, &set_tx_data);
-	}
 	else if (strcmp(argv[0], "p2p_cross_connect") == 0) {
 		argv++;
 		err = hspot_cmd_p2p_cross_connect_handler(hspotap, argv, txData, &set_tx_data);
@@ -3210,10 +2874,10 @@ static int processCommand(hspotApT *hspotap, char **argv, char *txData)
 	}
 	else if (strcmp(argv[0], "sr") == 0)
 	{
-		struct ether_addr addr, bssid;
+		struct ether_addr addr, *bssid;
 		char *url;
 		int urlLength;
-		bcm_encode_t enc;
+		pktEncodeT enc;
 		uint8 buffer[BUFFER_SIZE];
 
 		if ((argv[1] == NULL) || (argv[2] == NULL)) {
@@ -3233,42 +2897,15 @@ static int processCommand(hspotApT *hspotap, char **argv, char *txData)
 			return err;
 		}
 
-		bcm_encode_init(&enc, sizeof(buffer), buffer);
-		bcm_encode_wnm_subscription_remediation(&enc,
+		pktEncodeInit(&enc, sizeof(buffer), buffer);
+		pktEncodeWnmSubscriptionRemediation(&enc,
 			hspotap->dialogToken++, urlLength, url);
 
 		/* get bssid */
 		wl_cur_etheraddr(hspotap->ifr, DEFAULT_BSSCFG_INDEX, &bssid);
 		/* send action frame */
-		wl_actframe(hspotap->ifr, DEFAULT_BSSCFG_INDEX,
-			(uint32)bcm_encode_buf(&enc), 0, 250, &bssid, &addr,
-			bcm_encode_length(&enc), bcm_encode_buf(&enc));
-	}
-	/* Sending BSS Transition Request Frame */
-	else if (strcmp(argv[0], "btredi") == 0) {
-		char *url;
-		uint16 disassocTimer = 100;
-		if (argv[1] == NULL) {
-			printf("Invalid Number of Parameters\n");
-			return err;
-		}
-		url = argv[1];
-		if (strlen(url) > 255) {
-			printf("<url> too long");
-			return err;
-		}
-		if (wl_wnm_url(hspotap->ifr, strlen(url), (uchar *)url) < 0) {
-			printf("wl_wnm_url failed\n");
-			return err;
-		}
-		if (wl_wnm_bsstrans_req(hspotap->ifr,
-			DOT11_BSSTRANS_REQMODE_PREF_LIST_INCL |
-			DOT11_BSSTRANS_REQMODE_DISASSOC_IMMINENT |
-			DOT11_BSSTRANS_REQMODE_ESS_DISASSOC_IMNT,
-			disassocTimer, 0, TRUE) < 0) {
-				printf("wl_wnm_bsstrans_req failed\n");
-				return err;
-		}
+		wl_actframe(hspotap->ifr, DEFAULT_BSSCFG_INDEX, (uint32)pktEncodeBuf(&enc), 0, 250,
+			&bssid, &addr, pktEncodeLength(&enc), pktEncodeBuf(&enc));
 	}
 	else
 	{
@@ -3288,10 +2925,8 @@ static int processCommand(hspotApT *hspotap, char **argv, char *txData)
 	return err;
 }
 
-static void tcpReceiveHandler(void *handle, char *rxData, char *txData)
+static void tcpReceiveHandler(char *rxData, char *txData)
 {
-	(void)handle;
-
 	/* receive and send back with OK
 	   test with test.tcl test ap_set_hs2 to see what strings are being passed
 	 */
@@ -3397,7 +3032,6 @@ int main(int argc, char **argv)
 		hspotap_num ++;
 
 		hspotap->isGasPauseForServerResponse = TRUE;
-		hspotap->dialogToken = 1;
 		/* token start from 1 */
 		hspotap->req_token = 1;
 		hspotap->ifr = ifr;
@@ -3420,17 +3054,10 @@ int main(int argc, char **argv)
 		hspotap->opclass_id = 3;
 		hspotap->home_id = 1;
 		hspotap->nat_id = 1;
-		hspotap->osup_id = 1;
 
 		hspotap->hs_ie_enabled = TRUE;
 		hspotap->p2p_cross_enabled = FALSE;
 		hspotap->p2p_ie_enabled = TRUE;
-
-		hspotap->osu_server_uri = NULL;
-		hspotap->osu_ssid = NULL;
-		
-		reallocateString(&hspotap->osu_server_uri, "https://osu-server.R2-testbed.wi-fi.org");
-		reallocateString(&hspotap->osu_ssid, "OSU-Broadcom");
 
 		/* interworking IE default value */
 		hspotap->iw_enabled = TRUE;
@@ -3622,7 +3249,7 @@ int main(int argc, char **argv)
 				printf("%s is not defined in NVRAM\n", varname);
 			}
 
-			ptr = nvram_get(strcat_r(prefix, "bss_hs2_enabled", varname));
+			ptr = nvram_get(strcat_r(prefix, "hs2_ie", varname));
 			if (ptr) {
 				hspotap->hs_ie_enabled = atoi(ptr);
 				printf("%s: %d\n", varname, hspotap->hs_ie_enabled);
@@ -3651,6 +3278,7 @@ int main(int argc, char **argv)
 					printf(" -verbose    enable verbose output\n");
 					printf(" -help       print this menu\n");
 					printf(" -dgaf       disable DGAF\n");
+					printf(" sr <addr>   send subscription remediation action frame (use tcp port option)\n");
 					printf("\n");
 					printf("To redirect to file use 'tee' "
 						"(eg. %s -d | tee log.txt).\n", argv[0]);
@@ -3728,34 +3356,32 @@ int main(int argc, char **argv)
 	current_hspotap = hspotaps[0];
 
 	/* initialize GAS protocol */
-	bcm_gas_subscribe_event(0, gasEventCallback);
-	bcm_gas_init_dsp();
-	bcm_gas_init_wlan_handler();
+	proGasSubscribeEvent(0, gasEventCallback);
+	proGasInitDsp();
+	proGasInitWlanHandler();
 
 	if (tcpServerEnabled) {
-		tcpSubscribeTcpHandler(0, tcpReceiveHandler);
+		tcpSubscribeTcpHandler(tcpReceiveHandler);
 		tcpSrvCreate(tcpServerPort);
 	}
 
 	for (i = 0; i < hspotap_num; i++) {
 		if (hspotaps[i]->gas_cb_delay) {
-			bcm_gas_set_if_cb_delay_unpause(
-				hspotaps[i]->gas_cb_delay, hspotaps[i]->ifr);
+			proGasSetIfCBDelayUnpause(hspotaps[i]->gas_cb_delay, hspotaps[i]->ifr);
 		}
-		bcm_gas_set_if_gas_pause(
-			hspotaps[i]->isGasPauseForServerResponse, hspotaps[i]->ifr);
+		proGasSetIfGASPause(hspotaps[i]->isGasPauseForServerResponse, hspotaps[i]->ifr);
 	}
 	dspStart(dsp());
 
 	/* deinitialize GAS protocol */
-	bcm_gas_deinitialize();
-	bcm_gas_unsubscribe_event(gasEventCallback);
+	proGasDeinitialize();
+	proGasUnsubscribeEvent(gasEventCallback);
 
 	/* terminate dispatcher */
 	dspFree();
 
 	if (tcpServerEnabled) {
-		tcpSubscribeTcpHandler(0, NULL);
+		tcpSubscribeTcpHandler(NULL);
 		tcpSrvDestroy();
 		tcpServerEnabled = 0;
 	}

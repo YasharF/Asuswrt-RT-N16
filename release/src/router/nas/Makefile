@@ -26,8 +26,6 @@ clean : ${BUILDS-CLEAN}
 ${BUILDS-CLEAN} ::
 	$(MAKE) -C ${@:-clean=} clean
 
-all : ${BUILDS}
-
 # install
 BUILDS-INSTALL = ${BUILDS:=-install}
 

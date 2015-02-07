@@ -79,7 +79,6 @@ if(sw_mode == 3 || (sw_mode == 4))
 	theUrl = location.hostName;
 
 function initial(){
-	$('pull_arrow').title = Untranslated.select_client;
 	show_menu();
 	show_http_clientlist();
 	corrected_timezone();
@@ -90,7 +89,8 @@ function initial(){
 	load_dst_d_Options();
 	load_dst_h_Options();
 	document.form.http_passwd2.value = "";
-	chkPass("<% nvram_get("http_passwd"); %>", 'http_passwd');
+	var http_password = decodeURIComponent("<% nvram_char_to_ascii("", "http_passwd"); %>");
+	chkPass(http_password, 'http_passwd');
 	
 	if(svc_ready == "0")
 		$('svc_hint_div').style.display = "";	
@@ -233,7 +233,9 @@ function validForm(){
 		document.form.http_username.focus();
 		document.form.http_username.select();
 		return false;
-	}
+	}else{
+                $("alert_msg1").style.display = "none";
+        }
 
 	document.form.http_username.value = trim(document.form.http_username.value);
 
@@ -850,7 +852,6 @@ function select_time_zone(){
 <input type="hidden" name="productid" value="<% nvram_get("productid"); %>">
 <input type="hidden" name="current_page" value="Advanced_System_Content.asp">
 <input type="hidden" name="next_page" value="Advanced_System_Content.asp">
-<input type="hidden" name="next_host" value="">
 <input type="hidden" name="modified" value="0">
 <input type="hidden" name="flag" value="">
 <input type="hidden" name="action_mode" value="apply">
@@ -932,10 +933,10 @@ function select_time_zone(){
         </tr>
     	</thead>
 	<tr id="btn_ez_radiotoggle_tr">
-		<th>WPS Button behavior</th>
+		<th><#WPS_btn_behavior#></th>
 		<td>
-			<input type="radio" name="btn_ez_radiotoggle" class="input" value="1" <% nvram_match_x("", "btn_ez_radiotoggle", "1", "checked"); %>>Toggle Radio
-			<input type="radio" name="btn_ez_radiotoggle" class="input" value="0" <% nvram_match_x("", "btn_ez_radiotoggle", "0", "checked"); %>>Activate WPS
+			<input type="radio" name="btn_ez_radiotoggle" class="input" value="1" <% nvram_match_x("", "btn_ez_radiotoggle", "1", "checked"); %>><#WPS_btn_toggle#>
+			<input type="radio" name="btn_ez_radiotoggle" class="input" value="0" <% nvram_match_x("", "btn_ez_radiotoggle", "0", "checked"); %>><#WPS_btn_actWPS#>
 		</td>
 	</tr>
         <tr>
@@ -1043,14 +1044,14 @@ function select_time_zone(){
 			
 			  <tr>
 					<th width="80%"><#ConnectedClient#></th>
-					<th width="20%">Add / Delete</th>
+					<th width="20%"><#list_add_delete#></th>
 				</tr>
 
 				<tr>
 					<!-- client info -->
 					<td width="80%">
 				 		<input type="text" class="input_32_table" maxlength="15" name="http_client_ip_x_0"  onKeyPress="" onClick="hideClients_Block();" onblur="if(!over_var){hideClients_Block();}">
-						<img id="pull_arrow" height="14px;" src="/images/arrow-down.gif" style="position:absolute;*margin-left:-3px;*margin-top:1px;" onclick="pullLANIPList(this);" title="" onmouseover="over_var=1;" onmouseout="over_var=0;">				 		
+						<img id="pull_arrow" height="14px;" src="/images/arrow-down.gif" style="position:absolute;*margin-left:-3px;*margin-top:1px;" onclick="pullLANIPList(this);" title="<#select_client#>" onmouseover="over_var=1;" onmouseout="over_var=0;">	
 						<div id="ClientList_Block_PC" class="ClientList_Block_PC"></div>	
 				 	</td>
 				 	<td width="20%">	

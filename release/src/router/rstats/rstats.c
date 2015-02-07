@@ -874,14 +874,6 @@ static void calc(void)
 		// <rx bytes, packets, errors, dropped, fifo errors, frame errors, compressed, multicast><tx ...>
 		if (sscanf(p + 1, "%lu%*u%*u%*u%*u%*u%*u%*u%lu", &counter[0], &counter[1]) != 2) continue;
 
-#if defined(RTN14U) || defined(RTAC52U)
-				if (strcmp(ifname, "vlan2") == 0) 
-				{    
-					get_wan_bytecount(0,&counter[1]);	
-					get_wan_bytecount(1,&counter[0]);
-				}	
-#endif				
-
 		if(!netdev_calc(ifname, ifname_desc, &counter[0], &counter[1], ifname_desc2, &rx2, &tx2))
 			continue;
 //_dprintf(">>> %s, %s, %lu, %lu, %s, %lu, %lu, %s <<<\n",ifname, ifname_desc, counter[0], counter[1], ifname_desc2, rx2, tx2);

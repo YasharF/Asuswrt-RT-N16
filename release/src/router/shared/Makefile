@@ -5,14 +5,14 @@ CFLAGS += -I. -I$(TOP)/shared -I$(SRCBASE)/include
 CFLAGS += -I$(LINUXDIR)/include
 
 ifeq ($(RTCONFIG_SHP),y)
-CFLAGS += -DMEDIA_REVIEW
+CFLAGS += -DSHP
 endif
 
 ifeq ($(RTCONFIG_RALINK),y)
 CFLAGS += -I./sysdeps/ralink -I$(TOP)/wireless_tools/ -DWE_NOLIBM 
 endif
 
-ifeq ($(RTCONFIG_BCMARM),y)
+ifeq ($(RTCONFIG_BCMWL6),y)
 CFLAGS += -I$(SRCBASE)/shared/bcmwifi/include
 CFLAGS += -I$(SRCBASE)/common/include
 else
@@ -29,6 +29,10 @@ endif
 
 ifeq ($(RTAC66U), y)
 CFLAGS += -DRTAC66U
+endif
+
+ifeq ($(RTAC53U), y)
+CFLAGS += -DRTAC53U
 endif
 
 ifeq ($(RTCONFIG_4352_5G),y)
@@ -49,6 +53,14 @@ ifeq ($(RTAC52U),y)
 export CFLAGS += -DRTAC52U
 endif
 
+ifeq ($(RTAC51U),y)
+export CFLAGS += -DRTAC51U
+endif
+
+ifeq ($(RTN14U)$(RTAC52U)$(RTAC51U),y)
+CFLAGS += -DRA_ESW
+endif
+
 OBJS = shutils.o linux_timer.o defaults.o model.o rtstate.o boardapi.o
 OBJS += misc.o version.o files.o strings.o process.o 
 OBJS += bin_sem_asus.o semaphore.o pids.o notify_rc.o discover.o
@@ -61,7 +73,7 @@ OBJS += flash_mtd.o api-ralink.o
 ifeq ($(RTCONFIG_RALINK_RT3052),y)
 OBJS += ra3052.o
 endif
-ifeq ($(or $(RTN14U),$(RTAC52U)),y)
+ifeq ($(RTN14U)$(RTAC52U)$(RTAC51U),y)
 OBJS += mt7620.o
 else
 OBJS += rtkswitch.o

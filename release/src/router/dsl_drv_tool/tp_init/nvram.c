@@ -23,6 +23,7 @@ extern int SetAdslMode(int EnumAdslModeValue, int FromAteCmd);
 extern int SetAdslType(int EnumAdslTypeValue, int FromAteCmd);
 extern int SetSNRMOffset(int EnumSNRMOffsetValue, int FromAteCmd); /* Paul add 2012/9/24 */
 extern int SetSRA(int EnumSRAValue, int FromAteCmd); /* Paul add 2012/10/15 */
+extern int SetBitswap(int EnumBitswapValue, int FromAteCmd); /* Paul add 2013/10/23 */
 
 extern char* strcpymax(char *to, const char*from, int max_to_len);
 //
@@ -171,6 +172,19 @@ int nvram_load_SRA()
 #endif        
 }
 
+/* Paul add 2013/10/23, for Bitswap control. */
+int nvram_load_Bitswap() 
+{
+#ifndef WIN32
+    char* pValue;
+    pValue = nvram_safe_get("dslx_bitswap");
+    if (*pValue == 0) return EnumBitswap;
+    else return atoi(pValue);  
+#else    
+    return EnumBitswap;
+#endif        
+}
+
 int nvram_load_config_num(int* iptv)
 {
 #ifndef WIN32
@@ -275,6 +289,7 @@ int nvram_set_adsl_fw_setting(int config_num, int iptv_port, int internet_pvc, i
 	int EnumAdslMode;
 	int EnumSNRM_Offset;
 	int EnumSRA_;
+	int EnumBitswap_;	
 	int all_bridge_pvc = 1;	    
 	int pvc_idx;
 	FILE* fp;
@@ -289,16 +304,19 @@ int nvram_set_adsl_fw_setting(int config_num, int iptv_port, int internet_pvc, i
 	    EnumAdslMode=nvram_load_adsl_mode();
 	    EnumSNRM_Offset=nvram_load_SNRM_offset(); /* Paul add 2012/9/24 */
 	    EnumSRA_=nvram_load_SRA(); /* Paul add 2012/10/15 */
+	    EnumBitswap_=nvram_load_Bitswap(); /* Paul add 2013/10/23 */
 
 	    // set the setting to adsl fw    
 	    SetAdslType(EnumAdslType,0);
 	    SetAdslMode(EnumAdslMode,0);
 	    SetSNRMOffset(EnumSNRM_Offset,0); /* Paul add 2012/9/24 */
 	    SetSRA(EnumSRA_,0); /* Paul add 2012/10/15 */
+	    SetBitswap(EnumBitswap_,0); /* Paul add 2013/10/23 */
 	    myprintf("ADSL MODE : %d\n", EnumAdslType);                
 	    myprintf("ADSL TYPE : %d\n", EnumAdslMode); 
 			myprintf("SNRM Offset: %d\n", EnumSNRM_Offset); /* Paul add 2012/9/24 */
 			myprintf("SRA: %d\n", EnumSRA_); /* Paul add 2012/10/15 */
+			myprintf("Bitswap: %d\n", EnumBitswap_); /* Paul add 2013/10/23 */
     }
     
     // add internet pvc to first vlan

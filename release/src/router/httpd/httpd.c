@@ -202,6 +202,7 @@ struct language_table language_tables[] = {
 /* Forwards. */
 static int initialize_listen_socket( usockaddr* usaP );
 static int auth_check( char* dirname, char* authorization, char* url);
+static void __send_authenticate( char* realm );
 static void send_authenticate( char* realm );
 static void send_error( int status, char* title, char* extra_header, char* text );
 //#ifdef RTCONFIG_CLOUDSYNC
@@ -221,6 +222,7 @@ int change_passwd = 0;
 int reget_passwd = 0;	
 int x_Setting = 0;
 int skip_auth = 0;
+int isLogout = 0;
 char url[128];
 int http_port=SERVER_PORT;
 
@@ -330,22 +332,34 @@ auth_check( char* dirname, char* authorization ,char* url)
 	int l;
 	struct in_addr temp_ip_addr;
 	char *temp_ip_str;
+	time_t dt;
+
+	if(isLogout == 1){
+		isLogout = 0;
+		send_authenticate( dirname );
+                return 0;
+	}
 
 	login_timestamp_tmp = uptime();
-	if(last_login_timestamp != 0 && login_timestamp_tmp-last_login_timestamp > 60){
+	dt = login_timestamp_tmp - last_login_timestamp;
+	if(last_login_timestamp != 0 && dt > 60){
 		login_try = 0;
 		last_login_timestamp = 0;
 	}
 
+	if (MAX_login <= DEFAULT_LOGIN_MAX_NUM)
+		MAX_login = DEFAULT_LOGIN_MAX_NUM;
 	if(login_try >= MAX_login){
 		temp_ip_addr.s_addr = login_ip_tmp;
 		temp_ip_str = inet_ntoa(temp_ip_addr);
 
-		if(login_try%MAX_login == 0)		
+		if(login_try%MAX_login == 0)
 			logmessage(HEAD_HTTP_LOGIN, "Detect abnormal logins at %d times. The newest one was from %s.", login_try, temp_ip_str);
 
+#ifdef LOGIN_LOCK
 		send_authenticate( dirname );
 		return 0;
+#endif
 	}
 
 	//printf("[httpd] auth chk:%s, %s\n", dirname, url);	// tmp test
@@ -357,7 +371,7 @@ auth_check( char* dirname, char* authorization ,char* url)
 	/* Basic authorization info? */
 	if ( !authorization || strncmp( authorization, "Basic ", 6 ) != 0) 
 	{
-		send_authenticate( dirname );
+		__send_authenticate( dirname );
 		return 0;
 	}
 
@@ -394,15 +408,21 @@ auth_check( char* dirname, char* authorization ,char* url)
 }
 
 static void
-send_authenticate( char* realm )
+__send_authenticate( char* realm )
 {
 	char header[10000];
 
+	(void) snprintf(header, sizeof(header), "WWW-Authenticate: Basic realm=\"%s\"", realm);
+	send_error( 401, "Unauthorized", header, "Authorization required." );
+}
+
+static void
+send_authenticate( char* realm )
+{
 	login_try++;
 	last_login_timestamp = login_timestamp_tmp;
 
-	(void) snprintf(header, sizeof(header), "WWW-Authenticate: Basic realm=\"%s\"", realm);
-	send_error( 401, "Unauthorized", header, "Authorization required." );
+	__send_authenticate(realm);
 }
 
 static void
@@ -924,7 +944,7 @@ handle_request(void)
 #endif
 			}
 
-			if(!strstr(file, ".cgi") && !strstr(file, "syslog.txt") && !(strstr(file,".cgi")) && !check_if_file_exist(file)){
+			if(!strstr(file, ".cgi") && !strstr(file, "syslog.txt") && !(strstr(file,".CFG")) && !check_if_file_exist(file)){
 				send_error( 404, "Not Found", (char*) 0, "File not found." );
 				return;
 			}
@@ -952,8 +972,10 @@ handle_request(void)
 	}
 
 	if(!fromapp) {
-		if(!strcmp(file, "Logout.asp")) 
+		if(!strcmp(file, "Logout.asp")){
+			isLogout = 1;
 			http_logout(login_ip_tmp);
+		}
 	}
 }
 
@@ -973,7 +995,7 @@ void http_get_access_ip(void) {
 	char *nv, *nvp, *b;
 	int i=0, p=0;
 
-	for(; i<4; i++)
+	for(; i<ARRAY_SIZE(access_ip); i++)
 		access_ip[i]=0;
 
         nv = nvp = strdup(nvram_safe_get("http_clientlist"));
@@ -984,6 +1006,11 @@ void http_get_access_ip(void) {
                         sprintf(tmp_access_ip, "%s", b);
                         inet_aton(tmp_access_ip, &tmp_access_addr);
 			
+			if (p >= ARRAY_SIZE(access_ip)) {
+				_dprintf("%s: access_ip out of range (p %d addr %x)!\n",
+					__func__, p, (unsigned int)tmp_access_addr.s_addr);
+				break;
+			}
                         access_ip[p] = (unsigned int)tmp_access_addr.s_addr;
 			p++;
                 }
@@ -1030,7 +1057,7 @@ int http_client_ip_check(void) {
 
         int i = 0;
         if(nvram_match("http_client", "1")) {
-                while(i<4) {
+                while(i<ARRAY_SIZE(access_ip)) {
                         if(access_ip[i]!=0) {
                                 if(login_ip_tmp==access_ip[i])
                                         return 1;
@@ -1180,7 +1207,7 @@ load_dictionary (char *lang, pkw_t pkw)
 #ifndef RELOAD_DICT
 	static char loaded_dict[12] = {'\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0'};
 #endif  // RELOAD_DICT
-#if RTCONFIG_DYN_DICT_NAME
+#ifdef RTCONFIG_DYN_DICT_NAME
 	char *dyn_dict_buf;
 	char *dyn_dict_buf_new;
 #endif
@@ -1233,7 +1260,7 @@ load_dictionary (char *lang, pkw_t pkw)
 	dict_size -= 3;
 	printf ("dict_size %d\n", dict_size);
 
-#if RTCONFIG_DYN_DICT_NAME
+#ifdef RTCONFIG_DYN_DICT_NAME
 	dyn_dict_buf = malloc(dict_size);
 	fseek (dfp, 0L, SEEK_SET);
 	// skip BOM
@@ -1575,8 +1602,8 @@ int main(int argc, char **argv)
 	nvram_unset("login_ip_str");
 	nvram_unset("login_port");
 	MAX_login = nvram_get_int("login_max_num");
-	if(MAX_login <= 0)
-		MAX_login = 5;
+	if(MAX_login <= DEFAULT_LOGIN_MAX_NUM)
+		MAX_login = DEFAULT_LOGIN_MAX_NUM;
 
 	detect_timestamp_old = 0;
 	detect_timestamp = 0;

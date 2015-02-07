@@ -198,8 +198,8 @@ clean:
 
 # install
 install: all
-	install -d $(INSTALLDIR)/wps/bin
-	install wps_monitor $(INSTALLDIR)/wps/bin
-	$(STRIP) $(INSTALLDIR)/wps/bin/wps_monitor
+	install -d $(INSTALLDIR)/wps${BCMEX}/bin
+	install wps_monitor $(INSTALLDIR)/wps${BCMEX}/bin
+	$(STRIP) $(INSTALLDIR)/wps${BCMEX}/bin/wps_monitor
 
 .PHONY: all clean install libs dirs osl

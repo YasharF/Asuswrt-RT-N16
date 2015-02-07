@@ -111,14 +111,6 @@ XCFLAGS=$(CFLAGS) $(DEPFLAGS) $(WARN) $(HEADERS) $(WELIB_FLAG) $(WEDEF_FLAG)
 PICFLAG=-fPIC
 
 
-ifeq ($(RTN14U),y)
-CFLAGS += -DRTN14U
-endif
-
-ifeq ($(RTAC52U),y)
-CFLAGS += -DRTAC52U
-endif
-
 # Standard compilation targets
 all: $(STATIC) $(IWLIB) $(PROGS)
 

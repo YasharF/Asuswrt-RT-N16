@@ -22,7 +22,6 @@ wan_nat_x = '<% nvram_get("wan_nat_x"); %>';
 wan_proto = '<% nvram_get("wan_proto"); %>';
 function initial(){
 	show_menu();	
-	//load_body();
 }
 </script>
 </head>
@@ -35,7 +34,6 @@ function initial(){
 <form method="post" name="form" action="apply.cgi" target="hidden_frame">
 <input type="hidden" name="current_page" value="Main_WStatus_Content.asp">
 <input type="hidden" name="next_page" value="Main_WStatus_Content.asp">
-<input type="hidden" name="next_host" value="">
 <input type="hidden" name="group_id" value="">
 <input type="hidden" name="modified" value="0">
 <input type="hidden" name="action_mode" value="">
@@ -66,7 +64,7 @@ function initial(){
 									<div style="margin-left:5px;margin-top:10px;margin-bottom:10px"><img src="/images/New_ui/export/line_export.png"></div>
 									<div class="formfontdesc"><#WLLog_title#></div>
 									<div style="margin-top:8px"> 
-										<textarea  cols="63" rows="30" style="width=90%; font-family:'Courier New', Courier, mono; font-size:13px; background:#475A5F;color:#FFFFFF" readonly="readonly" wrap=VIRTUAL><% nvram_dump("wlan11b_2g.log","wlan11b.sh"); %></textarea>
+										<textarea  cols="63" rows="30" style="width:99%;font-family:'Courier New', Courier, mono; font-size:13px; background:#475A5F;color:#FFFFFF" readonly="readonly" wrap=VIRTUAL><% nvram_dump("wlan11b_2g.log","wlan11b.sh"); %></textarea>
 									</div>
 									<div class="apply_gen">
 										<input type="button" onClick="location.href=location.href" value="<#CTL_refresh#>" class="button_gen" >

@@ -534,16 +534,12 @@ process_signals()
 	sig_flags = 0;
 }
 
-char gw_linklocal[128];
-
 static void
 client6_mainloop()
 {
 	struct timeval *w;
 	int ret, maxsock;
 	fd_set r;
-
-	memset(gw_linklocal, 0, sizeof(gw_linklocal));
 
 	while(1) {
 		if (sig_flags)
@@ -1493,12 +1489,6 @@ client6_recv()
 	    dhcp6msgstr(dh6->dh6_msgtype),
 	    addr2str((struct sockaddr *)&from), ifp->ifname);
 
-	if (dh6->dh6_msgtype == DH6_REPLY)
-	{
-		memcpy(gw_linklocal, addr2str((struct sockaddr *)&from), sizeof(gw_linklocal));
-		dprintf(LOG_DEBUG, FNAME, "set gw_linklocal=%s\n", gw_linklocal);
-	}
-
 	/* get options */
 	dhcp6_init_options(&optinfo);
 	p = (struct dhcp6opt *)(dh6 + 1);
@@ -2192,7 +2182,11 @@ info_printf(const char *fmt, ...)
 	va_start(ap, fmt);
 	vsnprintf(logbuf, sizeof(logbuf), fmt, ap);
 
+#if 0
 	dprintf(LOG_DEBUG, FNAME, "%s", logbuf);
+#else
+	dprintf(LOG_NOTICE, FNAME, "%s", logbuf);
+#endif
 	if (infreq_mode)
 		printf("%s\n", logbuf);
 

@@ -1,8 +1,9 @@
 include ../common.mak
 
-CFLAGS = -Wall -Os $(EXTRACFLAGS)
+CFLAGS += -Wall -Os $(EXTRACFLAGS)
 CFLAGS += -I. -I$(TOP)/shared -I$(SRCBASE)/include -idirafter$(LINUXDIR)/include
 CFLAGS += -I$(TOP)/openssl/include
+CFLAGS += -I$(TOP)/push_log
 CFLAGS += -ffunction-sections -fdata-sections
 CFLAGS += -DDLM -DASUS_DDNS -DASUS_EXT -DBTN_SETUP -DWEB_REDIRECT
 
@@ -14,15 +15,19 @@ endif
 
 ifeq ($(RTCONFIG_RALINK),y)
 CFLAGS += -I$(TOP)/shared/sysdeps/ralink -I$(TOP)/wireless_tools
+ifneq ($(findstring MAC_REPEATER=, $(shell cat $(LINUXDIR)/.config)),)
+export CFLAGS += -DMAC_REPEATER
+endif
 endif
 
-ifeq ($(RTN14U),y)
-export CFLAGS += -DRTN14U
+ifneq ($(findstring DSL,$(BUILD_NAME)),)
+MODEL = $(subst -,_,$(BUILD_NAME))
+else
+MODEL = $(subst -,,$(BUILD_NAME))
 endif
 
-ifeq ($(RTAC52U),y)
-export CFLAGS += -DRTAC52U
-endif
+export CFLAGS += -D$(MODEL)
+
 
 LDFLAGS = -L$(TOP)/nvram${BCMEX} -lnvram -L$(TOP)/shared -lshared -lcrypt -L$(TOP)/libbcmcrypto -lbcmcrypto
 
@@ -47,19 +52,12 @@ CFLAGS += -DU2EC
 LDFLAGS += -L$(TOP)/libdisk -ldisk
 endif
 
-ifeq ($(RTCONFIG_EMAIL),y)
-CFLAGS += -I$(TOP)/push_log
+ifeq ($(RTCONFIG_PUSH_EMAIL),y)
+LDFLAGS += -L$(TOP)/openssl -lcrypto -lssl
+LDFLAGS += -L$(TOP)/curl-7.21.7/lib/.libs -lcurl
+LDFLAGS += -L$(TOP)/libxml2/.libs -lxml2
+LDFLAGS += -L$(TOP)/wb -lws
 LDFLAGS += -L$(TOP)/push_log -lpush_log
-endif
-
-ifeq ($(RTAC66U), y)
-CFLAGS += -DRTAC66U
-endif
-ifeq ($(RTN65U), y)
-CFLAGS += -DRTN65U
-endif
-ifeq ($(RTN56U), y)
-CFLAGS += -DRTN56U
 endif
 
 ifeq ($(RTCONFIG_ODMPID),y)
@@ -123,6 +121,10 @@ ifeq ($(RTCONFIG_JFFS2),y)
 OBJS += jffs2.o
 endif
 
+ifeq ($(RTCONFIG_BRCM_NAND_JFFS2),y)
+OBJS += jffs2.o
+endif
+
 ifeq ($(RTCONFIG_UBIFS),y)
 OBJS += ubifs.o
 endif
@@ -143,6 +145,10 @@ ifeq ($(RTCONFIG_ACCEL_PPTPD),y)
 OBJS += vpn.o
 endif
 
+ifeq ($(RTCONFIG_OPENVPN),y)
+OBJS += openvpn.o
+endif
+
 ifeq ($(RTCONFIG_OLD_PARENTALCTRL),y)
 OBJS += parental_ctrl.o
 endif
@@ -154,10 +160,6 @@ endif
 ifeq ($(RTCONFIG_DSL),y)
 OBJS += dsl.o
 OBJS += dsl-upg.o
-endif
-
-ifeq ($(RTCONFIG_IPV6),y)
-OBJS += ipv6aide.o
 endif
 
 ifeq ($(RTCONFIG_BCMWL6),y)
@@ -174,9 +176,16 @@ ifeq ($(RTN65U),y)
 OBJS += asm1042.o
 endif
 
+ifeq ($(RTCONFIG_VPNC),y)
+OBJS += vpnc.o
+endif
 
 ifeq ($(RTCONFIG_SHP),y)
-export CFLAGS += -DMEDIA_REVIEW
+export CFLAGS += -DSHP
+endif
+
+ifeq ($(RTCONFIG_TIMEMACHINE),y)
+OBJS += timemachine.o
 endif
 
 ifeq ($(RTCONFIG_BCMARM),y)
@@ -241,7 +250,6 @@ endif
 
 ifeq ($(RTCONFIG_IPV6),y)
 	@cd $(INSTALLDIR)/sbin && ln -sf rc dhcp6c-state
-	@cd $(INSTALLDIR)/sbin && ln -sf rc ipv6aide
 endif
 ifeq ($(RTCONFIG_WPS),y)
 	@cd $(INSTALLDIR)/sbin && ln -sf rc wpsaide

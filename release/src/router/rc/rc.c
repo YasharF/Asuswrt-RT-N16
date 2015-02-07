@@ -18,7 +18,7 @@ static int rctest_main(int argc, char *argv[])
 {
 	int on;
 
-	if (argc < 3) {
+	if (argc < 2) {
 		_dprintf("test what?\n");
 	}
 	else if (strcmp(argv[1], "rc_service")==0) {
@@ -136,8 +136,14 @@ static int rctest_main(int argc, char *argv[])
 					system("echo 2 > /proc/sys/net/ipv4/conf/default/force_igmp_version");
 					system("echo 2 > /proc/sys/net/ipv4/conf/all/force_igmp_version");
 #endif
-					modprobe("hw_nat");
-					sleep(1);
+
+#if defined(RTN14U) || defined(RTAC52U) || defined(RTAC51U)
+					if (!(!nvram_match("switch_wantag", "none")&&!nvram_match("switch_wantag", "")))
+#endif
+					{
+						modprobe("hw_nat");
+						sleep(1);
+					}	
 				}
 #endif
 				stop_iQos();
@@ -169,6 +175,11 @@ static int rctest_main(int argc, char *argv[])
 			set_pwr_usb(atoi(argv[2]));
 			_dprintf("done.\n");
 		}
+#ifdef RTCONFIG_BCMFA
+		else if (strcmp(argv[1], "fa_rev") == 0) {
+			_dprintf("(%d) done.\n", get_fa_rev());
+		}
+#endif
 		else {
 			printf("what?\n");
 		}
@@ -219,6 +230,12 @@ static const applets_t applets[] = {
 	{ "ipv6-down",			ip6down_main				},
 #endif
 	{ "auth-fail",			authfail_main				},
+#ifdef RTCONFIG_VPNC
+	{ "vpnc-ip-up",			vpnc_ipup_main				},
+	{ "vpnc-ip-down",		vpnc_ipdown_main				},
+	{ "vpnc-ip-pre-up",		vpnc_ippreup_main				},
+	{ "vpnc-auth-fail",		vpnc_authfail_main				},
+#endif
 #ifdef RTCONFIG_EAPOL
 	{ "wpa_cli",			wpacli_main			},
 #endif
@@ -252,7 +269,6 @@ static const applets_t applets[] = {
 	{ "zcip",			zcip_wan			},
 #ifdef RTCONFIG_IPV6
 	{ "dhcp6c-state",		dhcp6c_state_main		},
-	{ "ipv6aide",			ipv6aide_main			},
 #endif
 #ifdef RTCONFIG_WPS
 	{ "wpsaide",			wpsaide_main			},
@@ -605,7 +621,7 @@ int main(int argc, char **argv)
 		return 0;
 	}
 #endif
-#ifdef CONFIG_BCMWL5
+#if defined(CONFIG_BCMWL5) || (defined(RTCONFIG_RALINK) && defined(RTCONFIG_WIRELESSREPEATER))
 	else if (!strcmp(base, "wlcscan")) {
 		return wlcscan_main();
 	}

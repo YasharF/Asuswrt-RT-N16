@@ -142,12 +142,12 @@ function gen_list(){
 		passlist = new Array("", "indosat", "proxl", "", "3gprs", "smart", "123456", "esia", "indosat", "telkom", "aha");
 	}
 	else if(country == "MA"){
-		protolist = new Array("1", "1", "1", "4");
-		isplist = new Array("Celcom", "Maxis", "Digi", "Yes");
-		apnlist = new Array("celcom3g", "unet", "3gdgnet", "");
-		daillist = new Array("*99***1#", "*99***1#", "*99#", "");
-		userlist = new Array("", "maxis", "", "");
-		passlist = new Array("", "wap", "", "");
+		protolist = new Array("1", "1", "1", "4", "1");
+		isplist = new Array("Celcom", "Maxis", "Digi", "Yes", "U Mobile");
+		apnlist = new Array("celcom3g", "unet", "3gdgnet", "", "my3g");
+		daillist = new Array("*99***1#", "*99***1#", "*99#", "", "*99#");
+		userlist = new Array("", "maxis", "", "", "");
+		passlist = new Array("", "wap", "", "", "");
 	}
 	else if(country == "SG"){
 		protolist = new Array("1", "1", "1", "1");
@@ -246,12 +246,12 @@ function gen_list(){
 		passlist = new Array("", "", "true");
 	}
   else if(country == "POL"){
-		protolist = new Array("1", "1", "1", "1", "1", "1", "1");
-  	isplist = new Array("Play", "Cyfrowy Polsat", "ERA", "Orange", "Plus", "Heyah", "Aster");
-    apnlist = new Array("internet", "multi.internet", "internet", "internet", "internet", "internet", "aster.internet");
-    daillist = new Array("*99#", "*99***1#", "*99***1#", "*99#", "*99***1#", "*99***1#", "*99#");
-    userlist = new Array("", "", "erainternet", "internet", "plusgsm", "heyah", "internet");
-    passlist = new Array("", "", "erainternet", "internet", "plusgsm", "heyah", "internet");
+		protolist = new Array("1", "1", "1", "1", "1", "1", "1", "1");
+  	isplist = new Array("Play", "Cyfrowy Polsat", "T-Mobile(ERA)", "Orange", "Plus", "Heyah", "Aster", "SAMISWOI");
+    apnlist = new Array("internet", "multi.internet", "internet", "internet", "internet", "internet", "aster.internet", "www.plusgsm.pl");
+    daillist = new Array("*99#", "*99***1#", "*99***1#", "*99#", "*99***1#", "*99***1#", "*99#", "*99***1#");
+    userlist = new Array("", "", "", "internet", "plusgsm", "heyah", "internet", "internet");
+    passlist = new Array("", "", "", "internet", "plusgsm", "heyah", "internet", "internet");
   }
 	else if(country == "INDI"){
 		protolist = new Array("2", "2", "2", "1", "1", "1");

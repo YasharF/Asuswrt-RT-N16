@@ -1,9 +1,9 @@
 include ../common.mak
 
-CFLAGS = -Os -Wall $(EXTRACFLAGS)
+CFLAGS += -Os -Wall $(EXTRACFLAGS)
 CFLAGS += -I$(SRCBASE) -I$(SRCBASE)/include -I. -I$(TOP)/shared -I$(TOP)/zlib
-CFLAGS += -DASUS_DDNS -DTRANSLATE_ON_FLY -DFLASH_EMULATOR -DLinux -DWSC 
 CFLAGS += -I$(TOP)/push_log
+CFLAGS += -DASUS_DDNS -DTRANSLATE_ON_FLY -DFLASH_EMULATOR -DLinux -DWSC 
 
 ifeq ($(RTCONFIG_RALINK),y)
 CFLAGS += -DRalink_WPS
@@ -11,11 +11,19 @@ CFLAGS += -I$(TOP)/shared/sysdeps/ralink -I$(TOP)/wireless_tools
 endif
 
 ifeq ($(RTN14U),y)
-CFLAGS += -DRTN14U
+CFLAGS += -DBAND_2G_ONLY -DRTN14U
 endif
 
 ifeq ($(RTAC52U),y)
 CFLAGS += -DRTAC52U
+endif
+
+ifeq ($(RTAC51U),y)
+CFLAGS += -DRTAC51U
+endif
+
+ifeq ($(RTN14U)$(RTAC52U)$(RTAC51U),y)
+CFLAGS += -DRA_ESW
 endif
 
 ifeq ($(RTN65U),y)
@@ -55,6 +63,14 @@ endif
 
 LIBS = -L$(TOP)/nvram${BCMEX} -lnvram -L$(TOP)/shared -lshared
 
+ifeq ($(RTCONFIG_PUSH_EMAIL),y)
+LIBS += -L$(TOP)/openssl -lcrypto -lssl
+LIBS += -L$(TOP)/curl-7.21.7/lib/.libs -lcurl
+LIBS += -L$(TOP)/libxml2/.libs -lxml2
+LIBS += -L$(TOP)/wb -lws
+LIBS += -L$(TOP)/push_log -lpush_log
+endif
+
 ifeq ($(RTCONFIG_BCMARM),y)
 CFLAGS += -I$(SRCBASE)/shared/bcmwifi/include
 CFLAGS += -I$(SRCBASE)/common/include
@@ -71,6 +87,7 @@ LIBS += -L$(TOP)/openssl -lssl -lcrypto
 endif
 
 ifeq ($(RTCONFIG_OPENVPN),y)
+OBJS += openvpn_options.o
 LIBS += -L$(TOP)/openssl -lssl -lcrypto
 endif
 
@@ -84,7 +101,7 @@ all: httpd #test_apps
 
 httpd: $(OBJS)
 	@echo " [httpd] CC $@"
-	@$(CC) -o $@ $(OBJS) $(LIBS)
+	$(CC) -o $@ $(OBJS) $(LIBS)
 
 	$(SIZECHECK)
 	$(CPTMP)

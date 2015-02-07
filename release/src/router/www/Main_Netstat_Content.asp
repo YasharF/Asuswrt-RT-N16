@@ -56,7 +56,7 @@
 }	
 </style>	
 <script>
-option_netstat = new Array("Display all sockets","TCP sockets","UDP sockets","RAW sockets","UNIX sockets","Display listening server sockets","Display routing table");
+option_netstat = new Array("<#sockets_all#>","<#sockets_TCP#>","<#sockets_UDP#>","<#sockets_RAW#>","<#sockets_UNIX#>","<#sockets_listening#>","<#Display_routingtable#>");
 optval_netstat = new Array("-a","-t","-u","-w","-x","-l","-r");
 option_netstat_nat = new Array("Connections to NAT", "By source IP", "SNAT connections");
 optval_netstat_nat = new Array("-L","-s","-S");
@@ -76,7 +76,6 @@ function onSubmitCtrl(o, s) {
 
 function init(){
 		show_menu();
-		load_body();
 		showLANIPList();
 
 		if(downsize_4m_support){	// rm cmd for downsize //downsize_8m_support
@@ -98,6 +97,8 @@ function updateOptions(){
 																		+document.form.ExtOption.value +" -n";
 	}else{
 		document.form.SystemCmd.value = "netstat " + document.form.NetOption.value;
+		if (document.form.ResolveName.value != "1")
+			document.form.SystemCmd.value += " -n";
 	}		
 	document.form.submit();
 	document.getElementById("cmdBtn").disabled = true;
@@ -161,11 +162,13 @@ function hideCNT(obj){
 		addNetOption(document.form.NetOption, option_netstat_nat, optval_netstat_nat);
 		append_value(document.form.NetOption);
 		$('ExtOption_tr').style.display = "";
+		$('resolvename').style.display = "none";
 	}
 	else{
 		$("cmdDesc").innerHTML = "<#NetworkTools_Info#>";	
 		addNetOption(document.form.NetOption, option_netstat, optval_netstat);
 		$('ExtOption_tr').style.display = "none";
+		$('resolvename').style.display = "";
 	}
 }
 
@@ -186,7 +189,6 @@ function append_value(obj){
 	}else{
 				$('targetip_tr').style.display = "none";
 	}
-	
 }
 
 var over_var = 0;
@@ -267,7 +269,6 @@ function validForm(){
 <form method="GET" name="form" action="/apply.cgi" target="hidden_frame"> 
 <input type="hidden" name="current_page" value="Main_Netstat_Content.asp">
 <input type="hidden" name="next_page" value="Main_Netstat_Content.asp">
-<input type="hidden" name="next_host" value="">
 <input type="hidden" name="group_id" value="">
 <input type="hidden" name="modified" value="0">
 <input type="hidden" name="action_mode" value="">
@@ -309,7 +310,7 @@ function validForm(){
 										</tr>										
 										<tr>
 													<!-- client info -->
-											<th width="20%">Option</th>
+											<th width="20%"><#NetworkTools_option#></th>
 											<td>
 												<select id="NetOption" class="input_option" name="NetOption" onChange="append_value(this);">
 													<option value="-a">Display all sockets</option>
@@ -323,15 +324,15 @@ function validForm(){
 											</td>			
 										</tr>
 										<tr id="targetip_tr" style="display:none;">
-											<th width="20%">Target IP</th>
+											<th width="20%"><#NetworkTools_target#> IP</th>
 											<td>
 													<input type="text" id="targetip" class="input_15_table" maxlength="15" name="targetip" onKeyPress="return is_ipaddr(this,event)" onClick="hideClients_Block();">
-												<img id="pull_arrow" height="14px;" src="/images/arrow-down.gif" style="position:absolute;*margin-left:-3px;*margin-top:1px;" onclick="pullLANIPList(this);" title="Select the device name of DHCP clients." onmouseover="over_var=1;" onmouseout="over_var=0;">
+												<img id="pull_arrow" height="14px;" src="/images/arrow-down.gif" style="position:absolute;*margin-left:-3px;*margin-top:1px;" onclick="pullLANIPList(this);" title="<#select_device_name#>" onmouseover="over_var=1;" onmouseout="over_var=0;">
 												<div id="ClientList_Block_PC" class="ClientList_Block_PC"></div>
 											</td>										
 										</tr>										
 										<tr id="ExtOption_tr" style="display:none;">
-											<th width="20%">Extended option</th>
+											<th width="20%"><#NetworkTools_extended_option#></th>
 											<td>
 												<select id="ExtOption" class="input_option" name="ExtOption">
 													<option value="-r state" selected>Sort by state</option>
@@ -342,6 +343,15 @@ function validForm(){
  												</select>
 											</td>										
 										</tr>						
+										<tr id = "resolvename" style="">
+											<th width="20%"><#NetworkTools_ResolveName#></th>
+											<td>
+												<select id="ResolveName" class="input_option" name="ResolveName">
+													<option value="0">No</option>
+													<option value="1">Yes</option>
+												</select>
+											</td>
+										</tr>
 									</table>
 
 									<div class="apply_gen">

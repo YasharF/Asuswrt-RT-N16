@@ -216,6 +216,10 @@ bound(void)
 		nvram_get_int(strcat_r(prefix, "lease", tmp))
 		);
 
+#ifdef RTCONFIG_VPNC
+	start_vpnc();
+#endif
+
 	_dprintf("udhcpc:: %s done\n", __FUNCTION__);
 	return 0;
 }
@@ -372,8 +376,9 @@ start_udhcpc(char *wan_ifname, int unit, pid_t *ppid)
 		dhcp_argv[index++] = "-t2";
 		/* 5 seconds between packets (default 3 seconds) */
 		dhcp_argv[index++] = "-T5";
-		/* Wait 120 seconds before trying again (default 20 seconds) */
-		dhcp_argv[index++] = "-A120";
+		/* Wait 160 seconds before trying again (default 20 seconds) */
+		/* set to 160 to accomodate new timings enforced by Charter cable */
+		dhcp_argv[index++] = "-A160";
 	}
 
 	if (ppid == NULL)
@@ -641,10 +646,8 @@ int dhcp6c_state_main(int argc, char **argv)
 	if (nvram_get_int("ipv6_dhcp_pd"))
 	nvram_set("ipv6_rtr_addr", getifaddr(nvram_safe_get("lan_ifname"), AF_INET6, 0));
 
-	if (argv[1]) nvram_set("ipv6_gw_addr", argv[1]);
-
 	if (nvram_get_int("ipv6_dhcp_pd")) {
-		p = ipv6_prefix(NULL);
+		p = (char *)ipv6_prefix(NULL);
 		if (*p) nvram_set("ipv6_prefix", p);
 	}
 
@@ -668,7 +671,7 @@ int
 start_dhcp6c(void)
 {
 	FILE *fp;
-	char *wan_ifname = (char*)get_wan6face();
+	char *wan_ifname = (char *)get_wan6face();
 	char *lan_ifname = nvram_safe_get("lan_ifname");
 	char *dhcp6c_argv[] = { "dhcp6c",
 		"-T", "LL",
@@ -690,6 +693,13 @@ start_dhcp6c(void)
 		return 0;
 	if (!wan_ifname || !*wan_ifname)
 		return -1;
+	if (!nvram_match("ipv6_ra_conf", "mset") &&
+		!nvram_get_int("ipv6_dhcp_pd") &&
+		nvram_match("ipv6_dnsenable", "0"))
+		return -2;
+	if (nvram_match("ipv6_ra_conf", "noneset") &&
+		!nvram_get_int("ipv6_dhcp_pd"))
+		return -3;
 
 	nvram_set("ipv6_get_dns", "");
 	nvram_set("ipv6_get_domain", "");
@@ -697,7 +707,6 @@ start_dhcp6c(void)
 		nvram_set("ipv6_rtr_addr", "");
 		nvram_set("ipv6_prefix", "");
 	}
-	nvram_set("ipv6_gw_addr", "");
 
 	prefix_len = 64 - (nvram_get_int("ipv6_prefix_length") ? : 64);
 	if (prefix_len < 0)
@@ -730,12 +739,15 @@ start_dhcp6c(void)
 		fprintf(fp,	"interface %s {\n", wan_ifname);
 		if (nvram_get_int("ipv6_dhcp_pd"))
 		fprintf(fp,		"send ia-pd %lu;\n", iaid);
-		fprintf(fp,		"send ia-na %lu;\n"
-					"send rapid-commit;\n"
-					"request domain-name-servers;\n"
+		if (nvram_match("ipv6_ra_conf", "mset"))
+		fprintf(fp,		"send ia-na %lu;\n", iaid);
+		fprintf(fp,		"send rapid-commit;\n");
+		if (nvram_match("ipv6_dnsenable", "1") &&
+			!nvram_match("ipv6_ra_conf", "noneset"))
+		fprintf(fp,		"request domain-name-servers;\n"
 					"request domain-name;\n"
 					"script \"/sbin/dhcp6c-state\";\n"
-				"};\n", iaid);
+				"};\n");
 		if (nvram_get_int("ipv6_dhcp_pd"))
 		fprintf(fp,	"id-assoc pd %lu {\n"
 					"prefix-interface %s {\n"
@@ -743,6 +755,7 @@ start_dhcp6c(void)
 						"sla-len %d;\n"
 					"};\n"
 				"};\n", iaid, lan_ifname, prefix_len);
+		if (nvram_match("ipv6_ra_conf", "mset"))
 		fprintf(fp,	"id-assoc na %lu { };\n", iaid);
 		fclose(fp);
 	} else {
@@ -762,7 +775,6 @@ void stop_dhcp6c(void)
 {
 	TRACE_PT("begin\n");
 
-	char *wan6face = (char*)get_wan6face();
 	char *lan_ifname = nvram_safe_get("lan_ifname");
 
 	if (!pids("dhcp6c")) return;
@@ -770,8 +782,8 @@ void stop_dhcp6c(void)
 	killall("dhcp6c-event", SIGTERM);
 	killall_tk("dhcp6c");
 
+	if (nvram_get_int("ipv6_dhcp_pd"))
 	eval("ip", "-6", "addr", "flush", "scope", "global", "dev", lan_ifname);
-	eval("ip", "-6", "route", "flush", "root", "2000::/3", "dev", wan6face);
 	eval("ip", "-6", "neigh", "flush", "dev", lan_ifname);
 
 	TRACE_PT("end\n");

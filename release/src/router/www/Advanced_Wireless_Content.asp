@@ -33,7 +33,6 @@ wl_channel_list_5g = '<% channel_list_5g(); %>';
 
 function initial(){
 	show_menu();	
-	load_body();	
 
 	if((sw_mode == 2 || sw_mode == 4) && '<% nvram_get("wl_unit"); %>' == '<% nvram_get("wlc_band"); %>' && '<% nvram_get("wl_subunit"); %>' != '1'){
 		_change_wl_unit('<% nvram_get("wl_unit"); %>');
@@ -103,7 +102,7 @@ function initial(){
 	if(sw_mode == 2 || sw_mode == 4)
 		document.form.wl_subunit.value = ('<% nvram_get("wl_unit"); %>' == '<% nvram_get("wlc_band"); %>') ? 1 : -1;	
 	
-	$('WPS_hideSSID_hint').innerHTML = Untranslated.WPS_hideSSID_hint;	
+	$('WPS_hideSSID_hint').innerHTML = "<#WPS_hideSSID_hint#>";	
 	if("<% nvram_get("wl_closed"); %>" == 1){
 		$('WPS_hideSSID_hint').style.display = "";	
 	}	
@@ -142,13 +141,13 @@ function check_channel_2g(){
 		}
 		
 		if ((CurrentCh >=1) && (CurrentCh <= 4)){
-			x.options[0].text = "Lower";
+			x.options[0].text = "Above";
 			x.options[0].value = "lower";
 		}
 		else if ((CurrentCh >= 5) && (CurrentCh <= 7)){
-			x.options[0].text = "Lower";
+			x.options[0].text = "Above";
 			x.options[0].value = "lower";
-			add_option(document.form.wl_nctrlsb, "Upper", "upper");
+			add_option(document.form.wl_nctrlsb, "Below", "upper");
 			if (document.form.wl_nctrlsb_old.value == "upper")
 				document.form.wl_nctrlsb.options.selectedIndex=1;
 				
@@ -158,16 +157,16 @@ function check_channel_2g(){
 				document.form.wl_nctrlsb.remove(0);	
 		}
 		else if ((CurrentCh >= 8) && (CurrentCh <= 10)){
-			x.options[0].text = "Upper";
+			x.options[0].text = "Below";
 			x.options[0].value = "upper";
 			if (option_length >=14){
-				add_option(document.form.wl_nctrlsb, "Lower", "lower");
+				add_option(document.form.wl_nctrlsb, "Above", "lower");
 				if (document.form.wl_nctrlsb_old.value == "lower")
 					document.form.wl_nctrlsb.options.selectedIndex=1;
 			}
 		}
 		else if (CurrentCh >= 11){
-			x.options[0].text = "Upper";
+			x.options[0].text = "Below";
 			x.options[0].value = "upper";
 		}
 		else{
@@ -295,7 +294,10 @@ function disableAdvFn(){
 }
 
 function _change_wl_unit(val){
-	document.form.wl_subunit.value = (val == '<% nvram_get("wlc_band"); %>') ? 1 : -1;
+	if((sw_mode == 2 || sw_mode == 4) && val == '<% nvram_get("wlc_band"); %>')
+		document.form.wl_subunit.value = 1;
+	else
+		document.form.wl_subunit.value = -1;
 	change_wl_unit();
 }
 
@@ -309,22 +311,34 @@ function check_NOnly_to_GN(){
 	//                    Y/N        mssid      auth    asyn    wpa_psk wl_wep_x wl_key k1	k2 k3 k4                                        
 	//var gn_array_5g = [["1", "ASUS_5G_Guest1", "open", "aes", "", "0", "1", "", "", "", "", "0", "off", "0"], ["0", "ASUS_5G_Guest2", "open", "aes", "", "0", "1", "", "", "", "", "0", "off", ""], ["0", "ASUS_5G_Guest3", "open", "aes", "", "0", "1", "", "", "", "", "0", "off", ""]];
 	// Viz add 2012.11.05 restriction for 'N Only' mode  ( start 	
-	if(document.form.wl_nmode_x.value == "1" && "<% nvram_get("wl_unit"); %>" == "1"){		//5G
+	if(document.form.wl_nmode_x.value == "0" || document.form.wl_nmode_x.value == "1"){
+		if("<% nvram_get("wl_unit"); %>" == "1"){		//5G
 			for(var i=0;i<gn_array_5g.length;i++){
-					if(gn_array_5g[i][0] == "1" 
-							&& (gn_array_5g[i][3] == "tkip" || gn_array_5g[i][5] == "1" || gn_array_5g[i][5] == "2")){								
-								$('wl_NOnly_note').style.display = "";
-								return false;
-					}
-			}
-	}else if(document.form.wl_nmode_x.value == "1" && "<% nvram_get("wl_unit"); %>" == "0"){		//2.4G
+				if(gn_array_5g[i][0] == "1" && (gn_array_5g[i][3] == "tkip" || gn_array_5g[i][5] == "1" || gn_array_5g[i][5] == "2")){
+					if(document.form.wl_nmode_x.value == "0")
+						$('wl_NOnly_note').innerHTML = '<br>* <#WLANConfig11n_Auto_note#>';
+					else{
+						$('wl_NOnly_note').innerHTML = '<br>* <#WLANConfig11n_NOnly_note#>';
+					}	
+						
+					$('wl_NOnly_note').style.display = "";
+					return false;
+				}
+			}		
+		}
+		else if("<% nvram_get("wl_unit"); %>" == "0"){		//2.4G
 			for(var i=0;i<gn_array_2g.length;i++){
-					if(gn_array_2g[i][0] == "1" 
-							&& (gn_array_2g[i][3] == "tkip" || gn_array_2g[i][5] == "1" || gn_array_2g[i][5] == "2")){
-								$('wl_NOnly_note').style.display = "";
-								return false;
-					}
-			}
+				if(gn_array_2g[i][0] == "1" && (gn_array_2g[i][3] == "tkip" || gn_array_2g[i][5] == "1" || gn_array_2g[i][5] == "2")){
+					if(document.form.wl_nmode_x.value == "0")
+						$('wl_NOnly_note').innerHTML = '<br>* <#WLANConfig11n_Auto_note#>';
+					else	
+						$('wl_NOnly_note').innerHTML = '<br>* <#WLANConfig11n_NOnly_note#>';
+						
+					$('wl_NOnly_note').style.display = "";
+					return false;
+				}
+			}	
+		}	
 	}
 	$('wl_NOnly_note').style.display = "none";
 	return true;
@@ -334,18 +348,18 @@ function check_NOnly_to_GN(){
 function high_power_auto_channel(){
 	if(is_high_power){
 		if(document.form.wl_channel.value == 1){
-			if(confirm(Untranslated.WLANConfig11b_Channel_HighPower_desc1)){
+			if(confirm("<#WLANConfig11b_Channel_HighPower_desc1#>")){
 				document.form.wl_channel.value = 2;
 			}
-			else if(!(confirm(Untranslated.WLANConfig11b_Channel_HighPower_desc2))){
+			else if(!(confirm("<#WLANConfig11b_Channel_HighPower_desc2#>"))){
 				document.form.wl_channel.value = 2;
 			}
 		}
 		else if(document.form.wl_channel.value == 11){
-			if(confirm(Untranslated.WLANConfig11b_Channel_HighPower_desc3)){
+			if(confirm("<#WLANConfig11b_Channel_HighPower_desc3#>")){
 				document.form.wl_channel.value = 10;
 			}
-			else if(!(confirm(Untranslated.WLANConfig11b_Channel_HighPower_desc4))){
+			else if(!(confirm("<#WLANConfig11b_Channel_HighPower_desc4#>"))){
 				document.form.wl_channel.value = 10;
 			}
 		}	
@@ -371,7 +385,11 @@ function high_power_auto_channel(){
 				<br/>
 				<br/>
 		    </div>
-		  <div class="drImg"><img src="images/alertImg.png"></div>
+			<div id="wireless_client_detect" style="margin-left:10px;position:absolute;display:none">
+				<img src="images/loading.gif">
+				<div style="margin:-45px 0 0 75px;"><#QKSet_Internet_Setup_fail_method1#></div>
+			</div> 
+			<div class="drImg"><img src="images/alertImg.png"></div>
 			<div style="height:70px; "></div>
 		</td>
 		</tr>
@@ -384,10 +402,8 @@ function high_power_auto_channel(){
 <input type="hidden" name="productid" value="<% nvram_get("productid"); %>">
 <input type="hidden" name="wan_route_x" value="<% nvram_get("wan_route_x"); %>">
 <input type="hidden" name="wan_nat_x" value="<% nvram_get("wan_nat_x"); %>">
-
 <input type="hidden" name="current_page" value="Advanced_Wireless_Content.asp">
 <input type="hidden" name="next_page" value="Advanced_Wireless_Content.asp">
-<input type="hidden" name="next_host" value="">
 <input type="hidden" name="modified" value="0">
 <input type="hidden" name="action_mode" value="apply_new">
 <input type="hidden" name="action_script" value="restart_wireless">
@@ -494,7 +510,8 @@ function high_power_auto_channel(){
 						<span id="wl_optimizexbox_span" style="display:none"><input type="checkbox" name="wl_optimizexbox_ckb" id="wl_optimizexbox_ckb" value="<% nvram_get("wl_optimizexbox"); %>" onclick="document.form.wl_optimizexbox.value=(this.checked==true)?1:0;"> Optimized for Xbox</input></span>
 						<span id="wl_gmode_checkbox" style="display:none;"><input type="checkbox" name="wl_gmode_check" id="wl_gmode_check" value="" onClick="wl_gmode_protection_check();"> b/g Protection</input></span>
 						<span id="wl_nmode_x_hint" style="display:none;"><br><#WLANConfig11n_automode_limition_hint#><br></span>
-						<span id="wl_NOnly_note" style="display:none;"><br>* [N only] is not compatible with current guest network authentication method(TKIP or WEP),  Please go to <a id="gn_link" href="/Guest_network.asp?af=wl_NOnly_note" target="_blank" style="color:#FFCC00;font-family:Lucida Console;text-decoration:underline;">guest network</a> and change the authentication method.</span>
+						<span id="wl_NOnly_note" style="display:none;"></span>
+						<!-- [N only] is not compatible with current guest network authentication method(TKIP or WEP),  Please go to <a id="gn_link" href="/Guest_network.asp?af=wl_NOnly_note" target="_blank" style="color:#FFCC00;font-family:Lucida Console;text-decoration:underline;">guest network</a> and change the authentication method. -->
 					</td>
 			  </tr>
 			  

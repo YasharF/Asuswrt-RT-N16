@@ -37,12 +37,13 @@ if('<% nvram_get("wl_unit"); %>' == '1')
 		country = '<% nvram_get("wl1_country_code"); %>';
 else		
 		country = '<% nvram_get("wl0_country_code"); %>';
-
+		
 function initial(){
 	show_menu();
-	load_body();
-
-	regen_5G_mode(document.form.wl_nmode_x,'<% nvram_get("wl_unit"); %>')
+	if(band5g_11ac_support){
+		regen_5G_mode(document.form.wl_nmode_x,'<% nvram_get("wl_unit"); %>')		
+	}
+	
 	genBWTable('<% nvram_get("wl_unit"); %>');	
 
 	if((sw_mode == 2 || sw_mode == 4) && '<% nvram_get("wl_unit"); %>' == '<% nvram_get("wlc_band"); %>' && '<% nvram_get("wl_subunit"); %>' != '1'){
@@ -61,7 +62,6 @@ function initial(){
 	}
 
 	wl_auth_mode_change(1);
-	// mbss_display_ctrl();
 
 	if(optimizeXbox_support){
 		$("wl_optimizexbox_span").style.display = "";
@@ -110,59 +110,44 @@ function change_wl_nmode(o){
 	else
 		inputCtrl(document.form.wl_gmode_check, 1);
 
-	/*
-	// Legacy: a/b/g 
-	if(o.value == "2"){ 
-		document.form.wl_bw[1].selected = true;
-		inputCtrl(document.form.wl_bw, 0);
-		document.form.wl_bw.value = 1;
-		document.form.wl_bw.disabled = 0; // commit wl_bw
-	}
-	// N 
-	else 
-		inputCtrl(document.form.wl_bw, 1);
-	*/
-
 	limit_auth_method();
 	if(o.value == "3"){
 		document.form.wl_wme.value = "on";
 	}
 
 	wl_chanspec_list_change();
-	//nmode_limitation();
 	automode_hint();
 }
 
 function genBWTable(_unit){
 	cur = '<% nvram_get("wl_bw"); %>';
+	var bws = new Array();
+	var bwsDesc = new Array();
 
 	if(document.form.wl_nmode_x.value == 2){
-		var bws = new Array("1");
-		var bwsDesc = new Array("20 MHz");
+		bws = [1];
+		bwsDesc = ["20 MHz"];
 	}
 	else if(_unit == 0){
-		var bws = new Array(0, 1, 2);
-		var bwsDesc = new Array("20/40 MHz", "20 MHz", "40 MHz");
+		bws = [0, 1, 2];
+		bwsDesc = ["20/40 MHz", "20 MHz", "40 MHz"];
 	}
 	else{
 		if(document.form.preferred_lang.value == "UK"){    //use unique font-family for JP
-				var bws = new Array(0, 1, 2);
-				var bwsDesc = new Array("<#Auto#>", "20 MHz", "40 MHz");
-		}else{	
-				var bws = new Array(0, 1, 2, 3);
-				var bwsDesc = new Array("20/40/80 MHz", "20 MHz", "40 MHz", "80 MHz");
+			bws = [0, 1, 2];
+			bwsDesc = ["20/40 MHz", "20 MHz", "40 MHz"];
+		}
+		else if (!band5g_11ac_support){	//for RT-N66U SDK 6.x
+			bws = [0, 1, 2];
+			bwsDesc = ["20/40 MHz", "20 MHz", "40 MHz"];		
+		}
+		else{	
+			bws = [0, 1, 2, 3];
+			bwsDesc = ["20/40/80 MHz", "20 MHz", "40 MHz", "80 MHz"];
 		}		
 	}
 
-	document.form.wl_bw.length = bws.length;
-	for (var i in bws) {
-		document.form.wl_bw[i] = new Option(bwsDesc[i], bws[i]);
-		document.form.wl_bw[i].value = bws[i];
-
-		if (bws[i] == cur) {
-			document.form.wl_bw[i].selected = true;
-		}
-	}
+	add_options_x2(document.form.wl_bw, bwsDesc, bws, cur);
 	wl_chanspec_list_change();
 }
 
@@ -210,26 +195,19 @@ function applyRule(){
 			document.form.next_page.value = "/Advanced_WSecurity_Content.asp";
 
 		if(document.form.wl_nmode_x.value == "1" && "<% nvram_get("wl_unit"); %>" == "0")
-			document.form.wl_gmode_protection.value = "off";
-			
-		/*  Viz 2012.08.15 seems ineeded
-		inputCtrl(document.form.wl_crypto, 1);
-		inputCtrl(document.form.wl_wpa_psk, 1);
-		inputCtrl(document.form.wl_wep_x, 1);
-		inputCtrl(document.form.wl_key, 1);
-		inputCtrl(document.form.wl_key1, 1);
-		inputCtrl(document.form.wl_key2, 1);
-		inputCtrl(document.form.wl_key3, 1);
-		inputCtrl(document.form.wl_key4, 1);
-		inputCtrl(document.form.wl_phrase_x, 1);
-		inputCtrl(document.form.wl_wpa_gtk_rekey, 1);*/
+			document.form.wl_gmode_protection.value = "off";			
 
 		if(sw_mode == 2 || sw_mode == 4)
 			document.form.action_wait.value = "5";
 
+		if(document.form.wl_bw.value == 1)
+			document.form.wl_chanspec.value = document.form.wl_channel.value;
+		else
+			document.form.wl_chanspec.value = document.form.wl_channel.value + document.form.wl_nctrlsb.value;
+			
 		document.form.submit();
 	}
-}
+} 
 
 function validForm(){
 	var auth_mode = document.form.wl_auth_mode_x.value;
@@ -290,15 +268,19 @@ function checkBW(){
 	if(wifilogo_support)
 		return false;
 
-	if(document.form.wl_chanspec.value != 0 && document.form.wl_bw.value == 0){	//Auto but set specific channel
-		if(document.form.wl_chanspec.value == "165")	// channel 165 only for 20MHz
+	if(document.form.wl_channel.value != 0 && document.form.wl_bw.value == 0){	//Auto but set specific channel
+		if(document.form.wl_channel.value == "165")	// channel 165 only for 20MHz
 			document.form.wl_bw.selectedIndex = 1;
 		else if('<% nvram_get("wl_unit"); %>' == 0 || document.form.preferred_lang.value == "UK")	//2.4GHz or UK for 40MHz
 			document.form.wl_bw.selectedIndex = 2;
 		else{	//5GHz else for 80MHz
-			document.form.wl_bw.selectedIndex = 3;
+			if(band5g_11ac_support)
+				document.form.wl_bw.selectedIndex = 3;
+			else
+				document.form.wl_bw.selectedIndex = 2;
+				
 			if (wl_channel_list_5g.getIndexByValue("165") >= 0 ) // rm option 165 if not Auto
-						document.form.wl_chanspec.remove(wl_channel_list_5g.getIndexByValue("165"));			
+						document.form.wl_channel.remove(wl_channel_list_5g.getIndexByValue("165"));			
 		}
 	}
 }
@@ -308,23 +290,40 @@ function check_NOnly_to_GN(){
 	//                    Y/N        mssid      auth    asyn    wpa_psk wl_wep_x wl_key k1	k2 k3 k4                                        
 	//var gn_array_5g = [["1", "ASUS_5G_Guest1", "open", "aes", "", "0", "1", "", "", "", "", "0", "off", "0"], ["0", "ASUS_5G_Guest2", "open", "aes", "", "0", "1", "", "", "", "", "0", "off", ""], ["0", "ASUS_5G_Guest3", "open", "aes", "", "0", "1", "", "", "", "", "0", "off", ""]];
 	// Viz add 2012.11.05 restriction for 'N Only' mode  ( start 	
-	if(document.form.wl_nmode_x.value == "1" && "<% nvram_get("wl_unit"); %>" == "1"){		//5G
+	
+	if(document.form.wl_nmode_x.value == "0" || document.form.wl_nmode_x.value == "1"){
+		if("<% nvram_get("wl_unit"); %>" == "1"){		//5G
 			for(var i=0;i<gn_array_5g.length;i++){
-					if(gn_array_5g[i][0] == "1" 
-							&& (gn_array_5g[i][3] == "tkip" || gn_array_5g[i][5] == "1" || gn_array_5g[i][5] == "2")){								
-								$('wl_NOnly_note').style.display = "";
-								return false;
-					}
-			}
-	}else if(document.form.wl_nmode_x.value == "1"){		//2.4G
+				if(gn_array_5g[i][0] == "1" && (gn_array_5g[i][3] == "tkip" || gn_array_5g[i][5] == "1" || gn_array_5g[i][5] == "2")){
+					if(document.form.wl_nmode_x.value == "0")
+						$('wl_NOnly_note').innerHTML = '<br>* <#WLANConfig11n_Auto_note#>';
+					else{
+						if(band5g_11ac_support)
+							$('wl_NOnly_note').innerHTML = '<br>* <#WLANConfig11n_NAC_note#>';
+						else
+							$('wl_NOnly_note').innerHTML = '<br>* <#WLANConfig11n_NOnly_note#>';
+					}	
+						
+					$('wl_NOnly_note').style.display = "";
+					return false;
+				}
+			}		
+		}
+		else if("<% nvram_get("wl_unit"); %>" == "0"){		//2.4G
 			for(var i=0;i<gn_array_2g.length;i++){
-					if(gn_array_2g[i][0] == "1" 
-							&& (gn_array_2g[i][3] == "tkip" || gn_array_2g[i][5] == "1" || gn_array_2g[i][5] == "2")){
-								$('wl_NOnly_note').style.display = "";
-								return false;
-					}
-			}
+				if(gn_array_2g[i][0] == "1" && (gn_array_2g[i][3] == "tkip" || gn_array_2g[i][5] == "1" || gn_array_2g[i][5] == "2")){
+					if(document.form.wl_nmode_x.value == "0")
+						$('wl_NOnly_note').innerHTML = '<br>* <#WLANConfig11n_Auto_note#>';
+					else	
+						$('wl_NOnly_note').innerHTML = '<br>* <#WLANConfig11n_NOnly_note#>';
+						
+					$('wl_NOnly_note').style.display = "";
+					return false;
+				}
+			}	
+		}	
 	}
+		
 	$('wl_NOnly_note').style.display = "none";
 	return true;
 //  Viz add 2012.11.05 restriction for 'N Only' mode  ) end		
@@ -354,7 +353,11 @@ function regen_5G_mode(obj,flag){
 				<br/>
 				<br/>
 		    </div>
-		  <div class="drImg"><img src="images/alertImg.png"></div>
+			<div id="wireless_client_detect" style="margin-left:10px;position:absolute;display:none">
+				<img src="images/loading.gif">
+				<div style="margin:-45px 0 0 75px;"><#QKSet_Internet_Setup_fail_method1#></div>
+			</div> 
+			<div class="drImg"><img src="images/alertImg.png"></div>
 			<div style="height:70px; "></div>
 		</td>
 		</tr>
@@ -367,10 +370,8 @@ function regen_5G_mode(obj,flag){
 <input type="hidden" name="productid" value="<% nvram_get("productid"); %>">
 <input type="hidden" name="wan_route_x" value="<% nvram_get("wan_route_x"); %>">
 <input type="hidden" name="wan_nat_x" value="<% nvram_get("wan_nat_x"); %>">
-
 <input type="hidden" name="current_page" value="Advanced_Wireless_Content.asp">
 <input type="hidden" name="next_page" value="Advanced_Wireless_Content.asp">
-<input type="hidden" name="next_host" value="">
 <input type="hidden" name="modified" value="0">
 <input type="hidden" name="action_mode" value="apply_new">
 <input type="hidden" name="action_script" value="restart_wireless">
@@ -396,6 +397,7 @@ function regen_5G_mode(obj,flag){
 <input type="hidden" name="wl_nctrlsb_old" value="<% nvram_get("wl_nctrlsb"); %>">
 <input type="hidden" name="wl_key_type" value='<% nvram_get("wl_key_type"); %>'> <!--Lock Add 2009.03.10 for ralink platform-->
 <input type="hidden" name="wl_channel_orig" value='<% nvram_get("wl_channel"); %>'>
+<input type="hidden" name="wl_chanspec" value=''>
 <input type="hidden" name="wl_wep_x_orig" value='<% nvram_get("wl_wep_x"); %>'>
 <input type="hidden" name="wl_optimizexbox" value='<% nvram_get("wl_optimizexbox"); %>'>
 <input type="hidden" name="wl_subunit" value='-1'>
@@ -477,7 +479,8 @@ function regen_5G_mode(obj,flag){
 						<span id="wl_optimizexbox_span" style="display:none"><input type="checkbox" name="wl_optimizexbox_ckb" id="wl_optimizexbox_ckb" value="<% nvram_get("wl_optimizexbox"); %>" onclick="document.form.wl_optimizexbox.value=(this.checked==true)?1:0;"> Optimized for Xbox</input></span>
 						<span id="wl_gmode_checkbox" style="display:none;"><input type="checkbox" name="wl_gmode_check" id="wl_gmode_check" value="" onClick="wl_gmode_protection_check();"> b/g Protection</input></span>
 						<span id="wl_nmode_x_hint" style="display:none;"><br><#WLANConfig11n_automode_limition_hint#><br></span>
-						<span id="wl_NOnly_note" style="display:none;"><br>* [N + AC] is not compatible with current guest network authentication method(TKIP or WEP),  Please go to <a id="gn_link" href="/Guest_network.asp?af=wl_NOnly_note" target="_blank" style="color:#FFCC00;font-family:Lucida Console;text-decoration:underline;">guest network</a> and change the authentication method.</span>
+						<span id="wl_NOnly_note" style="display:none;"></span>
+						<!-- [N + AC] is not compatible with current guest network authentication method(TKIP or WEP),  Please go to <a id="gn_link" href="/Guest_network.asp?af=wl_NOnly_note" target="_blank" style="color:#FFCC00;font-family:Lucida Console;text-decoration:underline;">guest network</a> and change the authentication method. -->
 					</td>
 			  </tr>
 
@@ -492,32 +495,24 @@ function regen_5G_mode(obj,flag){
 			   	</td>
 			 	</tr>
 
-				<!-- a/b/g/n channel -->			  
-				<tr id="wl_channel_field" style="display:none">
-					<th><a id="wl_channel_select" class="hintstyle" href="javascript:void(0);" onClick="openHint(0, 3);"><#WLANConfig11b_Channel_itemname#></a></th>
-					<td>
-				 		<select name="wl_channel" class="input_option" onChange="insertExtChannelOption();" disabled>
-				 		</select>
-					</td>
-			  </tr>
 				<!-- ac channel -->			  
 				<tr>
 					<th><a id="wl_channel_select" class="hintstyle" href="javascript:void(0);" onClick="openHint(0, 3);"><#WLANConfig11b_Channel_itemname#></a></th>
 					<td>
-				 		<select name="wl_chanspec" class="input_option" onChange="checkBW();"></select>
+				 		<select name="wl_channel" class="input_option" onChange="change_channel(this);"></select>
 					</td>
 			  </tr>
 		  	<!-- end -->
 
-			  <tr id="wl_nctrlsb_field" style="display:none">
-			  	<th><a class="hintstyle" href="javascript:void(0);" onClick="openHint(0, 15);"><#WLANConfig11b_EChannel_itemname#></a></th>
-		   		<td>
-					<select name="wl_nctrlsb" class="input_option" disabled>
-						<option value="lower" <% nvram_match("wl_nctrlsb", "lower", "selected"); %>>lower</option>
-						<option value="upper"<% nvram_match("wl_nctrlsb", "upper", "selected"); %>>upper</option>
-					</select>
+				<tr id="wl_nctrlsb_field">
+					<th><a class="hintstyle" href="javascript:void(0);" onClick="openHint(0, 15);"><#WLANConfig11b_EChannel_itemname#></a></th>
+					<td>
+						<select name="wl_nctrlsb" class="input_option">
+							<option value=""></option>
+							<option value=""></option>
+						</select>
 					</td>
-		  	</tr>
+				</tr>
 			  
 			  <tr>
 					<th><a class="hintstyle" href="javascript:void(0);" onClick="openHint(0, 5);"><#WLANConfig11b_AuthenticationMethod_itemname#></a></th>

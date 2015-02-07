@@ -4,12 +4,8 @@ CFLAGS	= -Os -Wall $(EXTRACFLAGS) #-mips32
 CFLAGS	+= -I$(SRCBASE)/include -I$(TOP)/shared -DRTCONFIG_ISP_METER -DDEBUG
 LDFLAGS	=
 
-ifeq ($(RTN14U),y)
-CFLAGS += -DRTN14U
-endif
-
-ifeq ($(RTAC52U),y)
-CFLAGS += -DRTAC52U
+ifeq ($(RTN14U)$(RTAC52U)$(RTAC51U),y)
+CFLAGS += -DRA_ESW
 endif
 
 OBJS = rstats.o

@@ -88,7 +88,7 @@ function initial(){
 		inputHideCtrl(document.form.wl1_TxPower, 0);
 	}
 
-	if(based_modelid == "RT-AC68U"){
+	if(based_modelid == "RT-AC68U" || based_modelid == "RT-AC68U_V2" || based_modelid == "RT-AC69U"){
 		document.form.selLED.onchange = function(){
 			document.form.btn_led_mode.value = 0;
 			document.form.selCLK.checked = false;
@@ -274,7 +274,6 @@ function getCookie(c_name)
 <form method="post" name="form" id="ruleForm" action="/start_apply.htm" target="hidden_frame">
 <input type="hidden" name="current_page" value="Advanced_PerformanceTuning_Content.asp">
 <input type="hidden" name="next_page" value="Advanced_PerformanceTuning_Content.asp">
-<input type="hidden" name="next_host" value="">
 <input type="hidden" name="modified" value="0">
 <input type="hidden" name="action_mode" value="apply">
 <input type="hidden" name="action_wait" value="5">
@@ -489,7 +488,7 @@ function getCookie(c_name)
 														</tr>	
 														<tr height="50px">
 															<td valign="top">
-																<div id="btnReleased" class="btnDesc">Release the button to turn off overclock, RT-AC68U will reboot automatically.</div>		
+																<div id="btnReleased" class="btnDesc">Release the button to turn off overclock, <#Web_Title2#> will reboot automatically.</div>		
 															</td>
 														</tr>	
 													</table>
@@ -513,8 +512,8 @@ function getCookie(c_name)
 														<tr height="90px">
 															<td valign="top">
 																<div id="btnPressed" class="btnDesc">
-																	Press the button to turn on overclock, this process will increase the clock frequency of your RT-AC68U to 1000Mhz and reboot automatically.
-																	<div id='alertHint' style='color: #FF1F00;'>If RT-AC68U does not respond when you turn on overclock, please turn off overclock, power off and on to reboot RT-AC68U.</div>
+																	Press the button to turn on overclock, this process will increase the clock frequency of your <#Web_Title2#> to 1000Mhz and reboot automatically.
+																	<div id='alertHint' style='color: #FF1F00;'>If <#Web_Title2#> does not respond when you turn on overclock, please turn off overclock, power off and on to reboot <#Web_Title2#>.</div>
 																</div>		
 															</td>
 														</tr>	

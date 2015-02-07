@@ -20,10 +20,13 @@ var ddns_enable = '<% nvram_get("ddns_enable_x"); %>';
 var ddns_server = '<% nvram_get("ddns_server_x"); %>';
 var ddns_hostname = '<% nvram_get("ddns_hostname_x"); %>';
 var format_of_first_partition = parent.pool_types()[0]; //"ntfs";
-
+var st_ftp_mode = '<% nvram_get("st_ftp_mode"); %>';
 function initial(){
 	parent.hideLoading();
 	showdisklink();
+
+	if(st_ftp_mode == 1)
+		$("noFTP_Hint").style.display = "";
 }
 
 function showdisklink(){
@@ -124,7 +127,7 @@ function go_next_page(){
 	<tr>
 		<td class="formfonttitle">
 			<span style="margin-left:3px;"><#AiDiskWelcome_title#></span>
-			<img onclick="go_setting_parent('/APP_Installation.asp')" align="right" style="cursor:pointer;margin-right:20px;margin-top:-20px;" title="Go to APP Gallery" src="/images/backprev.png" onMouseOver="this.src='/images/backprevclick.png'" onMouseOut="this.src='/images/backprev.png'">
+			<img onclick="go_setting_parent('/APP_Installation.asp')" align="right" style="cursor:pointer;margin-right:20px;margin-top:-20px;" title="<#Menu_usb_application#>" src="/images/backprev.png" onMouseOver="this.src='/images/backprevclick.png'" onMouseOut="this.src='/images/backprev.png'">
   	</td>
   </tr>
    
@@ -145,28 +148,57 @@ function go_next_page(){
 			  		<li><#AiDiskWelcome_desp1#></li>
 			  		<li><#AiDiskWelcome_desp2#></li>
 						<li><#AiDisk_moreconfig#></li>
+						<li>
+							<a id="tosLink" style="cursor:pointer;font-family:Lucida Console;text-decoration:underline;" target="_blank" href="">
+								<#DDNS_termofservice_Title#>
+							</a>
+							<script>
+								(function(){
+									var preferLang = parent.document.form.preferred_lang.value.toLowerCase();
+
+									if(preferLang == "cn")
+										document.getElementById("tosLink").href = "http://www.asus.com.cn";
+									else if(preferLang == "ms")
+										document.getElementById("tosLink").href = "http://www.asus.com/my";
+									else if(preferLang == "en")
+										document.getElementById("tosLink").href = "http://www.asus.com/us";
+									else if(preferLang == "da")
+										document.getElementById("tosLink").href = "http://www.asus.com/dk";
+									else if(preferLang == "sv")
+										document.getElementById("tosLink").href = "http://www.asus.com/se";
+									else if(preferLang == "uk")
+										document.getElementById("tosLink").href = "http://www.asus.com/ua";
+									else if(
+										preferLang == "tw" || preferLang == "cz" || preferLang == "pl" || preferLang == "ro" ||
+										preferLang == "ru" || preferLang == "de" || preferLang == "fr" || preferLang == "hu" ||
+										preferLang == "tr" || preferLang == "th" || preferLang == "no" || preferLang == "it" ||
+										preferLang == "fi" || preferLang == "br" || preferLang == "jp" || preferLang == "es"
+									)
+										document.getElementById("tosLink").href = "http://www.asus.com/" + preferLang;
+									else
+										document.getElementById("tosLink").href = "http://www.asus.com/us";
+
+									document.getElementById("tosLink").href += "/Terms_of_Use_Notice_Privacy_Policy/Official_Site"
+								})()
+							</script>
+						</li>
 		  		</ul>
 		  	</div>
 		  	
 		  	<div id="linkdiskbox" >
 		  			<span style="margin-left:5px;"><#AiDisk_wizard_text_box_title3#></span><br/>
 		  			<ul>
+		  				<li id="noFTP_Hint" style="display:none;">
+		  					<span><#AiDisk_shareHint#></span>
+		  				</li>
 		  				<li> 
 		  					<span id="noWAN_link" style="display:none;"></span>
-		  					<span id="ddnslink1" style="display:none;">
-		  					<!-- #Internet#>&nbsp;<#AiDisk_linktoFTP_fromInternet#>&nbsp;<a target="_blank" href="ftp://<% nvram_get("ddns_hostname_x"); %>" style="text-decoration: underline; font-family:Lucida Console;">ftp://<% nvram_get("ddns_hostname_x"); %></a-->
-		  					</span>
-		  					<span id="ddnslink2" style="display:none;">
-		  					<!--#Internet#>&nbsp;<#AiDisk_linktoFTP_fromInternet#>&nbsp;<a target="_blank" href="ftp://<% nvram_get("ddns_hostname_x"); %>" style="text-decoration: underline; font-family:Lucida Console;">ftp://<% nvram_get("ddns_hostname_x"); %></a-->
-		  					</span>
+		  					<span id="ddnslink1" style="display:none;"></span>
+		  					<span id="ddnslink2" style="display:none;"></span>
 		  				</li>
 		  				<li id="desc_2" style="display:none;margin-top:8px;">
-		  					<span id="ddnslink1_LAN" style="display:none;">
-		  					<!-- #t2LAN#>&nbsp;<#AiDisk_linktoFTP_fromInternet#>&nbsp;<a target="_blank" href="ftp://<% nvram_get("lan_ipaddr"); %>" style="text-decoration: underline; font-family:Lucida Console;">ftp://<% nvram_get("lan_ipaddr"); %></a -->
-		  					</span>
-		  					<span id="ddnslink2_LAN" style="display:none;">
-		  					<!-- #t2LAN#>&nbsp;<#AiDisk_linktoFTP_fromInternet#>&nbsp;<a target="_blank" href="ftp://<% nvram_get("lan_ipaddr"); %>" style="text-decoration: underline; font-family:Lucida Console;">ftp://<% nvram_get("lan_ipaddr"); %></a -->
-		  					</span>
+		  					<span id="ddnslink1_LAN" style="display:none;"></span>
+		  					<span id="ddnslink2_LAN" style="display:none;"></span>
 		  				</li>
 							<li><#AiDisk_moreconfig#></li>
 							<li><#Aidisk_authority_hint#></li>

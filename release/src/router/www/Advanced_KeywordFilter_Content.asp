@@ -27,7 +27,6 @@ var keyword_rulelist_array = "<% nvram_char_to_ascii("","keyword_rulelist"); %>"
 
 function initial(){
 	show_menu();
-	load_body();
 	show_keyword_rulelist();
 }
 
@@ -117,9 +116,9 @@ function applyRule(){
 
 		//updateDateTime(document.form.current_page.value);
 
-		if(document.form.keyword_enable_x[0].checked == true && document.form.keyword_enable_x_orig.value != 1 ||
-				document.form.keyword_enable_x[1].checked == true && document.form.keyword_enable_x_orig.value != 0)
-			FormActions("start_apply.htm", "apply", "reboot", "<% get_default_reboot_time(); %>");
+//		if(document.form.keyword_enable_x[0].checked == true && document.form.keyword_enable_x_orig.value != 1 ||
+//				document.form.keyword_enable_x[1].checked == true && document.form.keyword_enable_x_orig.value != 0)
+//			FormActions("start_apply.htm", "apply", "reboot", "<% get_default_reboot_time(); %>");
 
 		showLoading();
 		document.form.submit();
@@ -156,7 +155,6 @@ function done_validating(action){
 <form method="post" name="form" id="ruleForm" action="/start_apply.htm" target="hidden_frame">
 <input type="hidden" name="current_page" value="Advanced_KeywordFilter_Content.asp">
 <input type="hidden" name="next_page" value="Advanced_KeywordFilter_Content.asp">
-<input type="hidden" name="next_host" value="">
 <input type="hidden" name="modified" value="0">
 <input type="hidden" name="action_mode" value="apply">
 <input type="hidden" name="action_wait" value="5">
@@ -217,7 +215,7 @@ function done_validating(action){
 
   	<tr>
 		<th width="80%"><#FirewallConfig_KeywordList_groupitemname#></th>
-		<th width="20%">Add / Delete</th>
+		<th width="20%"><#list_add_delete#></th>
 	</tr>
 	<tr>
 		<td width="80%">

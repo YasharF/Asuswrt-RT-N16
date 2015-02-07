@@ -13,7 +13,7 @@
 #
 
 include ../../common.mak
-CFLAGS	+= $(EXTRACFLAGS)
+CFLAGS  += $(EXTRACFLAGS)
 
 CFLAGS	+= -I.. -I$(SRCBASE)/include -I$(SRCBASE)/router/shared -Wall -Werror
 CFLAGS	+= $(WLAN_ComponentIncPath)
@@ -46,7 +46,7 @@ UTLOBJS = bcmwpa.o bcmutils.o
 
 ifeq ($(wildcard ../*.c), )
 all:
-	-cp ./prebuild/nas .
+	-cp ./prebuilt/nas .
 else
 all: nas
 endif

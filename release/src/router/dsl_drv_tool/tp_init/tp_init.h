@@ -54,6 +54,10 @@
 
 #define SYSVER "sys ver\x0d\x0a"
 
+/* Paul add 2013/10/23, for ADSL1 & ADSL2/ADSL2+ Bitswap control. */
+#define SET_Bitswap_ADSL1 "w dmt aoc bitswap " //US + DS Bit swap
+#define SET_Bitswap_ADSL2 "w dmt2 set olr " //Specifically for DS Bit swap only
+
 #define CON_START_RESP_NUM 1
 #define CON_ON_RESP_NUM 1
 #define CON_CRLF_RESP_NUM 2

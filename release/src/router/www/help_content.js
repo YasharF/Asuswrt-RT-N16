@@ -14,7 +14,7 @@ helpcontent[0] = new Array("",
 						   "<#WLANConfig11b_WEPKey_itemtype1#>",
 						   "<#WLANConfig11b_WEPKey_itemtype2#>",
 						   "<#WLANConfig11b_ChannelBW_itemdesc#><br/><#WLANConfig11b_Wireless_Speed_itemname_3#>",
-						   "<#WLANConfig11b_EChannel_itemdesc#>",
+						   "To locate the 40MHz channel in combination with the control channel", //<#WLANConfig11b_EChannel_itemdesc#>
 							 "<#WLANConfig11b_TxPower_help1#>",
 							 "<#WLANConfig11b_TxPower_help#>",
 							 "WEP-64bits: <#WLANConfig11b_WEPKey_itemtype1#><br/>WEP-128bits: <#WLANConfig11b_WEPKey_itemtype2#>",
@@ -23,7 +23,7 @@ helpcontent[0] = new Array("",
 							 "<#WLANConfig11b_WEPKey_itemtype1#><br/><#WLANConfig11b_WEPKey_itemtype2#>",	//21
 							 '<div><#qis_wireless_help1#></div><br/><img src="/images/qis/select_wireless.jpg">',
 							 '<div><#qis_wireless_help2#></div><br/><img width="350px" src="/images/qis/security_key.png">',
-							 "<#WLANConfig11n_automode_limition_hint#>"							 
+							 "<#WLANConfig11n_automode_limition_hint#>"
 							 );
 helpcontent[1] = new Array("",
 						   "<#WLANConfig11b_x_APMode_itemdesc#>",
@@ -65,7 +65,9 @@ helpcontent[3] = new Array("",
 							 "<#WLANConfig11b_x_ACK_desc#>",
 							 "<#WLANConfig11b_x_TurboQAM_desc#>",
 							 "<#WLANConfig11b_x_ReduceUSB3_desc#>",
-							 "Use RTS for AMPDU");
+							 "<#RTS_for_AMPDU#>",
+							 "In multiple AP or wireless router-repeater environment, client sometimes cannot automatically connect to the AP with better signal because it still connect to main wireless router. Enabling this feature would force disconnecting the client and main router when the signal strength is under the threshold and client can choose the AP with better signal."
+							 );
 
 helpcontent[4] = new Array("",
 						   "<#LANHostConfig_IPRouters_itemdesc#>",
@@ -246,8 +248,9 @@ helpcontent[24] = new Array("",
 							"<#qis_wireless_help2#>");										//0,23
 //ADSL
 helpcontent[25] = new Array("",
-							"<#DSL_Stab_Adjustment#>",			//Stability Adjustment
-							"<#DSL_SRA_itemdesc#>");		//SRA(Seamless Rate Adaptation)
+							"<#DSL_Stab_Adjustment#>",
+							"<#DSL_SRA_itemdesc#>",
+							"<#DSL_Bitswap_id#>");
 							
 //DualWAN
 helpcontent[26] = new Array("",

@@ -1779,11 +1779,6 @@ static void brcmnand_resume(struct mtd_info *mtd)
 
 struct mtd_partition brcmnand_parts[5] = {{0}};
 
-// Minimum number of blocks for jffs2 fs
-#define PART_JFFS2_MIN 5
-// Max size = 32 MB
-#define PART_JFFS2_MAXSIZE (32 * 0x100000UL)
-
 struct mtd_partition *init_brcmnand_mtd_partitions(struct mtd_info *mtd, size_t size)
 {
 	int bootflags = boot_flags();
@@ -1833,20 +1828,15 @@ struct mtd_partition *init_brcmnand_mtd_partitions(struct mtd_info *mtd, size_t 
 		j++;
 #endif
 	}
-
-        jffssize = size - (NFL_BBT_SIZE * 2);
-        if (jffssize > (mtd->erasesize * PART_JFFS2_MIN)) {
-
-                if (jffssize > PART_JFFS2_MAXSIZE)
-                        jffssize = PART_JFFS2_MAXSIZE;
-
-                brcmnand_parts[j].name = "jffs2";
-                brcmnand_parts[j].offset = offset;
-                brcmnand_parts[j].size = jffssize;
-                offset += brcmnand_parts[j].size;
-                size -= brcmnand_parts[j].size;
-                j++;
-        }
+#if 1 
+	//ASUS Dual image
+        brcmnand_parts[j].name = "asustrx2";
+        brcmnand_parts[j].offset = 0x4000000;
+        brcmnand_parts[j].size = 0x2000000;
+        offset = 0x6000000;
+        size   = 0x2000000;
+        j++;
+#endif
 
 	size -= NFL_BBT_SIZE;
 	if (size <= 0) {

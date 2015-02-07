@@ -7,8 +7,8 @@
 # $Id: wl_generic.mk,v 1.10 2011-01-21 22:12:09 $
 #
 
-REBUILD_WL_MODULE=$(shell if [ -d "$(src)/$(SRCBASE)/wl/sys" -a "$(REUSE_PREBUILT_WL)" != "1" ]; then echo 1; else echo 0; fi)
-#REBUILD_WL_MODULE=0
+#REBUILD_WL_MODULE=$(shell if [ -d "$(src)/$(SRCBASE)/wl/sys" -a "$(REUSE_PREBUILT_WL)" != "1" ]; then echo 1; else echo 0; fi)
+REBUILD_WL_MODULE=0
 
 # If source directory (src/wl/sys) exists and REUSE_PREBUILT_WL is undefined, 
 # then build inside $(SRCBASE)/wl/sys, otherwise use pre-builts
@@ -36,7 +36,7 @@ ifeq ($(REBUILD_WL_MODULE),1)
     include $(WLCFGDIR)/wl.mk
 
     ifeq ($(WLCLMAPI),1)
-        WLAN_ComponentsInUse := bcmwifi clm
+        WLAN_ComponentsInUse := bcmwifi clm ppr
         include $(src)/$(SRCBASE)/makefiles/WLAN_Common.mk
     endif
     
@@ -45,7 +45,8 @@ ifeq ($(REBUILD_WL_MODULE),1)
     endif
     
     ifeq ($(WLCLMAPI),1)
-    $(call WLAN_GenClmCompilerRule,$(src)/$(SRCBASE)/wl/clm/src,$(src)/$(SRCBASE),--ccrev all)
+    CLM_TYPE := generic
+    $(call WLAN_GenClmCompilerRule,$(src)/$(SRCBASE)/wl/clm/src,$(src)/$(SRCBASE))
     endif
     
     # need -I. to pick up wlconf.h in build directory
@@ -114,4 +115,4 @@ $(obj)/$(WLCONF_H): $(WLCFGDIR)/$(WLTUNEFILE) FORCE
 
 FORCE:
 
-clean-files += $(SRCBASE)/wl/sys/*.o $(SRCBASE)/wl/phy/*.o $(SRCBASE)/wl/sys/.*.*.cmd $(SRCBASE)/wl/phy/.*.*.cmd $(WLCONF_H) $(WLCONF_O)
+clean-files += $(SRCBASE)/wl/sys/*.o $(SRCBASE)/wl/phy/*.o $(SRCBASE)/wl/ppr/src/*.o $(SRCBASE)/wl/sys/.*.*.cmd $(SRCBASE)/wl/phy/.*.*.cmd $(WLCONF_H) $(WLCONF_O)

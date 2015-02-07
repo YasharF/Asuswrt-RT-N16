@@ -32,3 +32,7 @@ enum {
 enum {
 	EnumSRA,
 };
+
+enum {
+	EnumBitswap,
+};

@@ -50,9 +50,13 @@ int main (int argc, char **argv)
 #if defined(HAVE_LINUX_NETWORK)
   cap_user_header_t hdr = NULL;
   cap_user_data_t data = NULL;
+  char *bound_device = NULL;
+  int did_bind = 0;
 #endif 
+#if defined(HAVE_DHCP) || defined(HAVE_DHCP6)
   struct dhcp_context *context;
   struct dhcp_relay *relay;
+#endif
 
 #ifdef LOCALEDIR
   setlocale(LC_ALL, "");
@@ -202,7 +206,7 @@ int main (int argc, char **argv)
     dhcp_init();
   
 #  ifdef HAVE_DHCP6
-  if (daemon->doing_ra)
+  if (daemon->doing_ra || daemon->doing_dhcp6 || daemon->relay6)
     ra_init(now);
   
   if (daemon->doing_dhcp6 || daemon->relay6)
@@ -237,18 +241,29 @@ int main (int argc, char **argv)
 
 #if defined(HAVE_LINUX_NETWORK) && defined(HAVE_DHCP)
       /* after enumerate_interfaces()  */
+      bound_device = whichdevice();
+      
       if (daemon->dhcp)
 	{
-	  if (!daemon->relay4)
-	    bindtodevice(daemon->dhcpfd);
-	  if (daemon->enable_pxe)
-	    bindtodevice(daemon->pxefd);
+	  if (!daemon->relay4 && bound_device)
+	    {
+	      bindtodevice(bound_device, daemon->dhcpfd);
+	      did_bind = 1;
+	    }
+	  if (daemon->enable_pxe && bound_device)
+	    {
+	      bindtodevice(bound_device, daemon->pxefd);
+	      did_bind = 1;
+	    }
 	}
 #endif
 
 #if defined(HAVE_LINUX_NETWORK) && defined(HAVE_DHCP6)
-      if (daemon->doing_dhcp6 && !daemon->relay6)
-	bindtodevice(daemon->dhcp6fd);
+      if (daemon->doing_dhcp6 && !daemon->relay6 && bound_device)
+	{
+	  bindtodevice(bound_device, daemon->dhcp6fd);
+	  did_bind = 1;
+	}
 #endif
     }
   else 
@@ -258,6 +273,9 @@ int main (int argc, char **argv)
   /* after enumerate_interfaces() */
   if (daemon->doing_dhcp6 || daemon->relay6 || daemon->doing_ra)
     join_multicast(1);
+
+  /* After netlink_init() and before create_helper() */
+  lease_make_duid(now);
 #endif
   
   if (daemon->port != 0)
@@ -599,7 +617,7 @@ int main (int argc, char **argv)
   else
     my_syslog(LOG_INFO, _("started, version %s cache disabled"), VERSION);
   
-  my_syslog(LOG_INFO, _("compile time options: %s"), compile_opts);
+  my_syslog(LOG_DEBUG, _("compile time options: %s"), compile_opts);
   
 #ifdef HAVE_DBUS
   if (option_bool(OPT_DBUS))
@@ -617,6 +635,11 @@ int main (int argc, char **argv)
 
   if (bind_fallback)
     my_syslog(LOG_WARNING, _("setting --bind-interfaces option because of OS limitations"));
+
+  if (option_bool(OPT_NOWILD))
+    warn_bound_listeners();
+
+  warn_int_names();
   
   if (!option_bool(OPT_NOWILD)) 
     for (if_tmp = daemon->if_names; if_tmp; if_tmp = if_tmp->next)
@@ -655,6 +678,11 @@ int main (int argc, char **argv)
   
   if (option_bool(OPT_RA))
     my_syslog(MS_DHCP | LOG_INFO, _("IPv6 router advertisement enabled"));
+#  endif
+
+#  ifdef HAVE_LINUX_NETWORK
+  if (did_bind)
+    my_syslog(MS_DHCP | LOG_INFO, _("DHCP, sockets bound exclusively to interface %s"), bound_device);
 #  endif
 
   /* after dhcp_contruct_contexts */
@@ -836,6 +864,7 @@ int main (int argc, char **argv)
 	  enumerate_interfaces(0);
 	  /* NB, is_dad_listeners() == 1 --> we're binding interfaces */
 	  create_bound_listeners(0);
+	  warn_bound_listeners();
 	}
 
 #ifdef HAVE_LINUX_NETWORK
@@ -1238,6 +1267,8 @@ void poll_resolv(int force, int do_reload, time_t now)
 
 void clear_cache_and_reload(time_t now)
 {
+  (void)now;
+
   if (daemon->port != 0)
     cache_reload();
   
