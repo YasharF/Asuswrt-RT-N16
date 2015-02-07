@@ -192,6 +192,8 @@ obj-y += dosfstools
 #obj-$(RTCONFIG_NTFS) += linux-ntfs-2.0.0
 obj-$(RTCONFIG_FTP) += vsftpd
 
+#obj-$(RTCONFIG_EXT4FS) += e2fsprogs
+
 ifeq ($(CONFIG_LINUX26),y)
 ifeq ($(RTCONFIG_SAMBASRV),y)
 NEED_EX_NLS = y
@@ -325,6 +327,7 @@ obj-$(RTCONFIG_IPERF) += iperf
 obj-$(UBI) += mtd-utils
 obj-$(UBIFS) += mtd-utils
 obj-$(UBIFS) += util-linux lzo zlib
+obj-$(RA_SKU) += ra_SingleSKU
 
 #obj-y += bonnie
 
@@ -1420,6 +1423,28 @@ dhcpv6-install: dhcpv6
 dhcpv6-clean:
 	-@$(MAKE) -C dhcpv6 clean
 	@rm -f dhcpv6/stamp-h1 
+
+e2fsprogs: e2fsprogs/Makefile
+	$(MAKE) -C e2fsprogs
+
+e2fsprogs/Makefile:
+	$(MAKE) e2fsprogs-configure
+
+e2fsprogs-configure:
+	( cd e2fsprogs ; \
+		$(CONFIGURE) \
+		--prefix=/usr \
+		--sbindir=/sbin \
+		--libdir=/usr/lib \
+		--disable-defrag \
+	)
+
+e2fsprogs-install:
+	install -D e2fsprogs/e2fsck/e2fsck $(INSTALLDIR)/e2fsprogs/sbin/fsck.ext4
+	$(STRIP) $(INSTALLDIR)/e2fsprogs/sbin/fsck.ext4
+
+e2fsprogs-clean:
+	[ ! -f e2fsprogs/Makefile ] || $(MAKE) -C e2fsprogs clean
 
 ecmh/stamp-h1:
 	@touch ecmh/src/stamp-h1

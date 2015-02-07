@@ -68,6 +68,11 @@ dstoffset = '<% nvram_get("time_zone_dstoff"); %>';
 var wireless = [<% wl_auth_list(); %>];	// [[MAC, associated, authorized], ...]
 var http_clientlist_array = '<% nvram_get("http_clientlist"); %>';
 var accounts = [<% get_all_accounts(); %>];
+for(var i=0; i<accounts.length; i++){
+		accounts[i] = decodeURIComponent(accounts[i]);	
+}
+if(accounts.length == 0)
+	accounts = ['<% nvram_get("http_username"); %>'];
 
 var theUrl = "router.asus.com";
 if(sw_mode == 3 || (sw_mode == 4))
@@ -105,7 +110,7 @@ function initial(){
 	}else{
 		document.getElementById('http_username_span').style.display = "";
 		document.form.http_username.disabled = true;
-		document.getElementById('http_username').style.display = "none";
+		document.getElementById('http_username').parentNode.style.display = "none";
 	}
 	
 	if(wifi_tog_btn_support || wifi_hw_sw_support || sw_mode == 2 || sw_mode == 4){		// wifi_tog_btn && wifi_hw_sw && hide WPS button behavior under repeater mode
@@ -130,6 +135,8 @@ function initial(){
 		$("https_port").style.display = "none";
 	else if('<% nvram_get("http_enable"); %>' == 1)
 		$("http_port").style.display = "none";
+		
+	document.form.http_username.value= accounts[0];	
 }
 
 var time_zone_tmp="";
@@ -211,19 +218,6 @@ function applyRule(){
 	}
 }
 
-function checkDuplicateName(newname, teststr){
-	var existing_string = decodeURIComponent(teststr.join(','));
-	existing_string = "," + existing_string + ",";
-	var newstr = "," + trim(newname) + ","; 
-
-	var re = new RegExp(newstr,"gi")
-	var matchArray =  existing_string.match(re);
-	if (matchArray != null)
-		return true;
-	else
-		return false;
-}
-
 function validForm(){	
 	showtext($("alert_msg1"), "");
 	showtext($("alert_msg2"), "");
@@ -270,8 +264,8 @@ function validForm(){
 		return false;
 	}
 
-	if(checkDuplicateName(document.form.http_username.value, accounts)
-			&& document.form.http_username.value != accounts[0]){
+	if(accounts.getIndexByValue(document.form.http_username.value) > 0
+			&& document.form.http_username.value != accounts[0]){		
 		showtext($("alert_msg1"), "<#File_Pop_content_alert_desc5#>");
 		document.form.http_username.focus();
 		document.form.http_username.select();
@@ -885,7 +879,7 @@ function pass_checked(obj){
           <th width="40%"><#Router_Login_Name#></th>
           <td>
 				  	<div id="http_username_span" name="http_username_span" style="color:#FFFFFF;margin-left:8px;"><% nvram_get("http_username"); %></div>
-						<input type="text" id="http_username" name="http_username" style="height:25px;" class="input_15_table" maxlength="20" value='<% nvram_get("http_username"); %>'><br/><span id="alert_msg1"></span>
+						<div><input type="text" id="http_username" name="http_username" style="height:25px;" class="input_15_table" maxlength="20"><br/><span id="alert_msg1"></span></div>
           </td>
         </tr>
 

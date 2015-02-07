@@ -397,6 +397,7 @@ static const rcinfo_t rcinfo_jp_40 = {
 #define  LOCALE_CHAN_100_124	 LOCALE_SET_5G_MID1 | LOCALE_SET_5G_MID2
 #define  LOCALE_CHAN_100_140     \
 	LOCALE_SET_5G_MID1 | LOCALE_SET_5G_MID2 | LOCALE_SET_5G_MID3 | LOCALE_SET_5G_HIGH1
+#define  LOCALE_CHAN_149_161     LOCALE_SET_5G_HIGH2
 #define  LOCALE_CHAN_149_165     LOCALE_SET_5G_HIGH2 | LOCALE_SET_5G_HIGH3
 #define  LOCALE_CHAN_184_216     LOCALE_SET_5G_HIGH4
 
@@ -1196,7 +1197,7 @@ static const locale_info_t locale_b4 = {
 	LOCALE_RESTRICTED_NONE,
 	{86, 86, 86,
 	86, 86, 86},
-	{20, 20, 20, 0},
+	{30, 30, 30, 0},
 	WLC_PEAK_CONDUCTED
 };
 
@@ -1579,7 +1580,7 @@ static const locale_info_t locale_3j_3 = {
 	WLC_PEAK_CONDUCTED | WLC_DFS_FCC
 };
 
-/* locale 3j-4. channel 36 - 48 */
+/* locale 3j-4. channel 36 - 48,  */
 static const locale_info_t locale_3j_4 = {
 	LOCALE_SET_5G_LOW1,
 	LOCALE_RADAR_SET_NONE,
@@ -1589,7 +1590,7 @@ static const locale_info_t locale_3j_4 = {
 	WLC_PEAK_CONDUCTED
 };
 
-/* locale 3j-5. channel 36 - 48 */
+/* locale 3j-5. channel 36 - 48*/
 static const locale_info_t locale_3j_5 = {
 	LOCALE_SET_5G_LOW1,
 	LOCALE_RADAR_SET_NONE,
@@ -1805,14 +1806,14 @@ static const locale_info_t locale_8 = {		/* locale 8. channel 149 - 161 */
 	WLC_PEAK_CONDUCTED
 };
 
-/* locale 8. channel 56 - 64, 100 - 140, 149 - 165 */
+/* locale 8. channel 149 - 161 */
 static const locale_info_t locale_8a = {
-	LOCALE_SET_5G_LOW3 | LOCALE_CHAN_100_140 | LOCALE_CHAN_149_165,
-	LOCALE_RADAR_SET_1,
+	LOCALE_SET_5G_HIGH2,
+	LOCALE_RADAR_SET_NONE,
 	LOCALE_RESTRICTED_NONE,
-	{0, QDB(14), QDB(14), QDB(17), QDB(17)},
-	{0, 17, 17, 24, 30},
-	WLC_PEAK_CONDUCTED | WLC_DFS_FCC
+	{0, 0, 0, 0, QDB(30)},
+	{0, 0, 0, 0, 30},
+	WLC_PEAK_CONDUCTED
 };
 
 /* locale 8a_1. channel 149 - 161 */
@@ -2083,8 +2084,8 @@ static const locale_info_t locale_18l= {	/* locale 18l channel 36 - 48 */
 	LOCALE_SET_5G_LOW1,
 	LOCALE_RADAR_SET_NONE,
 	LOCALE_RESTRICTED_NONE,
-	{QDB(14), 0, 0, 0, 0},
-	{20, 0, 0, 0, 0},
+	{QDB(30), 0, 0, 0, 0},
+	{30, 0, 0, 0, 0},
 	WLC_PEAK_CONDUCTED
 };
 
@@ -2316,8 +2317,8 @@ static const locale_info_t locale_27b = {	/* locale 27b. channel 36 - 48, 149 - 
 	WLC_PEAK_CONDUCTED
 };
 
-static const locale_info_t locale_27c = {       /* locale 27c. channel 36 - 48, 149 - 165 */
-	LOCALE_SET_5G_LOW1 | LOCALE_CHAN_149_165,
+static const locale_info_t locale_27c = {       /* locale 27c. channel 36 - 48, 149 - 161 */
+	LOCALE_SET_5G_LOW1 | LOCALE_SET_5G_HIGH2,
 	LOCALE_RADAR_SET_NONE,
 	LOCALE_RESTRICTED_NONE,
 	{74, 0, 0, 0, 88},
@@ -4236,8 +4237,8 @@ static const locale_mimo_info_t locale_8n = {
 };
 
 static const locale_mimo_info_t locale_8an = {
-	{0, QDB(10), QDB(10),  /* 16.5 dBm */ 66, QDB(17)},
-	{0, QDB(12), QDB(12), /* 18.5 dBm */ 74, QDB(18)},
+	{0, 0, 0, 0, QDB(30)},
+	{0, 0, 0, 0, QDB(30)},
 	0
 };
 
@@ -4434,8 +4435,8 @@ static const locale_mimo_info_t locale_18rn = {
 };
 
 static const locale_mimo_info_t locale_18ln = {
-	{QDB(10), 0, 0, 0, 0},
-	{QDB(12), 0, 0, 0, 0},
+	{QDB(30), 0, 0, 0, 0},
+	{QDB(30), 0, 0, 0, 0},
 	0
 };
 

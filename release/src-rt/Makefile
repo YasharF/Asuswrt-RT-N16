@@ -61,7 +61,13 @@ else
 include $(ASUSWRTVERSIONCONFDIR)/version.conf
 endif
 
+export BRANCH := $(shell git branch)
+
+ifeq ($(BRANCH),) 
+include ./router/extendno.conf
+else
 export EXTENDNO := $(shell git log --pretty=oneline asuswrt_$(KERNEL_VER).$(FS_VER).$(SERIALNO)..HEAD | wc -l)-g$(shell git log --pretty=format:'%h' -n 1)
+endif
 
 ifeq ($(EXTENDNO),)
 export EXTENDNO := 0-g$(shell git log --pretty=format:'%h' -n 1)
@@ -147,6 +153,7 @@ rt_ver:
 	@echo '#define RT_BUILD_INFO "$(BUILD_TIME) $(BUILD_USER)@$(BUILD_INFO)"' >> router/shared/version.h
 	@echo '#endif' >> router/shared/version.h
 	@echo '$(BUILD_NAME)_$(KERNEL_VER).$(FS_VER) $(BUILD_TIME)' > router/shared/version
+	@echo 'EXTENDNO=$(EXTENDNO)' > router/extendno.conf
 
 all: rt_ver
 	@echo ""
@@ -703,6 +710,13 @@ define RouterOptions
 		sed -i "/RTCONFIG_DYN_DICT_NAME/d" $(1); \
 		echo "RTCONFIG_DYN_DICT_NAME=y" >>$(1); \
 	fi; \
+	if [ "$(EXT4FS)" = "y" ]; then \
+		sed -i "/RTCONFIG_EXT4FS/d" $(1); \
+		echo "RTCONFIG_EXT4FS=y" >>$(1); \
+	else \
+		sed -i "/RTCONFIG_EXT4FS/d" $(1); \
+		echo "# RTCONFIG_EXT4FS is not set" >>$(1); \
+	fi; \
 	)
 	$(call platformRouterOptions, $(1))
 endef
@@ -1099,6 +1113,21 @@ define KernelConfig
 	else \
 		echo "# CONFIG_DUAL_TRX is not set" >>$(1); \
 	fi; \
+	if [ "$(EXT4FS)" = "y" ]; then \
+		sed -i "/CONFIG_EXT4_FS/d" $(1); \
+		echo "CONFIG_EXT4_FS=m" >>$(1); \
+		sed -i "/CONFIG_EXT4_FS_XATTR/d" $(1); \
+		echo "CONFIG_EXT4_FS_XATTR=y" >>$(1); \
+		sed -i "/CONFIG_EXT4_FS_POSIX_ACL/d" $(1); \
+		echo "# CONFIG_EXT4_FS_POSIX_ACL is not set" >>$(1); \
+		sed -i "/CONFIG_EXT4_FS_SECURITY/d" $(1); \
+		echo "# CONFIG_EXT4_FS_SECURITY is not set" >>$(1); \
+		sed -i "/CONFIG_EXT4_DEBUG/d" $(1); \
+		echo "# CONFIG_EXT4_DEBUG is not set" >>$(1); \
+	else \
+		sed -i "/CONFIG_EXT4_FS/d" $(1); \
+		echo "# CONFIG_EXT4_FS is not set" >>$(1); \
+	fi; \
 	)
 	$(call platformKernelConfig, $(1))
 	$(call extraKernelConfig, $(1))
@@ -1113,6 +1142,7 @@ ifeq ($(BUILD_NAME),)
 	@echo $@" is not a valid target!"
 	@false
 endif
+
 	@cp router/config_base router/config_$(lowercase_B)
 	@cp router/busybox/config_base router/busybox/config_$(lowercase_B)
 	@cp $(LINUXDIR)/config_base $(LINUXDIR)/config_$(lowercase_B)
@@ -1122,6 +1152,7 @@ endif
 	$(call RouterOptions, router/config_$(lowercase_B))
 	$(call KernelConfig, $(LINUXDIR)/config_$(lowercase_B))
 	$(call BusyboxOptions, router/busybox/config_$(lowercase_B))
+
 	@$(MAKE) setprofile
 	@$(MAKE) all
 
