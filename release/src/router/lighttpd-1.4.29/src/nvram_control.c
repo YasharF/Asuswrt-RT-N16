@@ -1211,7 +1211,9 @@ int nvram_set_https_crt_cn(const char* cn)
 
 char* nvram_get_https_crt_cn(){
 #ifdef USE_TCAPI		
-	return NULL;
+	static char https_crt_cn[MAXLEN_TCAPI_MSG] = {0};
+	tcapi_get(WEBDAV, HTTPS_CRT_CN, https_crt_cn);
+	return https_crt_cn;
 #else
 	return nvram_get(HTTPS_CRT_CN);
 #endif

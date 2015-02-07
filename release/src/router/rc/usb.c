@@ -66,9 +66,10 @@ char *find_sddev_by_mountpoint(char *mountpoint);
 #ifdef LINUX26
 void tune_bdflush(void)
 {
+	f_write_string("/proc/sys/vm/dirty_writeback_centisecs", "200", 0, 0);
+
 #ifndef RTCONFIG_BCMARM
 	f_write_string("/proc/sys/vm/dirty_expire_centisecs", "200", 0, 0);
-	f_write_string("/proc/sys/vm/dirty_writeback_centisecs", "200", 0, 0);
 #else
         printf("no tune_bdflush\n");
 #endif
@@ -528,7 +529,8 @@ void stop_usb_program(int mode)
 #ifdef RTCONFIG_WEBDAV
 	stop_webdav();
 #else
-	system("sh /opt/etc/init.d/S50aicloud scan");
+	if(f_exists("/opt/etc/init.d/S50aicloud"))
+		system("sh /opt/etc/init.d/S50aicloud scan");
 #endif
 
 #ifdef RTCONFIG_USB_PRINTER
@@ -651,8 +653,6 @@ int mount_r(char *mnt_dev, char *mnt_dir, char *_type)
 
 #ifdef RTCONFIG_BCMARM
 			sprintf(options + strlen(options), ",allow_utime=0022" + (options[0] ? 0 : 1));
-#else
-			sprintf(options + strlen(options), ",allow_utime=0000" + (options[0] ? 0 : 1));
 #endif
 
 			if (nvram_invmatch("smbd_cset", ""))
@@ -1222,7 +1222,7 @@ done:
 #ifdef RTCONFIG_USB_MODEM
 		char usb_node[32], port_path[8];
 		char prefix[] = "usb_pathXXXXXXXXXXXXXXXXX_", tmp[100];
-		char vid[8], pid[8];
+		unsigned int vid, pid;
 
 		ptr = dev_name+5;
 
@@ -1234,11 +1234,8 @@ done:
 				if(strlen(nvram_safe_get(strcat_r(prefix, "_fs_path0", tmp))) <= 0)
 					nvram_set(tmp, ptr);
 
-				memset(vid, 0, 8);
-				strcpy(vid, nvram_safe_get(strcat_r(prefix, "_vid", tmp)));
-
-				memset(pid, 0, 8);
-				strcpy(pid, nvram_safe_get(strcat_r(prefix, "_pid", tmp)));
+				vid = strtoul(nvram_safe_get(strcat_r(prefix, "_vid", tmp)), NULL, 16);
+				pid = strtoul(nvram_safe_get(strcat_r(prefix, "_pid", tmp)), NULL, 16);
 
 				if(is_create_file_dongle(vid, pid)){
 					if(strcmp(nvram_safe_get("stop_sg_remove"), "1")){
@@ -1993,7 +1990,7 @@ start_samba(void)
 	/* write smbpasswd  */
 	system("smbpasswd nobody \"\"");
 
-	acc_num = atoi(nvram_safe_get("acc_num"));
+	acc_num = nvram_get_int("acc_num");
 	if(acc_num < 0)
 		acc_num = 0;
 
@@ -2028,16 +2025,16 @@ _dprintf("%s: cmd=%s.\n", __FUNCTION__, cmd);
 
 	xstart("nmbd", "-D", "-s", "/etc/smb.conf");
 #ifdef RTCONFIG_BCMARM
-#ifdef SMP 
-        if (cpu_num > 1)
-                taskset_ret = cpu_eval(NULL, "1", "ionice", "-c1", "-n0", "smbd", "-D", "-s", "/etc/smb.conf");
-        else
-                taskset_ret = eval("ionice", "-c1", "-n0", "smbd", "-D", "-s", "/etc/smb.conf");
+#ifdef SMP
+	if(cpu_num > 1)
+		taskset_ret = cpu_eval(NULL, "1", "ionice", "-c1", "-n0", "smbd", "-D", "-s", "/etc/smb.conf");
+	else
+		taskset_ret = eval("ionice", "-c1", "-n0", "smbd", "-D", "-s", "/etc/smb.conf");
 
-        if (taskset_ret != 0)
+	if(taskset_ret != 0)
 #endif
 #endif
-                xstart("smbd", "-D", "-s", "/etc/smb.conf");
+		xstart("smbd", "-D", "-s", "/etc/smb.conf");
 
 	logmessage("Samba Server", "daemon is started");
 
@@ -2421,7 +2418,7 @@ void write_webdav_permissions()
 	fp = fopen("/tmp/lighttpd/permissions", "w");
 	if (fp==NULL) return;
 
-	acc_num = atoi(nvram_safe_get("acc_num"));
+	acc_num = nvram_get_int("acc_num");
 	if(acc_num < 0)
 		acc_num = 0;
 
@@ -2494,7 +2491,8 @@ void start_webdav(void)	// added by Vanic
 	if (nvram_match("enable_webdav", "0")) return;
 
 #ifndef RTCONFIG_WEBDAV
-        system("sh /opt/etc/init.d/S50aicloud scan");
+	if(f_exists("/opt/etc/init.d/S50aicloud"))
+	        system("sh /opt/etc/init.d/S50aicloud scan");
 #else
 	/* WebDav directory */
 	mkdir_if_none("/tmp/lighttpd");
@@ -2535,7 +2533,8 @@ void stop_webdav(void)
 	}
 
 #ifndef RTCONFIG_WEBDAV
-	system("sh /opt/etc/init.d/S50aicloud scan");
+	if(f_exists("/opt/etc/init.d/S50aicloud"))
+		system("sh /opt/etc/init.d/S50aicloud scan");
 #else	
 	if (pids("lighttpd-monitor")){
 		kill_pidfile_tk("/tmp/lighttpd/lighttpd-monitor.pid");
@@ -2789,7 +2788,8 @@ void start_nas_services(int force)
 		// webdav still needed if no disk is mounted
 		start_webdav();
 #else
-		system("sh /opt/etc/init.d/S50aicloud scan");
+		if(f_exists("/opt/etc/init.d/S50aicloud"))
+			system("sh /opt/etc/init.d/S50aicloud scan");
 #endif
 		return;
 	}
@@ -2868,7 +2868,8 @@ void restart_sambaftp(int stop, int start)
 #ifdef RTCONFIG_WEBDAV
 		stop_webdav();
 #else
-		system("sh /opt/etc/init.d/S50aicloud scan");
+		if(f_exists("/opt/etc/init.d/S50aicloud"))
+			system("sh /opt/etc/init.d/S50aicloud scan");
 #endif
 	}
 	
@@ -2883,7 +2884,8 @@ void restart_sambaftp(int stop, int start)
 #ifdef RTCONFIG_WEBDAV
 		start_webdav();
 #else
-		system("sh /opt/etc/init.d/S50aicloud scan");
+		if(f_exists("/opt/etc/init.d/S50aicloud"))
+			system("sh /opt/etc/init.d/S50aicloud scan");
 #endif
 	}
 	file_unlock(fd);

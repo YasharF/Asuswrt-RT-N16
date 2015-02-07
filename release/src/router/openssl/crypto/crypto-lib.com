@@ -47,6 +47,13 @@ $!  P6, if defined, sets a choice of crypto methods to compile.
 $!  WARNING: this should only be done to recompile some part of an already
 $!  fully compiled library.
 $!
+$!  For 64 bit architectures (Alpha and IA64), specify the pointer size as P7.
+$!  For 32 bit architectures (VAX), P7 is ignored.
+$!  Currently supported values are:
+$!
+$!	32	To ge a library compiled with /POINTER_SIZE=32
+$!	64	To ge a library compiled with /POINTER_SIZE=64
+$!
 $!
 $! Define A TCP/IP Library That We Will Need To Link To.
 $! (That Is, If We Need To Link To One.)
@@ -140,11 +147,11 @@ $ ENDIF
 $!
 $! Define The Library Name.
 $!
-$ LIB_NAME := 'EXE_DIR'LIBCRYPTO.OLB
+$ LIB_NAME := 'EXE_DIR'LIBCRYPTO'LIB32'.OLB
 $!
 $! Define The CRYPTO-LIB We Are To Use.
 $!
-$ CRYPTO_LIB := 'EXE_DIR'LIBCRYPTO.OLB
+$ CRYPTO_LIB := 'EXE_DIR'LIBCRYPTO'LIB32'.OLB
 $!
 $! Check To See If We Already Have A "[.xxx.EXE.CRYPTO]LIBCRYPTO.OLB" Library...
 $!
@@ -193,7 +200,7 @@ $ LIB_CAST = "c_skey,c_ecb,c_enc,c_cfb64,c_ofb64"
 $ LIB_CAMELLIA = "camellia,cmll_misc,cmll_ecb,cmll_cbc,cmll_ofb,"+ -
 	"cmll_cfb,cmll_ctr"
 $ LIB_SEED = "seed,seed_ecb,seed_cbc,seed_cfb,seed_ofb"
-$ LIB_MODES = "cbc128,ctr128,cfb128,ofb128"
+$ LIB_MODES = "cbc128,ctr128,cfb128,ofb128,cts128"
 $ LIB_BN_ASM = "[.asm]vms.mar,vms-helper"
 $ IF F$TRNLNM("OPENSSL_NO_ASM") .OR. ARCH .NES. "VAX" THEN -
      LIB_BN_ASM = "bn_asm"
@@ -907,6 +914,58 @@ $! End The P5 Check.
 $!
 $ ENDIF
 $!
+$! Check To See If P7 Is Blank.
+$!
+$ IF (P7.EQS."")
+$ THEN
+$   POINTER_SIZE = ""
+$ ELSE
+$!
+$!  Check is P7 Is Valid
+$!
+$   IF (P7.EQS."32")
+$   THEN
+$     POINTER_SIZE = "/POINTER_SIZE=32"
+$     IF ARCH .EQS. "VAX"
+$     THEN
+$       LIB32 = ""
+$     ELSE
+$       LIB32 = "32"
+$     ENDIF
+$   ELSE
+$     IF (P7.EQS."64")
+$     THEN
+$       LIB32 = ""
+$       IF ARCH .EQS. "VAX"
+$       THEN
+$         POINTER_SIZE = "/POINTER_SIZE=32"
+$       ELSE
+$         POINTER_SIZE = "/POINTER_SIZE=64"
+$       ENDIF
+$     ELSE
+$!
+$!      Tell The User Entered An Invalid Option..
+$!
+$       WRITE SYS$OUTPUT ""
+$       WRITE SYS$OUTPUT "The Option ",P7," Is Invalid.  The Valid Options Are:"
+$       WRITE SYS$OUTPUT ""
+$       WRITE SYS$OUTPUT "    32  :  Compile with 32 bit pointer size"
+$       WRITE SYS$OUTPUT "    64  :  Compile with 64 bit pointer size"
+$       WRITE SYS$OUTPUT ""
+$!
+$!      Time To EXIT.
+$!
+$       GOTO TIDY
+$!
+$!      End The Valid Arguement Check.
+$!
+$     ENDIF
+$   ENDIF
+$!
+$! End The P7 Check.
+$!
+$ ENDIF
+$!
 $! Check To See If P3 Is Blank.
 $!
 $ IF (P3.EQS."")
@@ -1034,9 +1093,9 @@ $!
 $     CC = "CC"
 $     IF ARCH.EQS."VAX" .AND. F$TRNLNM("DECC$CC_DEFAULT").NES."/DECC" -
 	 THEN CC = "CC/DECC"
-$     CC = CC + "/''CC_OPTIMIZE'/''DEBUGGER'/STANDARD=ANSI89" + -
+$     CC = CC + "/''CC_OPTIMIZE'/''DEBUGGER'/STANDARD=ANSI89''POINTER_SIZE'" + -
            "/NOLIST/PREFIX=ALL" + -
-	   "/INCLUDE=(SYS$DISK:[],SYS$DISK:[._''ARCH'],SYS$DISK:[-],SYS$DISK:[.ENGINE.VENDOR_DEFNS],SYS$DISK:[.EVP],SYS$DISK:[.ASN1])" + -
+	   "/INCLUDE=(SYS$DISK:[._''ARCH'],SYS$DISK:[],SYS$DISK:[-],SYS$DISK:[.ENGINE.VENDOR_DEFNS],SYS$DISK:[.EVP],SYS$DISK:[.ASN1])" + -
 	   CCEXTRAFLAGS
 $!
 $!    Define The Linker Options File Name.
@@ -1070,7 +1129,7 @@ $	EXIT
 $     ENDIF
 $     IF F$TRNLNM("DECC$CC_DEFAULT").EQS."/DECC" THEN CC = "CC/VAXC"
 $     CC = CC + "/''CC_OPTIMIZE'/''DEBUGGER'/NOLIST" + -
-	   "/INCLUDE=(SYS$DISK:[],SYS$DISK:[._''ARCH'],SYS$DISK:[-],SYS$DISK:[.ENGINE.VENDOR_DEFNS],SYS$DISK:[.EVP],SYS$DISK:[.ASN1])" + -
+	   "/INCLUDE=(SYS$DISK:[._''ARCH'],SYS$DISK:[],SYS$DISK:[-],SYS$DISK:[.ENGINE.VENDOR_DEFNS],SYS$DISK:[.EVP],SYS$DISK:[.ASN1])" + -
 	   CCEXTRAFLAGS
 $     CCDEFS = """VAXC""," + CCDEFS
 $!
@@ -1102,7 +1161,7 @@ $!
 $!    Use GNU C...
 $!
 $     CC = "GCC/NOCASE_HACK/''GCC_OPTIMIZE'/''DEBUGGER'/NOLIST" + -
-	   "/INCLUDE=(SYS$DISK:[],SYS$DISK:[._''ARCH'],SYS$DISK:[-],SYS$DISK:[.ENGINE.VENDOR_DEFNS],SYS$DISK:[.EVP],SYS$DISK:[.ASN1])" + -
+	   "/INCLUDE=(SYS$DISK:[._''ARCH'],SYS$DISK:[],SYS$DISK:[-],SYS$DISK:[.ENGINE.VENDOR_DEFNS],SYS$DISK:[.EVP],SYS$DISK:[.ASN1])" + -
 	   CCEXTRAFLAGS
 $!
 $!    Define The Linker Options File Name.

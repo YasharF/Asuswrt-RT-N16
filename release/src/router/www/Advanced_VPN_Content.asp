@@ -146,7 +146,7 @@ function valid_wan_ip() {
 								return;
         }
 				
-				document.getElementById("privateIP_notes").innerHTML = "The wireless router currently uses a private WAN IP address (192.168.x.x, 10,x,x,x, or 172.16.x.x). Please set DDNS service before initializing VPN server."
+				document.getElementById("privateIP_notes").innerHTML = "<#vpn_privateIP_hint#>"
 				document.getElementById("privateIP_notes").style.display = "";
 				return;
 }
@@ -719,7 +719,7 @@ function switchPage(page){
 										</thead>
 										
 										<tr>
-											<th>Enable VPN Server</th>
+											<th><#vpn_enable#></th>
 											<td>
 													<div align="center" class="left" style="width:94px; float:left; cursor:pointer;" id="radio_VPNServer_enable"></div>
 													<div class="iphone_switch_container" style="height:32px; width:74px; position: relative; overflow: hidden;">
@@ -742,7 +742,7 @@ function switchPage(page){
 										</tr>
 
 										<tr>
-											<th>Server mode</th>
+											<th><#vpn_mode#></th>
 											<td>
 													<select name="VPNServer_mode_select" class="input_option" onchange="change_mode(this);">
               						</select>
@@ -756,10 +756,10 @@ function switchPage(page){
 											</td>
 										</tr>
 										<tr id="openvpn_export" style="display:none;">
-            								<th>Export ovpn file</th>
+            								<th><#vpn_export_ovpnfile#></th>
             								<td>
 																<div id="export_div">
-	              									<input id="exportToLocal" class="button_gen" type="button" value="Export" />
+	              									<input id="exportToLocal" class="button_gen" type="button" value="<#btn_Export#>" />
 	              									<input id="exportViaEmail" class="button_gen" type="button" value="via Email" />
 																</div>
 																<script type="text/javascript">
@@ -829,8 +829,8 @@ function switchPage(page){
 
 									<div id="OpenVPN_setting" style="display:none;">
 										<div class="formfontdesc">
-											For OpenVPN server configuration, <#Web_Title2#> will automatically generate a ovpn file including Certification Authority key.  You can deliver this file with username and password to clients making them connect to your VPN server. If you need to customize OpenVPN server setting, please go to <#menu5#>.<br>
-											Please refer to below FAQ for your client side setting.
+											<#vpn_openvpn_desc1#>&nbsp;<#vpn_openvpn_desc3#>&nbsp;<#vpn_openvpn_desc2#> <#menu5#><br><br>
+											<#vpn_openvpn_FAQ#>
 											<ol>
 												<li><a href="http://www.asus.com/support/Knowledge-Detail/11/2/RTAC68U/1A935B95-C237-4281-AE86-C824737D11F9/" target="_blank" style="text-decoration:underline;">Windows</a>
 												<li><a href="http://www.asus.com/support/Knowledge-Detail/11/2/RTAC68U/C77ADCBF-F5C4-46B4-8A0D-B64F09AB881F/" target="_blank" style="text-decoration:underline;">Mac OS</a>

@@ -926,8 +926,8 @@ void start_vpnserver(int serverNum)
 		if ( useronly ) {
 			fprintf(fp, "client-cert-not-required\n");
 			fprintf(fp, "username-as-common-name\n");
-			fprintf(fp, "duplicate-cn\n");	//user share the same account
 		}
+		fprintf(fp, "duplicate-cn\n");
 
 		//sprintf(&buffer[0], "vpn_crt_server%d_ca", serverNum);
 		//if ( !nvram_is_empty(&buffer[0]) )
@@ -1098,7 +1098,7 @@ void start_vpnserver(int serverNum)
 		if (buffer2[strlen(buffer2)-1] != '\n') fprintf(fp_client, "\n");	// Append newline if missing
 		fprintf(fp_client, "</ca>\n");
 
-		if(!useronly) {
+		//if(!useronly) {
 			/*
 			 * See if stored client cert was signed with our stored CA.  If not, it means
 			 * the CA was changed by the user and the current client crt/key no longer match,
@@ -1136,7 +1136,7 @@ void start_vpnserver(int serverNum)
 				fprintf(fp_client, "    paste client key data here\n");
 			}
 			fprintf(fp_client, "</key>\n");
-		}
+		//}
 
 		sprintf(&buffer[0], "vpn_crt_server%d_dh", serverNum);
 		if ( !nvram_is_empty(&buffer[0]) )

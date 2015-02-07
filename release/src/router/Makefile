@@ -104,7 +104,7 @@ SEP=echo "\033[41;1m   $@   \033[0m"
 #
 obj-$(RTCONFIG_DMALLOC) += dmalloc
 
-ifeq ($(RTN14U)$(RTAC52U)$(RTAC51U),y)
+ifeq ($(RTN14U)$(RTAC52U)$(RTAC51U)$(RTN11P),y)
 obj-y += reg
 endif
 ifneq ($(RTCONFIG_BCMARM),y)
@@ -119,8 +119,10 @@ ifneq ($(findstring linux-3.x,$(LINUXDIR)),)
 obj-y += rt2880_app
 else
 obj-y += ated
+ifneq ($(RTN11P),y)
 obj-y += flash
-ifeq ($(RTN14U)$(RTAC52U)$(RTAC51U),y)
+endif
+ifeq ($(RTN14U)$(RTAC52U)$(RTAC51U)$(RTN11P),y)
 else
 obj-y += hw_nat
 endif
@@ -134,17 +136,14 @@ ifneq ($(or $(findstring linux-2.6.36,$(LINUXDIR)),$(findstring linux-3.x,$(LINU
 obj-y += iptables-1.4.x
 obj-y += iproute2-3.x
 else
-ifeq ($(RTAC53U),y)
-obj-y += iptables-1.4.x
-obj-y += iproute2-3.x
-else
 obj-y += iptables
 obj-y += iproute2
 endif
-endif
 
 obj-y += rc
+ifeq ($(RTCONFIG_USB),y)
 obj-y += rom
+endif
 obj-y += others
 obj-y += busybox
 obj-y += httpd
@@ -315,12 +314,9 @@ obj-$(RTCONFIG_TIMEMACHINE) += libgpg-error-1.10
 obj-$(RTCONFIG_TIMEMACHINE) += libgcrypt-1.5.1
 obj-$(RTCONFIG_TIMEMACHINE) += db-4.8.30
 obj-$(RTCONFIG_TIMEMACHINE) += netatalk-3.0.5
-ifeq ($(RTCONFIG_TIMEMACHINE),y)
+ifeq ($(or $(RTCONFIG_TIMEMACHINE),$(RTCONFIG_MDNS)),y)
 obj-$(RTCONFIG_TIMEMACHINE) += avahi-0.6.31
 obj-$(RTCONFIG_TIMEMACHINE) += expat-2.0.1
-else ifeq ($(RTCONFIG_MDNS),y)
-obj-$(RTCONFIG_MDNS) += avahi-0.6.31
-obj-$(RTCONFIG_MDNS) += expat-2.0.1
 else
 obj-$(RTCONFIG_MEDIA_SERVER) += mDNSResponder
 endif
@@ -426,6 +422,7 @@ endif
 
 obj-$(RTCONFIG_TCPDUMP) += libpcap
 obj-$(RTCONFIG_TCPDUMP) += tcpdump-4.4.0
+obj-$(RTCONFIG_QTN) += libqcsapi_client
 
 obj-clean := $(foreach obj, $(obj-y) $(obj-n) $(obj-), $(obj)-clean)
 obj-install := $(foreach obj,$(obj-y),$(obj)-install)
@@ -1876,6 +1873,18 @@ tcpdump-4.4.0-install: tcpdump-4.4.0
 tcpdump-4.4.0-clean:
 	[ ! -f tcpdump-4.4.0/Makefile ] || -@$(MAKE) -C tcpdump-4.4.0 clean
 	@rm -f tcpdump-4.4.0/stamp-h1
+
+libqcsapi_client-install: libqcsapi_client
+	install -d $(INSTALLDIR)/libqcsapi_client/usr/lib/
+	install -d $(INSTALLDIR)/libqcsapi_client/usr/sbin/
+	install -D libqcsapi_client/libqcsapi_client.so.1.0.1 $(INSTALLDIR)/libqcsapi_client/usr/lib/
+	install -D libqcsapi_client/qcsapi_sockrpc $(INSTALLDIR)/libqcsapi_client/usr/sbin/
+	install -D libqcsapi_client/c_rpc_qcsapi_sample $(INSTALLDIR)/libqcsapi_client/usr/sbin/
+	$(STRIP) $(INSTALLDIR)/libqcsapi_client/usr/lib/*.so.*
+	$(STRIP) $(INSTALLDIR)/libqcsapi_client/usr/sbin/*
+	cd $(INSTALLDIR)/libqcsapi_client/usr/lib && \
+		ln -sf libqcsapi_client.so.1.0.1 libqcsapi_client.so.1 && \
+		ln -sf libqcsapi_client.so.1.0.1 libqcsapi_client.so
 
 libbcm:
 	@[ ! -f libbcm/Makefile ] || $(MAKE) -C libbcm

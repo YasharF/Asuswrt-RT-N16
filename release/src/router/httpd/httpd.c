@@ -1599,6 +1599,16 @@ int main(int argc, char **argv)
         	}
 	}
 
+#ifdef RTCONFIG_QTN
+	time_t start_time = uptime();
+	int ret = 0;
+	ret = c_rpc_qcsapi_init();
+	if (ret < 0) {
+		dbG("Qcsapi qcsapi init error, return: %d\n", ret);
+	}
+	dbG("Qcsapi qcsapi init takes %d secodns\n", uptime() - start_time);
+#endif
+
 	//websSetVer();
 	//2008.08 magic
 	nvram_unset("login_timestamp");

@@ -36,6 +36,13 @@ $!	SOCKETSHR	for SOCKETSHR+NETLIB
 $!
 $!  P4, if defined, sets a compiler thread NOT needed on OpenVMS 7.1 (and up)
 $!
+$!  For 64 bit architectures (Alpha and IA64), specify the pointer size as P5.
+$!  For 32 bit architectures (VAX), P5 is ignored.
+$!  Currently supported values are:
+$!
+$!	32	To ge a library compiled with /POINTER_SIZE=32
+$!	64	To ge a library compiled with /POINTER_SIZE=64
+$!
 $!
 $! Define A TCP/IP Library That We Will Need To Link To.
 $! (That is, If Wee Need To Link To One.)
@@ -72,11 +79,11 @@ $ WRITE SYS$OUTPUT "Compiling On ''ARCH'."
 $!
 $! Define The CRYPTO-LIB We Are To Use.
 $!
-$ CRYPTO_LIB := SYS$DISK:[-.'ARCH'.EXE.CRYPTO]LIBCRYPTO.OLB
+$ CRYPTO_LIB := SYS$DISK:[-.'ARCH'.EXE.CRYPTO]LIBCRYPTO'LIB32'.OLB
 $!
 $! Define The SSL We Are To Use.
 $!
-$ SSL_LIB := SYS$DISK:[-.'ARCH'.EXE.SSL]LIBSSL.OLB
+$ SSL_LIB := SYS$DISK:[-.'ARCH'.EXE.SSL]LIBSSL'LIB32'.OLB
 $!
 $! Create the OBJ and EXE Directories, if needed.
 $!
@@ -105,7 +112,7 @@ $ TEST_FILES = "BNTEST,ECTEST,ECDSATEST,ECDHTEST,IDEATEST,"+ -
 	       "MDC2TEST,RMDTEST,"+ -
 	       "RANDTEST,DHTEST,ENGINETEST,"+ -
 	       "BFTEST,CASTTEST,SSLTEST,EXPTEST,DSATEST,RSA_TEST,"+ -
-	       "EVP_TEST,JPAKETEST"
+	       "EVP_TEST,IGETEST,JPAKETEST,ASN1TEST"
 $! Should we add MTTEST,PQ_TEST,LH_TEST,DIVTEST,TABTEST as well?
 $!
 $! Additional directory information.
@@ -139,8 +146,9 @@ $ T_D_EXPTEST    := [-.crypto.bn]
 $ T_D_DSATEST    := [-.crypto.dsa]
 $ T_D_RSA_TEST   := [-.crypto.rsa]
 $ T_D_EVP_TEST   := [-.crypto.evp]
-$ T_D_JPAKETEST  := [-.crypto.jpake]
 $ T_D_IGETEST    := [-.test]
+$ T_D_JPAKETEST  := [-.crypto.jpake]
+$ T_D_ASN1TEST   := [-.test]
 $!
 $ TCPIP_PROGRAMS = ",,"
 $ IF COMPILER .EQS. "VAXC" THEN -
@@ -495,7 +503,59 @@ $!  End The Valid Arguement Check.
 $!
 $   ENDIF
 $!
-$! End The P2 Check.
+$! End The P1 Check.
+$!
+$ ENDIF
+$!
+$! Check To See If P5 Is Blank.
+$!
+$ IF (P5.EQS."")
+$ THEN
+$   POINTER_SIZE = ""
+$ ELSE
+$!
+$!  Check is P5 Is Valid
+$!
+$   IF (P5.EQS."32")
+$   THEN
+$     POINTER_SIZE = "/POINTER_SIZE=32"
+$     IF ARCH .EQS. "VAX"
+$     THEN
+$       LIB32 = ""
+$     ELSE
+$       LIB32 = "32"
+$     ENDIF
+$   ELSE
+$     IF (P5.EQS."64")
+$     THEN
+$       LIB32 = ""
+$       IF ARCH .EQS. "VAX"
+$       THEN
+$         POINTER_SIZE = "/POINTER_SIZE=32"
+$       ELSE
+$         POINTER_SIZE = "/POINTER_SIZE=64"
+$       ENDIF
+$     ELSE
+$!
+$!      Tell The User Entered An Invalid Option..
+$!
+$       WRITE SYS$OUTPUT ""
+$       WRITE SYS$OUTPUT "The Option ",P5," Is Invalid.  The Valid Options Are:"
+$       WRITE SYS$OUTPUT ""
+$       WRITE SYS$OUTPUT "    32  :  Compile with 32 bit pointer size"
+$       WRITE SYS$OUTPUT "    64  :  Compile with 64 bit pointer size"
+$       WRITE SYS$OUTPUT ""
+$!
+$!      Time To EXIT.
+$!
+$       GOTO TIDY
+$!
+$!      End The Valid Arguement Check.
+$!
+$     ENDIF
+$   ENDIF
+$!
+$! End The P5 Check.
 $!
 $ ENDIF
 $!
@@ -626,7 +686,7 @@ $!
 $     CC = "CC"
 $     IF ARCH.EQS."VAX" .AND. F$TRNLNM("DECC$CC_DEFAULT").NES."/DECC" -
 	 THEN CC = "CC /DECC"
-$     CC = CC + "/''CC_OPTIMIZE' /''DEBUGGER' /STANDARD=ANSI89" + -
+$     CC = CC + "/''CC_OPTIMIZE' /''DEBUGGER' /STANDARD=ANSI89 ''POINTER_SIZE'" + -
            "/NOLIST /PREFIX=ALL" + -
 	   "/INCLUDE=(SYS$DISK:[-],SYS$DISK:[-.CRYPTO])" + CCEXTRAFLAGS
 $!

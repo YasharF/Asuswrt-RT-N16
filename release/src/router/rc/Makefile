@@ -18,6 +18,9 @@ CFLAGS += -I$(TOP)/shared/sysdeps/ralink -I$(TOP)/wireless_tools
 ifneq ($(findstring MAC_REPEATER=, $(shell cat $(LINUXDIR)/.config)),)
 export CFLAGS += -DMAC_REPEATER
 endif
+ifneq ($(findstring CONFIG_RT2860V2_AP_EDCCA_MONITOR=, $(shell cat $(LINUXDIR)/.config)),)
+export CFLAGS += -DCE_ADAPTIVITY
+endif
 endif
 
 include $(SRCBASE)/.config
@@ -243,7 +246,9 @@ ifeq ($(RTCONFIG_PROXYSTA),y)
 	@cd $(INSTALLDIR)/sbin && ln -sf rc psta_monitor
 endif
 endif
+ifeq ($(RTCONFIG_USB),y)
 	@cd $(INSTALLDIR)/sbin && ln -sf rc usbled
+endif
 	@cd $(INSTALLDIR)/sbin && ln -sf rc ntp
 	@cd $(INSTALLDIR)/sbin && ln -sf rc autodet
 	@cd $(INSTALLDIR)/sbin && ln -sf rc ddns_updated

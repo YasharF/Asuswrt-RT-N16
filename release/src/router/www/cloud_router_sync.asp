@@ -1186,7 +1186,7 @@ hint_string += "<#routerSync_rule_CtoS#>";
 										</th>
 										<td>
 											<input type="text" id="PATH" class="input_25_table" style="height: 25px;" name="cloud_dir" value="" >
-											<input name="button" type="button" class="button_gen_short" onclick="get_disk_tree();" value="Browser"/>
+											<input name="button" type="button" class="button_gen_short" onclick="get_disk_tree();" value="<#Cloudsync_browser_folder#>"/>
 											<div id="noUSB" style="color:#FC0;display:none;margin-left:3px;font-size:12px;line-height:140%;"><#no_usb_found#></div>
 										</td>
 									</tr>
@@ -1253,7 +1253,7 @@ hint_string += "<#routerSync_rule_CtoS#>";
 							</tr>
 	  					</thead>		  
     					<tr>
-							<th width="10%">Provider</th>
+							<th width="10%"><#Provider#></th>
 							<th width="25%">Description</a></th>
 							<th width="10%">Sync Rule</a></th>
 							<th width="30%">Local Sync Folder</th>

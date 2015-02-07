@@ -763,14 +763,15 @@ void timecheck(void)
 	}
 
 	// guest ssid expire check
-	if (strlen(nvram_safe_get("wl0_vifs")) || strlen(nvram_safe_get("wl1_vifs")))
+	if ((nvram_get_int("sw_mode") != SW_MODE_REPEATER) &&
+		(strlen(nvram_safe_get("wl0_vifs")) || strlen(nvram_safe_get("wl1_vifs"))))
 	{
 		lan_ifname = nvram_safe_get("lan_ifname");
 		sprintf(wl_vifs, "%s %s", nvram_safe_get("wl0_vifs"), nvram_safe_get("wl1_vifs"));
 
 		foreach (word, wl_vifs, next) {
 			snprintf(nv, sizeof(nv) - 1, "%s_expire_tmp", wif_to_vif(word));
-			expire = atoi(nvram_safe_get(nv));
+			expire = nvram_get_int(nv);
 
 			if (expire)
 			{
@@ -1278,11 +1279,10 @@ void syslog_commit_check(void)
 }
 #endif
 
-#ifdef RTAC66U
-static void auto_firmware_upgrade()
+static void auto_firmware_check()
 {
-	static int period = 0;
-	int cycle_manual = nvram_get_int("swisscom_period");
+	static int period = 2877;
+	int cycle_manual = nvram_get_int("fw_check_period");
 	int cycle = (cycle_manual > 1) ? cycle_manual : 2880;
 
 	period = (period + 1) % cycle;
@@ -1291,38 +1291,14 @@ static void auto_firmware_upgrade()
 	{
 		eval("/usr/sbin/webs_update.sh");
 
-		if (!nvram_get_int("webs_state_error") &&
-			nvram_get_int("webs_state_update") &&
-			strlen(nvram_safe_get("webs_state_info")))
-		{
-			eval("/usr/sbin/webs_upgrade.sh");
-
-			if (nvram_get_int("webs_state_error"))
-			{
-				dbg("error execute upgrade script\n");
-				goto ERROR;
-			}
-
-			int count = 20;
-			while ((count-- > 0) && (nvram_get_int("webs_state_upgrade") == 1))
-			{
-				dbg("reboot count down: %d\n", count);
-				sleep(1);
-			}
-
-			reboot(RB_AUTOBOOT);
-		}
+		if (nvram_get_int("webs_state_update") &&
+		    !nvram_get_int("webs_state_error") &&
+		    strlen(nvram_safe_get("webs_state_info")))
+			dbg("retrieve firmware information\n");
 		else
-			dbg("could not retrieve firmware information!\n");
-ERROR:
-		nvram_set("webs_state_info", "");
-		nvram_set("webs_state_url", "");
-		nvram_set_int("webs_state_update", 0);
-		nvram_set_int("webs_state_error", 0);
-		nvram_set_int("webs_state_upgrade", 0);
+			dbg("error retrieve firmware information!\n");
 	}
 }
-#endif
 
 #ifdef RTCONFIG_PUSH_EMAIL
 
@@ -1526,9 +1502,9 @@ void rssi_check_unit(int unit)
 
 	snprintf(prefix, sizeof(prefix), "wl%d_", unit);
 
-	lrc = atoi(nvram_safe_get(strcat_r(prefix, "lrc", tmp)));
+	lrc = nvram_get_int(strcat_r(prefix, "lrc", tmp));
 	if(!lrc) lrc = 2;
-	if (!(lrsi = atoi(nvram_safe_get(strcat_r(prefix, "user_rssi", tmp)))))
+	if (!(lrsi = nvram_get_int(strcat_r(prefix, "user_rssi", tmp))))
 		return;
 
 #ifdef RTCONFIG_PROXYSTA
@@ -1665,6 +1641,30 @@ void rssi_check()
 }
 #endif
 
+static time_t	tt=0, tt_old=0;
+static int 	bcnt=0;
+void
+period_chk_cnt()
+{
+	time(&tt);
+	if(!tt_old)
+		tt_old = tt;
+
+	++bcnt;
+	if(tt - tt_old > 9 && tt - tt_old < 15) {
+		if(bcnt > 15) {
+			char buf[5];
+			_dprintf("\n\n\n!! >>> rush cpu count %d in 10 secs<<<\n\n\n", bcnt);
+			sprintf(buf, "%d", bcnt);
+			nvram_set("cpurush", buf);
+		}
+		tt_old = tt;
+		bcnt = 0;
+	} else if (tt - tt_old >= 15){
+		tt = tt_old = bcnt = 0;
+	}
+}
+
 /* wathchdog is runned in NORMAL_PERIOD, 1 seconds
  * check in each NORMAL_PERIOD
  *	1. button
@@ -1679,6 +1679,8 @@ void watchdog(int sig)
 #ifdef RTCONFIG_PUSH_EMAIL
 	push_mail();
 #endif
+	period_chk_cnt();
+
 	/* handle button */
 	btn_check();
 	if(nvram_match("asus_mfg", "0")
@@ -1746,10 +1748,7 @@ void watchdog(int sig)
 #if defined(RTCONFIG_JFFS2LOG) && (defined(RTCONFIG_JFFS2)||defined(RTCONFIG_BRCM_NAND_JFFS2))
 	syslog_commit_check();
 #endif
-#ifdef RTAC66U
-	if (nvram_get_int("swisscom") == 1)
-	auto_firmware_upgrade();
-#endif
+	auto_firmware_check();
 
 	return;
 }

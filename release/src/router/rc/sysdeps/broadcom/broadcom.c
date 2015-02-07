@@ -87,7 +87,7 @@ typedef u_int8_t __u8;
 //End
 char cmd[32];
 
-int 
+int
 setCommit(void)
 {
 	FILE *fp;
@@ -102,8 +102,8 @@ setCommit(void)
 #ifdef RTCONFIG_CFE_NVRAM_CHK
 	if((fp = fopen("/var/log/cfecommit_ret", "r"))!=NULL) {
 		puts("Illegal nvram format!");
-                fclose(fp);
-                return 1;
+		fclose(fp);
+		return 1;
 	}
 #endif
 	if((fp = fopen("/var/log/commit_ret", "r"))!=NULL) {
@@ -414,7 +414,7 @@ setRegrev_5G(const char *regrev)
 int
 setPIN(const char *pin)
 {
-	if( pin==NULL ) 
+	if( pin==NULL )
 		return 0;
 
 	if( pincheck(pin) )
@@ -448,9 +448,9 @@ set40M_Channel_2G(char *channel)
 	nvram_set("wl0_nctrlsb", "lower");
 #endif
 	nvram_set("wl0_obss_coex", "0");
-	eval("wlconf", "eth1", "down" );
-	eval("wlconf", "eth1", "up" );
-	eval("wlconf", "eth1", "start" );
+	eval("wlconf", "eth1", "down");
+	eval("wlconf", "eth1", "up");
+	eval("wlconf", "eth1", "start");
 	puts("1");
 	return 1;
 }
@@ -479,9 +479,9 @@ set40M_Channel_5G(char *channel)
 	nvram_set("wl1_nctrlsb", "lower");
 #endif
 	nvram_set("wl1_obss_coex", "0");
-	eval("wlconf", "eth2", "down" );
-	eval("wlconf", "eth2", "up" );
-	eval("wlconf", "eth2", "start" );
+	eval("wlconf", "eth2", "down");
+	eval("wlconf", "eth2", "up");
+	eval("wlconf", "eth2", "start");
 	puts("1");
 	return 1;
 }
@@ -509,9 +509,9 @@ set80M_Channel_5G(char *channel)
 	nvram_set("wl1_nctrlsb", "lower");
 #endif
 	nvram_set("wl1_obss_coex", "0");
-	eval("wlconf", "eth2", "down" );
-	eval("wlconf", "eth2", "up" );
-	eval("wlconf", "eth2", "start" );
+	eval("wlconf", "eth2", "down");
+	eval("wlconf", "eth2", "up");
+	eval("wlconf", "eth2", "start");
 	puts("1");
 	return 1;
 }
@@ -743,7 +743,7 @@ Get5325Status(void)
 	return 1;
 }
 
-int 
+int
 GetPhyStatus(void)
 {
 	int model;
@@ -898,7 +898,7 @@ int LanWanLedCtrl(void)
 }
 #endif	/* LAN4WAN_LED*/
 
-int 
+int
 setAllLedOn(void)
 {
 	int model;
@@ -1076,7 +1076,7 @@ setAllLedOn(void)
 	return 0;
 }
 
-int 
+int
 setAllLedOff(void)
 {
 	int model;
@@ -1352,7 +1352,7 @@ setATEModeLedOn(void){
 			led_control(LED_WAN, LED_ON);
 			led_control(LED_USB, LED_ON);
 			break;
-		}	
+		}
 	}
 
 	return 0;
@@ -1505,7 +1505,7 @@ getMAC_5G(void)
 	return 0;
 }
 
-int 
+int
 getBootVer(void)
 {
 	char buf[32];
@@ -1534,7 +1534,7 @@ getBootVer(void)
 	return 0;
 }
 
-int 
+int
 getPIN(void)
 {
 	puts(nvram_safe_get("secret_code"));
@@ -1590,7 +1590,7 @@ getCountryCode_5G(void)
 	return 0;
 }
 
-int 
+int
 getRegrev_2G(void)
 {
 	int model;
@@ -2332,7 +2332,7 @@ int wlcscan_core(char *ofile, char *wif)
 
 				ie = (struct bss_ie_hdr *) ((unsigned char *) info + sizeof(*info));
 				for (left = info->ie_length; left > 0; // look for RSN IE first
-					left -= (ie->len + 2), ie = (struct bss_ie_hdr *) ((unsigned char *) ie + 2 + ie->len)) 
+					left -= (ie->len + 2), ie = (struct bss_ie_hdr *) ((unsigned char *) ie + 2 + ie->len))
 				{
 					if (ie->elem_id != DOT11_MNG_RSN_ID)
 						continue;
@@ -2346,7 +2346,7 @@ int wlcscan_core(char *ofile, char *wif)
 
 				ie = (struct bss_ie_hdr *) ((unsigned char *) info + sizeof(*info));
 				for (left = info->ie_length; left > 0; // then look for WPA IE
-					left -= (ie->len + 2), ie = (struct bss_ie_hdr *) ((unsigned char *) ie + 2 + ie->len)) 
+					left -= (ie->len + 2), ie = (struct bss_ie_hdr *) ((unsigned char *) ie + 2 + ie->len))
 				{
 					if (ie->elem_id != DOT11_MNG_WPA_ID)
 						continue;
@@ -2594,10 +2594,10 @@ next_info:
 }
 
 #ifdef RTCONFIG_WIRELESSREPEATER
-/* 
+/*
  *  Return value:
- *  	2 = successfully connected to parent AP 
- */  
+ *  	2 = successfully connected to parent AP
+ */
 int get_wlc_status(char *wif)
 {
 	char ure_mac[18];
@@ -2787,104 +2787,6 @@ wl_phy_rssi_ant(char *ifname)
 	}
 
 	return ret;
-}
-#endif
-#ifdef RTAC66U
-int generate_swisscom_setting(unsigned char *ssid, unsigned char *key)
-{
-	int i;
-	unsigned char ea[ETHER_ADDR_LEN];
-	char *mac = nvram_safe_get("et0macaddr");
-
-	memset(ssid, sizeof(ssid), 0);
-	memset(key, sizeof(key), 0);
-	ether_atoe(mac, ea);
-
-	sprintf(ssid, "%x%x%x-%x%x%x%x%x\n",
-		(ea[2] & 0xf0) >> 4,
-		(ea[2] & 0x0f),
-		(ea[3] & 0xf0) >> 4,
-		(ea[3] & 0x0f),
-		(ea[4] & 0xf0) >> 4,
-		(ea[4] & 0x0f),
-		(ea[5] & 0xf0) >> 4,
-		(ea[5] & 0x0f));
-	ssid[9] = 0x0;
-
-	for (i = 0; i < 3; i++)
-	{
-		switch(ssid[i])
-		{
-			case '0': ssid[i] = 'a'; break;
-			case '1': ssid[i] = 'b'; break;
-			case '2': ssid[i] = 'c'; break;
-			case '3': ssid[i] = 'd'; break;
-			case '4': ssid[i] = 'e'; break;
-			case '5': ssid[i] = 'f'; break;
-			case '6': ssid[i] = 'g'; break;
-			case '7': ssid[i] = 'h'; break;
-			case '8': ssid[i] = 'j'; break;
-			case '9': ssid[i] = 'k'; break;
-		}
-	}
-
-	for (i = 4; i < 9; i++)
-	{
-		switch(ssid[i])
-		{
-			case '0': ssid[i] = '1'; break;
-			case 'a': ssid[i] = '2'; break;
-			case 'b': ssid[i] = '3'; break;
-			case 'c': ssid[i] = '4'; break;
-			case 'd': ssid[i] = '5'; break;
-			case 'e': ssid[i] = '7'; break;
-			case 'f': ssid[i] = '8'; break;
-		}
-	}
-
-	sprintf(key, "%x%x%x%x-%c%c%c%c-%x%x%x%x-%x%x%x%x\n",
-		(ea[5] & 0xf0) >> 4,
-		(ea[4] & 0x0f),
-		(ea[4] & 0xf0) >> 4,
-		(ea[5] & 0x0f),
-
-		ssid[1],
-		ssid[4],
-		ssid[6],
-		ssid[8],
-
-		(ea[1] & 0xf0) >> 4,
-		(ea[0] & 0x0f),
-		(ea[0] & 0xf0) >> 4,
-		(ea[1] & 0x0f),
-
-		(ea[3] & 0xf0) >> 4,
-		(ea[2] & 0x0f),
-		(ea[2] & 0xf0) >> 4,
-		(ea[3] & 0x0f)
-	);
-	key[19] = 0x0;
-
-	for (i = 0; i < 19; i++)
-	{
-		if (key[i] != '-')
-		switch(key[i])
-		{
-			case '0': key[i] = '1'; break;
-			case 'a': key[i] = '2'; break;
-			case 'b': key[i] = '3'; break;
-			case 'c': key[i] = '4'; break;
-			case 'd': key[i] = '5'; break;
-			case 'e': key[i] = '7'; break;
-			case 'f': key[i] = '8'; break;
-			default:  if (key[i] > 'f') key[i] = '6'; break;
-		}
-	}
-
-	printf("swisscom ssid: %s (%d)\n", ssid, strlen(ssid));
-	printf("swisscom key:  %s (%d)\n", key, strlen(key));
-
-	return 0;
 }
 #endif
 

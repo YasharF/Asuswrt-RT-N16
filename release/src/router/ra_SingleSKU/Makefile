@@ -21,6 +21,16 @@ SKU_5G_SG   = "20130826_SG_5GHz_RFMD_SingleSKU.dat"
 SKU_2G_AU   = 
 SKU_5G_AU   = 
 endif
+ifeq ($(BUILD_NAME), RT-N11P)
+SKU_2G_FCC  = "20131101_FCC_2.4GHz_SingleSKU.dat"
+SKU_2G_CE   = "20131106_CE_2.4GHz_SingleSKU.dat"
+SKU_2G_SG   = "20130826_SG_2.4GHz_SingleSKU.dat"
+SKU_5G_FCC  =
+SKU_5G_CE   =
+SKU_5G_SG   =
+SKU_2G_AU   =
+SKU_5G_AU   =
+endif
 
 
 SKU_FILES  = $(BUILD_NAME)/$(SKU_2G_FCC) $(BUILD_NAME)/$(SKU_2G_CE) $(BUILD_NAME)/$(SKU_5G_FCC) $(BUILD_NAME)/$(SKU_5G_CE)
@@ -47,10 +57,18 @@ all clean:
 
 install: all
 	@install -d $(SKUDIR)
+ifneq ($(SKU_2G_FCC),)
 	@install $(BUILD_NAME)/$(SKU_2G_FCC) $(SKUDIR)/SingleSKU_FCC.dat
+endif
+ifneq ($(SKU_2G_CE),)
 	@install $(BUILD_NAME)/$(SKU_2G_CE)  $(SKUDIR)/SingleSKU_CE.dat
+endif
+ifneq ($(SKU_5G_FCC),)
 	@install $(BUILD_NAME)/$(SKU_5G_FCC) $(SKUDIR)/SingleSKU_5G_FCC.dat
+endif
+ifneq ($(SKU_5G_CE),)
 	@install $(BUILD_NAME)/$(SKU_5G_CE)  $(SKUDIR)/SingleSKU_5G_CE.dat
+endif
 ifneq ($(SKU_2G_SG),)
 	@install $(BUILD_NAME)/$(SKU_2G_SG) $(SKUDIR)/SingleSKU_SG.dat
 endif

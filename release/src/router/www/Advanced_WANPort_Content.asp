@@ -154,6 +154,7 @@ function form_show(v){
 function applyRule(){
 	if(wans_flag == 1){
 		document.form.wans_dualwan.value = document.form.wans_primary.value +" "+ document.form.wans_second.value;
+		document.form.wan_unit.value = "<% nvram_get("wan_unit"); %>";
 		if(document.form.wans_mode.value == "lb"){
 			if(document.form.wans_lb_ratio_0.value !=0 && document.form.wans_lb_ratio_1.value!=0)	// To check LoadBalance ratio value is zero or not, Jieming add 2012/08/01
 				document.form.wans_lb_ratio.value = document.form.wans_lb_ratio_0.value + ":" + document.form.wans_lb_ratio_1.value;
@@ -204,6 +205,7 @@ function applyRule(){
 		document.form.wan1_routing_isp.disabled = true;
 		document.form.wans_routing_rulelist.disabled =true;		
 		document.form.wans_dualwan.value = document.form.wans_primary.value + " none";
+		document.form.wan_unit.value = 0;
 		document.form.wandog_enable.value = "0";
 		
 	}	
@@ -215,9 +217,7 @@ function applyRule(){
 	else	
 		document.form.wans_lanport.disabled = true;
 
-	var tmp_pri_if = wans_dualwan_orig.split(" ")[0].toUpperCase();
-	var tmp_sec_if = wans_dualwan_orig.split(" ")[1].toUpperCase();	
-	if (tmp_pri_if == 'LAN' || tmp_sec_if == 'LAN') {
+	if (document.form.wans_primary.value == "lan" || document.form.wans_second.value == "lan") {
 		var port_conflict = false;
 		var lan_port_num = document.form.wans_lanport.value;
 		
@@ -237,9 +237,6 @@ function applyRule(){
 	if (document.form.wans_primary.value == "dsl") document.form.next_page.value = "Advanced_DSL_Content.asp";
 	if (document.form.wans_primary.value == "lan") document.form.next_page.value = "Advanced_WAN_Content.asp";
 	if (document.form.wans_primary.value == "usb") document.form.next_page.value = "Advanced_Modem_Content.asp";
-
-	if(wans_dualwan_orig.split(" ")[1] == "none")
-		document.form.wan_unit.value = 0;
 
 	showLoading();
 	document.form.submit();
@@ -786,7 +783,7 @@ function pullLANIPList(obj){
 								  <div>&nbsp;</div>
 								  <div class="formfonttitle"><#menu5_3#> - <#dualwan_port#></div>
 								  <div style="margin-left:5px;margin-top:10px;margin-bottom:10px"><img src="/images/New_ui/export/line_export.png"></div>
-					  			<div class="formfontdesc"><#Layer3Forwarding_x_ConnectionType_sectiondesc#></div>
+					  			<div class="formfontdesc"><#dualwan_desc#></div>
 									<table width="100%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3"  class="FormTable">
 										
 			  						<thead>
@@ -898,7 +895,7 @@ function pullLANIPList(obj){
 				<table width="100%" border="1" align="center" cellpadding="4" cellspacing="0" class="FormTable" style="margin-top:8px;">
 					<thead>
 					<tr>
-						<td colspan="2">Ping Time Watch Dog</td>
+						<td colspan="2"><#dualwan_pingtime_wd#></td>
 					</tr>
 					</thead>
 					<tr>
@@ -917,19 +914,19 @@ function pullLANIPList(obj){
 						</td>
 					</tr>
 					<tr>
-						<th><a class="hintstyle" href="javascript:void(0);" onClick="openHint(26,3);">Interval</a></th>
+						<th><a class="hintstyle" href="javascript:void(0);" onClick="openHint(26,3);"><#Interval#></a></th>
 						<td>
 		        		<input type="text" name="wandog_interval" class="input_3_table" maxlength="1" value="<% nvram_get("wandog_interval"); %>" onKeyPress="return is_number(this, event);" placeholder="5">&nbsp;&nbsp;<#Second#>
 						</td>
 					</tr>	
 					<tr>
-						<th><a class="hintstyle" href="javascript:void(0);" onClick="openHint(26,4);">Delay</a></th>
+						<th><a class="hintstyle" href="javascript:void(0);" onClick="openHint(26,4);"><#Delay#></a></th>
 						<td>
 		        		<input type="text" name="wandog_delay" class="input_3_table" maxlength="2" value="<% nvram_get("wandog_delay"); %>" onKeyPress="return is_number(this, event);" placeholder="0">&nbsp;&nbsp;<#Second#>
 						</td>
 					</tr>
 					<tr>
-						<th><a class="hintstyle" href="javascript:void(0);" onClick="openHint(26,5);">Fail Count</a></th>
+						<th><a class="hintstyle" href="javascript:void(0);" onClick="openHint(26,5);"><#dualwan_pingtime_fc#></a></th>
 						<td>
 		        		<input type="text" name="wandog_maxfail" class="input_3_table" maxlength="2" value="<% nvram_get("wandog_maxfail"); %>" onKeyPress="return is_number(this, event);" placeholder="12">
 						</td>
@@ -957,7 +954,7 @@ function pullLANIPList(obj){
 				<!-- ----------Routing Rules Table  ---------------- -->
 				<table width="100%" border="1" align="center" cellpadding="4" cellspacing="0" class="FormTable_table" style="margin-top:8px;" id="Routing_rules_table">
 			  	<thead>
-			  		<tr><td colspan="4" id="Routing_table">Routing rules&nbsp;(<#List_limit#>&nbsp;32)</td></tr>
+			  		<tr><td colspan="4" id="Routing_table"><#dualwan_routing_rule_list#>&nbsp;(<#List_limit#>&nbsp;32)</td></tr>
 			  	</thead>
 			  
 			  	<tr>

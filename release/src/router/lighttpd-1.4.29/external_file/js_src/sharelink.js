@@ -835,7 +835,7 @@ $(document).ready(function(){
 		g_show_modal = 1;
 		
 		var sAgent = navigator.userAgent.toLowerCase();
-    	var isIE = (sAgent.indexOf("msie")!=-1); //IE
+    	var isIE = isIE(); //IE
    		var getInternetExplorerVersion = function(){
 		   var rv = -1; // Return value assumes failure.
 		   if (navigator.appName == 'Microsoft Internet Explorer')

@@ -137,7 +137,7 @@ static int rctest_main(int argc, char *argv[])
 					system("echo 2 > /proc/sys/net/ipv4/conf/all/force_igmp_version");
 #endif
 
-#if defined(RTN14U) || defined(RTAC52U) || defined(RTAC51U)
+#if defined(RTN14U) || defined(RTAC52U) || defined(RTAC51U) || defined(RTN11P)
 					if (!(!nvram_match("switch_wantag", "none")&&!nvram_match("switch_wantag", "")))
 #endif
 					{
@@ -178,6 +178,9 @@ static int rctest_main(int argc, char *argv[])
 #ifdef RTCONFIG_BCMFA
 		else if (strcmp(argv[1], "fa_rev") == 0) {
 			_dprintf("(%d) done.\n", get_fa_rev());
+		}
+		else if (strcmp(argv[1], "fa_dump") == 0) {
+			_dprintf("(%d) done.\n", get_fa_dump());
 		}
 #endif
 		else {

@@ -582,7 +582,7 @@ setCountryCode_2G(const char *cc)
 	else if (!strcasecmp(cc, "FR")) ;
 	else if (!strcasecmp(cc, "GB")) ;
 	else if (!strcasecmp(cc, "GE")) ;
-#if defined(RTN14U) || defined(RTAC52U) || defined(RTAC51U)
+#if defined(RTN14U) || defined(RTAC52U) || defined(RTAC51U) || defined(RTN11P)
 	else if (!strcasecmp(cc, "EU")) ;
 #endif
 	else if (!strcasecmp(cc, "GR")) ;
@@ -666,7 +666,7 @@ setCountryCode_2G(const char *cc)
 	memset(&CC[1], toupper(cc[1]), 1);
 	memset(&CC[2], 0, 1);
 
-#if defined(RTN14U)
+#if defined(RTN14U) || defined(RTN11P)
 	FWrite(CC, OFFSET_COUNTRY_CODE, 2);
 #else
 #define MTD_SIZE_FACTORY 0x10000
@@ -878,7 +878,7 @@ getPIN()
 int
 GetPhyStatus(void)
 {
-#if defined(RTN14U) || defined(RTAC52U) || defined(RTAC51U)
+#if defined(RTN14U) || defined(RTAC52U) || defined(RTAC51U) || defined(RTN11P)
 	ATE_mt7620_esw_port_status();
 	return 1;
 #else
@@ -1510,6 +1510,21 @@ int gen_ralink_config(int band, int is_iNIC)
 
 	//CountryCode
 	str = nvram_safe_get(strcat_r(prefix, "country_code", tmp));
+#ifdef CE_ADAPTIVITY
+	if (nvram_match("reg_spec", "CE"))
+	{
+		fprintf(fp, "CountryCode=FR\n");
+		fprintf(fp, "EDCCA_AP_STA_TH=255\n");
+		fprintf(fp, "EDCCA_AP_AP_TH=255\n");
+		fprintf(fp, "EDCCA_FALSE_CCA_TH=3000\n");
+		fprintf(fp, "TxBurst=0\n");
+		fprintf(fp, "HT_RDG=0\n");
+		fprintf(fp, "EDCCA_ED_TH=90\n");
+		fprintf(fp, "EDCCA_BLOCK_CHECK_TH=2\n");
+		fprintf(fp, "EDCCA_AP_RSSI_TH=-80\n");
+	}
+	else
+#endif	/* CE_ADAPTIVITY */
 	if (str && strlen(str))
 	{
 		fprintf(fp, "CountryCode=%s\n", str);
@@ -1823,6 +1838,11 @@ int gen_ralink_config(int band, int is_iNIC)
 
 	//TxBurst
 	str = nvram_safe_get(strcat_r(prefix, "frameburst", tmp));
+#ifdef CE_ADAPTIVITY
+	if (nvram_match("reg_spec", "CE"))
+		;
+	else
+#endif	/* CE_ADAPTIVITY */
 	if (str && strlen(str))
 //		fprintf(fp, "TxBurst=%d\n", atoi(str));
 		fprintf(fp, "TxBurst=%d\n", strcmp(str, "off") ? 1 : 0);
@@ -1976,7 +1996,7 @@ int gen_ralink_config(int band, int is_iNIC)
 			if (atoi(str) == 0)
 			{
 				fprintf(fp, "AutoChannelSelect=%d\n", 2);
-				if(band && atoi(nvram_safe_get(strcat_r(prefix, "bw", tmp))) > 0)
+				if(band && nvram_get_int(strcat_r(prefix, "bw", tmp)) > 0)
 					fprintf(fp, "AutoChannelSkipList=%d\n", 165); // skip 165 in A band when bw setting to 20/40Mhz or 40Mhz.
 			}
 			else
@@ -2078,7 +2098,7 @@ int gen_ralink_config(int band, int is_iNIC)
 	{
 		fprintf(fp, "GreenAP=%d\n", 1);
 	}
-#elif defined(RTN14U) || defined(RTAC52U) || defined(RTAC51U)
+#elif defined(RTN14U) || defined(RTAC52U) || defined(RTAC51U) || defined(RTN11P)
 	/// MT7620 GreenAP will impact TSSI, force to disable GreenAP here..
 	//  MT7620 GreenAP cause bad site survey result on RTAC52 2G.
 	{
@@ -2604,6 +2624,11 @@ int gen_ralink_config(int band, int is_iNIC)
 
 	//HT_RDG
 	str = nvram_safe_get(strcat_r(prefix, "HT_RDG", tmp));
+#ifdef CE_ADAPTIVITY
+	if (nvram_match("reg_spec", "CE"))
+		;
+	else
+#endif	/* CE_ADAPTIVITY */
 	if (str && strlen(str))
 		fprintf(fp, "HT_RDG=%d\n", atoi(str));
 	else
@@ -2645,7 +2670,7 @@ int gen_ralink_config(int band, int is_iNIC)
 		fprintf(fp, "HT_MpduDensity=%d\n", 5);
 	}
 
-	int Channel = atoi(nvram_safe_get(strcat_r(prefix, "channel", tmp)));
+	int Channel = nvram_get_int(strcat_r(prefix, "channel", tmp));
 	int EXTCHA = 0;
 	int EXTCHA_MAX = 0;
 	int HTBW_MAX = 1;
@@ -3017,9 +3042,9 @@ int gen_ralink_config(int band, int is_iNIC)
 	if (str && strlen(str))
 	{
 		{
-			if ((atoi(nvram_safe_get(strcat_r(prefix, "nmode_x", tmp))) == 0))
+			if ((nvram_get_int(strcat_r(prefix, "nmode_x", tmp)) == 0))
 				fprintf(fp, "WdsPhyMode=%s\n", "HTMIX");
-			else if ((atoi(nvram_safe_get(strcat_r(prefix, "nmode_x", tmp))) == 1))
+			else if ((nvram_get_int(strcat_r(prefix, "nmode_x", tmp)) == 1))
 				fprintf(fp, "WdsPhyMode=%s\n", "GREENFIELD");
 			else
 				fprintf(fp, "WdsPhyMode=\n");
@@ -3044,7 +3069,7 @@ int gen_ralink_config(int band, int is_iNIC)
 	)
 	{
 #if 0
-		num = atoi(nvram_safe_get(strcat_r(prefix, "wdsnum_x", tmp)));
+		num = nvram_get_int(strcat_r(prefix, "wdsnum_x", tmp));
 		for (i=0;i<num;i++)
 			sprintf(list, "%s;%s", list, mac_conv(strcat_r(prefix, "wdslist_x", tmp), i, macbuf));
 #else
@@ -3212,8 +3237,8 @@ int gen_ralink_config(int band, int is_iNIC)
 		{   
 			char prekey[16];
 			snprintf(prekey, sizeof(prekey), "key%d", p);	
-		  	if(atoi(nvram_safe_get("wlc_key"))==p)
-	     			nvram_set(strcat_r(prefix, prekey, tmp), nvram_safe_get("wlc_wep_key"));		
+			if(nvram_get_int("wlc_key")==p)
+				nvram_set(strcat_r(prefix, prekey, tmp), nvram_safe_get("wlc_wep_key"));
 		}
 
 		nvram_set(strcat_r(prefix, "crypto", tmp), nvram_safe_get("wlc_crypto"));
@@ -3276,12 +3301,12 @@ int gen_ralink_config(int band, int is_iNIC)
 			//KeyType (0 -> Hex, 1->Ascii)
 			for(p = 1 ; p <= 4; p++)
 			{
-		  		if(atoi(nvram_safe_get("wlc_key"))==p)
+				if(nvram_get_int("wlc_key")==p)
 				{   
 				   	if((strlen(nvram_safe_get("wlc_wep_key"))==5)||(strlen(nvram_safe_get("wlc_wep_key"))==13))
-	     					fprintf(fp, "ApCliKey%dType=1\n",p);
+						fprintf(fp, "ApCliKey%dType=1\n",p);
 					else if((strlen(nvram_safe_get("wlc_wep_key"))==10)||(strlen(nvram_safe_get("wlc_wep_key"))==26))
-	     					fprintf(fp, "ApCliKey%dType=0\n",p);
+						fprintf(fp, "ApCliKey%dType=0\n",p);
 					else
 					   	fprintf(fp, "ApCliKey%dType=\n",p);
 				}
@@ -3293,7 +3318,7 @@ int gen_ralink_config(int band, int is_iNIC)
 			//KeyStr
 			for(p = 1 ; p <= 4; p++)
 			{   
-		  		if(atoi(nvram_safe_get("wlc_key"))==p)
+				if(nvram_get_int("wlc_key")==p)
 					fprintf(fp, "ApCliKey%dStr=%s\n",p,nvram_safe_get("wlc_wep_key"));
 				else
 					fprintf(fp, "ApCliKey%dStr=\n",p); 
@@ -3455,8 +3480,8 @@ next_mrate:
 		break;
 	case 20:
 		/* Choose multicast rate base on mode, encryption type, and IPv6 is enabled or not. */
-                __choose_mrate(prefix, &mcast_phy, &mcast_mcs);
-                break;
+		__choose_mrate(prefix, &mcast_phy, &mcast_mcs);
+		break;
 	}
 	/* No CCK for 5Ghz band */
 	if (band && mcast_phy == 1)
@@ -3975,13 +4000,13 @@ getSiteSurvey(int band,char* ofile)
 					fprintf(fp, "\"%d\",", atoi(ssap->SiteSurvey[i].channel));
 
 					if(strstr(ssap->SiteSurvey[i].authmode,"WPA-Enterprise"))
-						fprintf(fp, "\"%s\",","WPA");
+						fprintf(fp, "\"%s\",","WPA-Enterprise");
 					else if(strstr(ssap->SiteSurvey[i].authmode,"WPA2-Enterprise"))
-						fprintf(fp, "\"%s\",","WPA2");
+						fprintf(fp, "\"%s\",","WPA2-Enterprise");
 					else if(strstr(ssap->SiteSurvey[i].authmode,"WPA-Personal"))
-						fprintf(fp, "\"%s\",","WPA-PSK");
+						fprintf(fp, "\"%s\",","WPA-Personal");
 					else if(strstr(ssap->SiteSurvey[i].authmode,"WPA2-Personal"))
-						fprintf(fp, "\"%s\",","WPA2-PSK");
+						fprintf(fp, "\"%s\",","WPA2-Personal");
 					else if(strstr(ssap->SiteSurvey[i].authmode,"Open System"))
 						fprintf(fp, "\"%s\",","Open System");
 					else 
@@ -4043,7 +4068,7 @@ getSiteSurvey(int band,char* ofile)
 #endif
 					fprintf(fp, "\"%d\",", atoi(ssap->SiteSurvey[i].signal));
 					fprintf(fp, "\"%s\",", ssap->SiteSurvey[i].bssid);
-				        if(strcmp(ssap->SiteSurvey[i].wmode,"11b    ")==0)
+					if(strcmp(ssap->SiteSurvey[i].wmode,"11b    ")==0)
 						fprintf(fp, "\"%s\",", "b");
 					else if(strcmp(ssap->SiteSurvey[i].wmode,"11a    ")==0)   
 						fprintf(fp, "\"%s\",", "a");
@@ -4184,7 +4209,7 @@ int site_survey_for_channel(int n, const char *wif, int *HT_EXT)
 	char data[8192];
 	struct iwreq wrq;
 	SSA *ssap;
-	int chk_hidden_ap = atoi(nvram_safe_get(strcat_r(prefix, "check_ha", tmp)));
+	int chk_hidden_ap = nvram_get_int(strcat_r(prefix, "check_ha", tmp));
 	int channellistnum, commonchannel, centralchannel, ht_extcha = 1;
 	int wep = 0;
 
@@ -5552,7 +5577,7 @@ ate_run_in(void)
 }
 #endif // RTN65U
 
-#if !defined(RTN14U) && !defined(RTAC52U) && !defined(RTAC51U)
+#if !defined(RTN14U) && !defined(RTAC52U) && !defined(RTAC51U) && !defined(RTN11P)
 int Set_SwitchPort_LEDs(const char *group, const char *action)
 {
 	int groupNo;
@@ -5896,11 +5921,11 @@ void rssi_check_unit(int unit)
 	int hdrLen;
 
 	snprintf(prefix, sizeof(prefix), "wl%d_", unit);
-	if (!(rssi_th= atoi(nvram_safe_get(strcat_r(prefix, "user_rssi", tmp)))))
+	if (!(rssi_th= nvram_get_int(strcat_r(prefix, "user_rssi", tmp))))
 		return;
 	//dbg("rssi_th=%d\n",rssi_th);
 
-	if (!(xTxR = atoi(nvram_safe_get(strcat_r(prefix, "HT_RxStream", tmp)))))
+	if (!(xTxR = nvram_get_int(strcat_r(prefix, "HT_RxStream", tmp))))
 		return;
 
 	if(xTxR > xR_MAX)

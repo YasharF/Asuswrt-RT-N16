@@ -456,7 +456,9 @@ struct nvram_tuple router_defaults[] = {
 
 #ifdef RTCONFIG_BCMWL6
 	{ "acs_ifnames", "", 0 },
-
+#ifdef RTAC68U
+	{ "acs_dfs", "0", 0},			/* disable DFS channels for acsd by default */
+#endif
 	{ "wl_wet_tunnel", "0", 0  },		/* Disable wet tunnel */
 
 	{ "dpsta_ifnames", "", 0  },
@@ -698,7 +700,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "upnp_clean_threshold", "20" },
 
 #ifdef RTCONFIG_DUALWAN // RTCONFIG_DUALWAN
-	{ "wans_mode", "fo" }, 		// off/failover/loadbance/routing(off/fo/lb/rt)
+	{ "wans_mode", "fo" }, 		// off/failover/failback/loadbance(off/fo/fb/lb)
 #ifdef RTCONFIG_DSL
 	{ "wans_dualwan", "dsl none"},
 #else
@@ -718,6 +720,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "wandog_interval", "5" },
 	{ "wandog_maxfail", "12" },
 	{ "wandog_delay", "0" },
+	{ "wandog_fb_count", "4" },
 #endif // RTCONFIG_DUALWAN
 
 #ifdef RTCONFIG_DSL
@@ -1054,7 +1057,7 @@ struct nvram_tuple router_defaults[] = {
 #ifdef RTCONFIG_USB
 	{ "acc_num", "1"},
 	{ "acc_list", "admin>admin"},
-	{ "st_samba_mode", "1"},
+	{ "st_samba_mode", "2"},
 	{ "st_ftp_mode", "2"},
 	{ "enable_ftp", "0"},
 	{ "enable_samba", "1"},
@@ -1170,6 +1173,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "http_enable", "0"}, // 0: http, 1: https, 2: both
 	{ "http_client", "0"},
 	{ "http_clientlist", "0"},
+	{ "http_autologout", "30"},
 
 	{ "temp_lang", ""},
 	{ "wollist", ""},
@@ -1344,7 +1348,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "vpn_server_pdns",		"0"		},
 	{ "vpn_server_rgw",		"0"		},
 	{ "vpn_server_custom",		""		},
-	{ "vpn_server_igncrt",		"1"		},
+	{ "vpn_server_igncrt",		"0"		},
 	{ "vpn_server_clientlist",	""		},
 	{ "vpn_server1_poll",		"0"		},
 	{ "vpn_server1_if",		"tun"		},
@@ -1371,7 +1375,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "vpn_server1_pdns",		"0"		},
 	{ "vpn_server1_rgw",		"0"		},
 	{ "vpn_server1_custom",		""		},
-	{ "vpn_server1_igncrt",		"1"		},
+	{ "vpn_server1_igncrt",		"0"		},
 	{ "vpn_server1_state",		"0"		},
 	{ "vpn_server1_errno",		"0"		},
 	{ "vpn_crt_server1_static",	""		},
@@ -1407,7 +1411,7 @@ struct nvram_tuple router_defaults[] = {
 	{ "vpn_server2_pdns",		"0"		},
 	{ "vpn_server2_rgw",		"0"		},
 	{ "vpn_server2_custom",		""		},
-	{ "vpn_server2_igncrt",		"1"		},
+	{ "vpn_server2_igncrt",		"0"		},
 	{ "vpn_server2_state",		"0"		},
 	{ "vpn_server2_errno",		"0"		},
 	{ "vpn_crt_server2_static",	""		},
@@ -1599,6 +1603,8 @@ struct nvram_tuple router_defaults[] = {
 	{ "ipv6_dhcp_lifetime", "86400"		},	// valid lifetimes of IPv6 prefix in seconds
 	{ "ipv6_dhcp_start",	""		},	// start of address pool
 	{ "ipv6_dhcp_end",	""		},	// end of address pool
+	{ "ipv6_fw_enable",	"1"		},	// Default FORWARD table to DROP packets
+	{ "ipv6_fw_rulelist",	""		},	// IPv6 allowed forward rules
 	{ "ipv6_ra_conf",	"noneset"	},	// address configuration from WAN router advertisement
 
 	{ "web_redirect", 	"1"		},	// Only NOLINK is redirected in default, it is overwrited in init_nvram

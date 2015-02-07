@@ -202,17 +202,17 @@ int main(int argc, char *argv[])
 	char **account_list;
 	int dup, same_m_pt = 0;
 	char unique_share_name[PATH_MAX];
-	
+
 	unlink("/var/log.samba");
-	
+
 	if ((fp=fopen(SAMBA_CONF, "r"))) {
 		fclose(fp);
 		unlink(SAMBA_CONF);
 	}
-	
+
 	if((fp = fopen(SAMBA_CONF, "w")) == NULL)
 		goto confpage;
-	
+
 	fprintf(fp, "[global]\n");
 	if (nvram_safe_get("st_samba_workgroup"))
 		fprintf(fp, "workgroup = %s\n", nvram_safe_get("st_samba_workgroup"));
@@ -234,9 +234,17 @@ int main(int argc, char *argv[])
 	fprintf(fp, "log file = /var/log.samba\n");
 	fprintf(fp, "log level = 0\n");
 	fprintf(fp, "max log size = 5\n");
-	
-	/* share mode */
-	if (!strcmp(nvram_safe_get("st_samba_mode"), "1") || !strcmp(nvram_safe_get("st_samba_mode"), "3")) {
+
+	// account mode
+	if(nvram_match("st_samba_mode", "2") || nvram_match("st_samba_mode", "4")
+			|| (nvram_match("st_samba_mode", "1") && nvram_get("st_samba_force_mode") == NULL)
+			){
+		fprintf(fp, "security = USER\n");
+		fprintf(fp, "guest ok = no\n");
+		fprintf(fp, "map to guest = Bad User\n");
+	}
+	// share mode
+	else if (nvram_match("st_samba_mode", "1") || nvram_match("st_samba_mode", "3")) {
 #ifdef RTCONFIG_TUXERA
 		fprintf(fp, "auth methods = guest\n");
 		fprintf(fp, "guest account = admin\n");
@@ -246,27 +254,22 @@ int main(int argc, char *argv[])
 		fprintf(fp, "security = SHARE\n");
 		fprintf(fp, "guest only = yes\n");
 	}
-	else if (!strcmp(nvram_safe_get("st_samba_mode"), "2") || !strcmp(nvram_safe_get("st_samba_mode"), "4")) {
-		fprintf(fp, "security = USER\n");
-		fprintf(fp, "guest ok = no\n");
-		fprintf(fp, "map to guest = Bad User\n");
-	}
 	else{
 		usb_dbg("samba mode: no\n");
 		goto confpage;
 	}
-	
+
 	fprintf(fp, "encrypt passwords = yes\n");
 	fprintf(fp, "pam password change = no\n");
 	fprintf(fp, "null passwords = yes\n");		// ASUS add
-	
+
 	fprintf(fp, "force directory mode = 0777\n");
 	fprintf(fp, "force create mode = 0777\n");
-	
+
 	/* max users */
 	if (strcmp(nvram_safe_get("st_max_user"), "") != 0)
 		fprintf(fp, "max connections = %s\n", nvram_safe_get("st_max_user"));
-	
+
 	/* remove socket options due to NIC compatible issue */
 #ifndef RTCONFIG_BCMARM
 	fprintf(fp, "socket options = TCP_NODELAY SO_KEEPALIVE SO_RCVBUF=65536 SO_SNDBUF=65536\n");
@@ -280,10 +283,8 @@ int main(int argc, char *argv[])
 	fprintf(fp, "strict allocate = No\n");		// ASUS add
 //	fprintf(fp, "mangling method = hash2\n");	// ASUS add
 	fprintf(fp, "wide links = no\n"); 		// ASUS add
-#ifndef RTCONFIG_BCMARM
-#ifndef RTCONFIG_TUXERA
 	fprintf(fp, "bind interfaces only = yes\n");	// ASUS add
-#endif
+#ifndef RTCONFIG_BCMARM
 	fprintf(fp, "interfaces = lo br0 %s\n", (is_routing_enabled() && nvram_get_int("smbd_wanac")) ? nvram_safe_get("wan0_ifname") : "");
 #else
 	fprintf(fp, "interfaces = br0 %s\n", (is_routing_enabled() && nvram_get_int("smbd_wanac")) ? nvram_safe_get("wan0_ifname") : "");
@@ -311,12 +312,12 @@ int main(int argc, char *argv[])
 	}
 
 	/* share */
-	if (!strcmp(nvram_safe_get("st_samba_mode"), "0") || !strcmp(nvram_safe_get("st_samba_mode"), "")) {
+	if (nvram_match("st_samba_mode", "0") || !strcmp(nvram_safe_get("st_samba_mode"), "")) {
 		;
 	}
-	else if (!strcmp(nvram_safe_get("st_samba_mode"), "1")) {
+	else if (nvram_match("st_samba_mode", "1") && nvram_match("st_samba_force_mode", "1")) {
 		usb_dbg("samba mode: share\n");
-		
+
 		for (follow_disk = disks_info; follow_disk != NULL; follow_disk = follow_disk->next) {
 			for (follow_partition = follow_disk->partitions; follow_partition != NULL; follow_partition = follow_partition->next) {
 				if (follow_partition->mount_point == NULL)
@@ -329,7 +330,7 @@ int main(int argc, char *argv[])
 						sprintf(unique_share_name, "%s(%d)", follow_partition->mount_point, ++same_m_pt);
 				} while (dup);
 				mount_folder = strrchr(unique_share_name, '/')+1;
-				
+
 				fprintf(fp, "[%s]\n", mount_folder);
 				fprintf(fp, "comment = %s's %s\n", follow_disk->tag, mount_folder);
 				fprintf(fp, "veto files = /.__*.txt*/asus_lighttpdpasswd/\n");
@@ -341,14 +342,14 @@ int main(int argc, char *argv[])
 			}
 		}
 	}
-	else if (!strcmp(nvram_safe_get("st_samba_mode"), "2")) {
+	else if (nvram_match("st_samba_mode", "2")) {
 		usb_dbg("samba mode: share\n");
-		
+
 		for (follow_disk = disks_info; follow_disk != NULL; follow_disk = follow_disk->next) {
 			for (follow_partition = follow_disk->partitions; follow_partition != NULL; follow_partition = follow_partition->next) {
 				if (follow_partition->mount_point == NULL)
 					continue;
-				
+
 				strcpy(unique_share_name, follow_partition->mount_point);
 				do {
 					dup = check_mount_point_icase(disks_info, follow_partition, follow_disk, follow_partition->partition_order, unique_share_name);
@@ -356,7 +357,7 @@ int main(int argc, char *argv[])
 						sprintf(unique_share_name, "%s(%d)", follow_partition->mount_point, ++same_m_pt);
 				} while (dup);
 				mount_folder = strrchr(unique_share_name, '/')+1;
-				
+
 				node_layer = get_permission(NULL, follow_partition->mount_point, NULL, "cifs");
 				if(node_layer == 3){
 					fprintf(fp, "[%s]\n", mount_folder);
@@ -374,12 +375,12 @@ int main(int argc, char *argv[])
 						free_2_dimension_list(&sh_num, &folder_list);
 						continue;
 					}
-					
+
 					for (n = 0; n < sh_num; ++n){
 						samba_right = get_permission(NULL, follow_partition->mount_point, folder_list[n], "cifs");
 						if (samba_right < 0 || samba_right > 3)
 							samba_right = DEFAULT_SAMBA_RIGHT;
-						
+
 						if(samba_right > 0){
 							int count = get_list_strings_count(folder_list, sh_num, folder_list[n]);
 							if (count <= 1)
@@ -397,38 +398,38 @@ int main(int argc, char *argv[])
 							fprintf(fp, "fake directory create times = yes\n");
 						}
 					}
-					
+
 					free_2_dimension_list(&sh_num, &folder_list);
 				}
 			}
 		}
 	}
-	else if (!strcmp(nvram_safe_get("st_samba_mode"), "3")) {
+	else if (nvram_match("st_samba_mode", "3")) {
 		usb_dbg("samba mode: user\n");
-		
+
 		// get the account list
 		if (get_account_list(&acc_num, &account_list) < 0) {
 			usb_dbg("Can't read the account list.\n");
 			free_2_dimension_list(&acc_num, &account_list);
 			goto confpage;
 		}
-		
+
 		for (follow_disk = disks_info; follow_disk != NULL; follow_disk = follow_disk->next) {
 			for (follow_partition = follow_disk->partitions; follow_partition != NULL; follow_partition = follow_partition->next) {
 				if (follow_partition->mount_point == NULL)
 					continue;
-				
+
 				mount_folder = strrchr(follow_partition->mount_point, '/')+1;
-				
+
 				// 1. get the folder list
 				if (get_folder_list(follow_partition->mount_point, &sh_num, &folder_list) < 0) {
 					free_2_dimension_list(&sh_num, &folder_list);
 				}
-				
+
 				// 2. start to get every share
 				for (n = -1; n < sh_num; ++n) {
 					int i, first;
-					
+
 					if(n == -1){
 						fprintf(fp, "[%s]\n", mount_folder);
 						fprintf(fp, "comment = %s's %s\n", follow_disk->tag, mount_folder);
@@ -458,11 +459,11 @@ int main(int argc, char *argv[])
 							first = 0;
 						else
 							fprintf(fp, ", ");
-						
+
 						fprintf(fp, "%s", account_list[i]);
 					}
 					fprintf(fp, "\n");
-					
+
 					fprintf(fp, "invalid users = ");
 					first = 1;
 					for (i = 0; i < acc_num; ++i) {
@@ -477,11 +478,11 @@ int main(int argc, char *argv[])
 							first = 0;
 						else
 							fprintf(fp, ", ");
-						
+
 						fprintf(fp, "%s", account_list[i]);
 					}
 					fprintf(fp, "\n");
-					
+
 					fprintf(fp, "read list = ");
 					first = 1;
 					for (i = 0; i < acc_num; ++i) {
@@ -491,16 +492,16 @@ int main(int argc, char *argv[])
 							samba_right = get_permission(account_list[i], follow_partition->mount_point, folder_list[n], "cifs");
 						if (samba_right < 1)
 							continue;
-						
+
 						if (first == 1)
 							first = 0;
 						else
 							fprintf(fp, ", ");
-						
+
 						fprintf(fp, "%s", account_list[i]);
 					}
 					fprintf(fp, "\n");
-					
+
 					fprintf(fp, "write list = ");
 					first = 1;
 					for (i = 0; i < acc_num; ++i) {
@@ -510,49 +511,51 @@ int main(int argc, char *argv[])
 							samba_right = get_permission(account_list[i], follow_partition->mount_point, folder_list[n], "cifs");
 						if (samba_right < 2)
 							continue;
-						
+
 						if (first == 1)
 							first = 0;
 						else
 							fprintf(fp, ", ");
-						
+
 						fprintf(fp, "%s", account_list[i]);
 					}
 					fprintf(fp, "\n");
 				}
-				
+
 				free_2_dimension_list(&sh_num, &folder_list);
 			}
 		}
-		
+
 		free_2_dimension_list(&acc_num, &account_list);
 	}
-	else if (!strcmp(nvram_safe_get("st_samba_mode"), "4")) {
+	else if (nvram_match("st_samba_mode", "4")
+			|| (nvram_match("st_samba_mode", "1") && nvram_get("st_samba_force_mode") == NULL)
+			) {
 		usb_dbg("samba mode: user\n");
-		
+
 		// get the account list
 		if (get_account_list(&acc_num, &account_list) < 0) {
 			usb_dbg("Can't read the account list.\n");
 			free_2_dimension_list(&acc_num, &account_list);
 			goto confpage;
 		}
-		
+
 		for (follow_disk = disks_info; follow_disk != NULL; follow_disk = follow_disk->next) {
 			for (follow_partition = follow_disk->partitions; follow_partition != NULL; follow_partition = follow_partition->next) {
 				if (follow_partition->mount_point == NULL)
 					continue;
-				
+
 				mount_folder = strrchr(follow_partition->mount_point, '/')+1;
-				
+
 				// 1. get the folder list
 				if (get_folder_list(follow_partition->mount_point, &sh_num, &folder_list) < 0) {
 					free_2_dimension_list(&sh_num, &folder_list);
 				}
-				
+
 				// 2. start to get every share
 				for (n = 0; n < sh_num; ++n) {
 					int i, first;
-					
+
 					int count = get_list_strings_count(folder_list, sh_num, folder_list[n]);
 					if (count <= 1)
 						fprintf(fp, "[%s]\n", folder_list[n]);
@@ -563,7 +566,7 @@ int main(int argc, char *argv[])
 
 					fprintf(fp, "dos filetimes = yes\n");
 					fprintf(fp, "fake directory create times = yes\n");
-					
+
 					fprintf(fp, "valid users = ");
 					first = 1;
 					for (i = 0; i < acc_num; ++i) {
@@ -575,11 +578,11 @@ int main(int argc, char *argv[])
 							first = 0;
 						else
 							fprintf(fp, ", ");
-						
+
 						fprintf(fp, "%s", account_list[i]);
 					}
 					fprintf(fp, "\n");
-					
+
 					fprintf(fp, "invalid users = ");
 					first = 1;
 					for (i = 0; i < acc_num; ++i) {
@@ -591,51 +594,51 @@ int main(int argc, char *argv[])
 							first = 0;
 						else
 							fprintf(fp, ", ");
-						
+
 						fprintf(fp, "%s", account_list[i]);
 					}
 					fprintf(fp, "\n");
-					
+
 					fprintf(fp, "read list = ");
 					first = 1;
 					for (i = 0; i < acc_num; ++i) {
 						samba_right = get_permission(account_list[i], follow_partition->mount_point, folder_list[n], "cifs");
 						if (samba_right < 1)
 							continue;
-						
+
 						if (first == 1)
 							first = 0;
 						else
 							fprintf(fp, ", ");
-						
+
 						fprintf(fp, "%s", account_list[i]);
 					}
 					fprintf(fp, "\n");
-					
+
 					fprintf(fp, "write list = ");
 					first = 1;
 					for (i = 0; i < acc_num; ++i) {
 						samba_right = get_permission(account_list[i], follow_partition->mount_point, folder_list[n], "cifs");
 						if (samba_right < 2)
 							continue;
-						
+
 						if (first == 1)
 							first = 0;
 						else
 							fprintf(fp, ", ");
-						
+
 						fprintf(fp, "%s", account_list[i]);
 					}
 					fprintf(fp, "\n");
 				}
-				
+
 				free_2_dimension_list(&sh_num, &folder_list);
 			}
 		}
-		
+
 		free_2_dimension_list(&acc_num, &account_list);
 	}
-	
+
 confpage:
 	if(fp != NULL)
 		fclose(fp);

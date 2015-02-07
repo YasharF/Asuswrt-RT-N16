@@ -1025,9 +1025,9 @@ function cal_panel_block(){
 												</div>
                 				<div style="margin-left:5px;margin-top:10px;margin-bottom:10px"><img src="/images/New_ui/export/line_export.png"></div>
 								<div class="formfontdesc">
-									<p>You can customize defaulted settings for OpenVPN Server. Different configuration makes different contents of ovpn file and connecting type.<br>
-									<p>If you have your own required key, please click yellow word for modification.<br>
-									<p>In case of problem, see the <a style="font-weight: bolder;text-decoration:underline;" class="hyperlink" href="Main_LogStatus_Content.asp">System Log</a> for any error message related to OpenVPN.
+									<p><#vpn_openvpn_desc3#><br>
+									<p><#vpn_openvpn_hint1#><br>
+									<p><#vpn_openvpn_hint2#>
 								</div>
 
 								<table width="100%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3"  class="FormTable">

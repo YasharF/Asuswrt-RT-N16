@@ -1,4 +1,4 @@
-String.prototype.toArray = function(){
+﻿String.prototype.toArray = function(){
 	var ret = eval(this.toString());
 	if(Object.prototype.toString.apply(ret) === '[object Array]')
 		return ret;
@@ -185,7 +185,9 @@ var notice_acpw_is_default = '<% check_acpw(); %>';
 var noti_auth_mode_2g = '<% nvram_get("wl0_auth_mode_x"); %>';
 var noti_auth_mode_5g = '<% nvram_get("wl1_auth_mode_x"); %>';
 var st_ftp_mode = '<% nvram_get("st_ftp_mode"); %>';
+var st_ftp_force_mode = '<% nvram_get("st_ftp_force_mode"); %>';
 var st_samba_mode = '<% nvram_get("st_samba_mode"); %>';
+var st_samba_force_mode = '<% nvram_get("st_samba_force_mode"); %>';
 var enable_samba = '<% nvram_get("enable_samba"); %>';
 var enable_ftp = '<% nvram_get("enable_ftp"); %>';
 
@@ -239,31 +241,36 @@ function genUsbDevices(){
 		tmpDisk.deviceType = "storage";
 		tmpDisk.mountNumber = foreign_disk_total_mounted_number()[i];
 
-		for(var j=0; j<tmpDisk.mountNumber; j++){
-			var tmpParts = new newPartition();
-			tmpParts.partName = pool_names()[allPartIndex];
-			tmpParts.mountPoint = pool_devices()[allPartIndex];
-			if(tmpParts.mountPoint == apps_dev){
-				tmpParts.isAppDev = true;
-				tmpDisk.hasAppDev = true;
-			}
-			if(tmpParts.mountPoint == tm_device_name){
-				tmpParts.isTM = true;
-				tmpDisk.hasTM = true;
-			}		
-			tmpParts.size = parseInt(pool_kilobytes()[allPartIndex] + pool_kilobytes_in_use()[allPartIndex]);
-			tmpParts.used = parseInt(pool_kilobytes_in_use()[allPartIndex]);
-			tmpParts.format = pool_types()[allPartIndex];
-			if(apps_fsck_ret.length > 0) {
-				tmpParts.fsck = apps_fsck_ret[allPartIndex][1];
-				if(apps_fsck_ret[allPartIndex][1] == 1){
-					tmpDisk.hasErrPart = true;
+		var _mountedPart = 0;	
+		while (_mountedPart < tmpDisk.mountNumber && allPartIndex < pool_name.length){
+			if(pool_types()[allPartIndex] != "unknown" || pool_status()[allPartIndex] != "unmounted"){
+				var tmpParts = new newPartition();
+				tmpParts.partName = pool_names()[allPartIndex];
+				tmpParts.mountPoint = pool_devices()[allPartIndex];
+				if(tmpParts.mountPoint == apps_dev){
+					tmpParts.isAppDev = true;
+					tmpDisk.hasAppDev = true;
 				}
+				if(tmpParts.mountPoint == tm_device_name){
+					tmpParts.isTM = true;
+					tmpDisk.hasTM = true;
+				}		
+				tmpParts.size = parseInt(pool_kilobytes()[allPartIndex]);
+				tmpParts.used = parseInt(pool_kilobytes_in_use()[allPartIndex]);
+				tmpParts.format = pool_types()[allPartIndex];
+				if(apps_fsck_ret.length > 0) {
+					tmpParts.fsck = apps_fsck_ret[allPartIndex][1];
+					if(apps_fsck_ret[allPartIndex][1] == 1){
+						tmpDisk.hasErrPart = true;
+					}
+				}
+
+				tmpDisk.partition.push(tmpParts);
+				tmpDisk.totalSize = parseInt(tmpDisk.totalSize + tmpParts.size);
+				tmpDisk.totalUsed = parseInt(tmpDisk.totalUsed + tmpParts.used);
+				_mountedPart++;
 			}
 
-			tmpDisk.partition.push(tmpParts);
-			tmpDisk.totalSize = parseInt(tmpDisk.totalSize + tmpParts.size);
-			tmpDisk.totalUsed = parseInt(tmpDisk.totalUsed + tmpParts.used);
 			allPartIndex++;
 		}
 
@@ -446,7 +453,7 @@ tabtitle[2] = new Array("", "<#menu5_3_1#>", "<#dualwan#>", "<#menu5_3_3#>", "<#
 tabtitle[3] = new Array("", "<#UPnPMediaServer#>", "<#menu5_4_1#>", "<#menu5_4_2#>", "<#menu5_4_3#>");
 tabtitle[4] = new Array("", "IPv6");
 tabtitle[5] = new Array("", "<#BOP_isp_heart_item#>", "VPN Client");	//, "VPN Client Advanced"
-tabtitle[6] = new Array("", "<#menu5_1_1#>", "<#menu5_5_2#>", "<#menu5_5_5#>", "<#menu5_5_3#>", "<#menu5_5_4#>");
+tabtitle[6] = new Array("", "<#menu5_1_1#>", "<#menu5_5_2#>", "<#menu5_5_5#>", "<#menu5_5_3#>", "<#menu5_5_4#>", "IPv6 <#menu5_5#>");
 tabtitle[7] = new Array("", "<#menu5_6_1#>", "<#menu5_6_2#>", "<#menu5_6_3#>", "<#menu5_6_4#>", "Performance tuning", "<#menu_dsl_setting#>");
 tabtitle[8] = new Array("", "<#menu5_7_2#>", "<#menu5_7_4#>", "<#menu5_7_3#>", "IPv6", "<#menu5_7_6#>", "<#menu5_7_5#>", "<#menu_dsl_log#>", "Spectrum", "<#Connections#>");
 tabtitle[9] = new Array("", "<#Network_Analysis#>", "Netstat", "<#NetworkTools_WOL#>");
@@ -460,7 +467,7 @@ tablink[2] = new Array("", "Advanced_WAN_Content.asp", "Advanced_WANPort_Content
 tablink[3] = new Array("", "mediaserver.asp", "Advanced_AiDisk_samba.asp", "Advanced_AiDisk_ftp.asp", "Advanced_AiDisk_others.asp");
 tablink[4] = new Array("", "Advanced_IPv6_Content.asp");
 tablink[5] = new Array("", "Advanced_VPN_Content.asp", "Advanced_VPNClient_Content.asp");
-tablink[6] = new Array("", "Advanced_BasicFirewall_Content.asp", "Advanced_URLFilter_Content.asp", "Advanced_KeywordFilter_Content.asp","Advanced_MACFilter_Content.asp", "Advanced_Firewall_Content.asp");
+tablink[6] = new Array("", "Advanced_BasicFirewall_Content.asp", "Advanced_URLFilter_Content.asp", "Advanced_KeywordFilter_Content.asp","Advanced_MACFilter_Content.asp", "Advanced_Firewall_Content.asp", "Advanced_Firewall_IPv6_Content.asp");
 tablink[7] = new Array("", "Advanced_OperationMode_Content.asp", "Advanced_System_Content.asp", "Advanced_FirmwareUpgrade_Content.asp", "Advanced_SettingBackup_Content.asp", "Advanced_PerformanceTuning_Content.asp", "Advanced_ADSL_Content.asp");
 tablink[8] = new Array("", "Main_LogStatus_Content.asp", "Main_WStatus_Content.asp", "Main_DHCPStatus_Content.asp", "Main_IPV6Status_Content.asp", "Main_RouteStatus_Content.asp", "Main_IPTStatus_Content.asp", "Main_AdslStatus_Content.asp", "Main_Spectrum_Content.asp", "Main_ConnStatus_Content.asp");
 tablink[9] = new Array("", "Main_Analysis_Content.asp", "Main_Netstat_Content.asp", "Main_WOL_Content.asp");
@@ -659,7 +666,11 @@ function remove_url(){
 	if(!IPv6_support){
 		menuL2_title[5] = "";
 		menuL2_link[5] = "";
-		remove_menu_item(8, "Main_IPV6Status_Content.asp");		
+		remove_menu_item(8, "Main_IPV6Status_Content.asp");
+
+		tabtitle[6][6] = "";	/*IPv6 Firewall*/
+		tablink[6][6] = "";
+		remove_menu_item(6, "Advanced_Firewall_IPv6_Content.asp");			
 	}
 	
 	if(multissid_support == -1){
@@ -891,7 +902,7 @@ function show_menu(){
 		notification.acpw = 1;
 		notification.desc[0] = '<#ASUSGATE_note1#>';
 		notification.action_desc[0] = '<#ASUSGATE_act_change#>';
-		notification.clickCallBack[0] = "location.href = 'Advanced_System_Content.asp';"
+		notification.clickCallBack[0] = "location.href = 'Advanced_System_Content.asp?af=http_passwd2';"
 	}else
 		notification.acpw = 0;
 
@@ -908,7 +919,7 @@ function show_menu(){
 			notification.array[2] = 'noti_wifi_2g';
 			notification.wifi_2g = 1;
 			notification.desc[2] = '<#ASUSGATE_note3#>';
-			notification.action_desc[2] = '<#ASUSGATE_act_change#> (2G)';
+			notification.action_desc[2] = '<#ASUSGATE_act_change#> (2.4GHz)';
 			notification.clickCallBack[2] = "change_wl_unit_status(0);";
 	}else
 		notification.wifi_2g = 0;
@@ -917,12 +928,17 @@ function show_menu(){
 			notification.array[3] = 'noti_wifi_5g';
 			notification.wifi_5g = 1;
 			notification.desc[3] = '<#ASUSGATE_note3#>';
-			notification.action_desc[3] = '<#ASUSGATE_act_change#> (5G)';
+			notification.action_desc[3] = '<#ASUSGATE_act_change#> (5 GHz)';
 			notification.clickCallBack[3] = "change_wl_unit_status(1);";
 	}else
 		notification.wifi_5g = 0;
 	
-	if(usb_support && enable_ftp == 1 && st_ftp_mode != 2){	//case4
+	if(usb_support && enable_ftp == 1 && st_ftp_mode == 1 && st_ftp_force_mode == '' ){ //case4_1
+			notification.array[4] = 'noti_ftp';
+			notification.ftp = 1;
+			notification.desc[4] = '<#ASUSGATE_note4_1#> <a class="hyperlink" href="/Advanced_AiDisk_ftp.asp" style="text-decoration:underline;"><#web_redirect_suggestion_etc#></a>.';
+			notification.action_desc[4] = '';
+	}else if(usb_support && enable_ftp == 1 && st_ftp_mode != 2 && st_ftp_force_mode != 2){	//case4
 			notification.array[4] = 'noti_ftp';
 			notification.ftp = 1;
 			notification.desc[4] = '<#ASUSGATE_note4#>';
@@ -930,8 +946,13 @@ function show_menu(){
 			notification.clickCallBack[4] = "showLoading();setTimeout('document.noti_ftp.submit();', 1);setTimeout('notification.redirectftp()', 2000);";
 	}else
 		notification.ftp = 0;
-	
-	if(usb_support && enable_samba == 1 && st_samba_mode != 4){	//case5
+
+	if(usb_support && enable_samba == 1 && st_samba_mode == 1 && st_samba_force_mode == '' ){ //case5_1
+			notification.array[5] = 'noti_samba';
+			notification.samba = 1;
+			notification.desc[5] = '<#ASUSGATE_note5_1#> <a class="hyperlink" href="/Advanced_AiDisk_samba.asp" style="text-decoration:underline;"><#web_redirect_suggestion_etc#></a>.';
+			notification.action_desc[5] = '';	
+	}else if(usb_support && enable_samba == 1 && st_samba_mode != 4){	//case5
 			notification.array[5] = 'noti_samba';
 			notification.samba = 1;
 			notification.desc[5] = '<#ASUSGATE_note5#>';
@@ -1874,6 +1895,15 @@ function validate_ssidchar(ch){
 	return true;
 }
 
+function validate_username(obj){        
+        var re = new RegExp("^[a-zA-Z0-9][a-zA-Z0-9\-\_]+$","gi");
+        if(re.test(obj.value)){
+                return "";
+        }else{
+                return "<#File_Pop_content_alert_desc4#> <#JS_validstr1#> -";
+        }
+}
+
 function validate_account(string_obj, flag){
 	var invalid_char = "";
 
@@ -2137,10 +2167,14 @@ function inputHideCtrl(obj, flag){
 
 //Update current status via AJAX
 var http_request_status = false;
-
+var updateStatusCounter = 0;
+var AUTOLOGOUT_MAX_MINUTE = parseInt('<% nvram_get("http_autologout"); %>');
 function updateStatus_AJAX(){
 	if(stopFlag == 1)
 		return false;
+
+	if(updateStatusCounter > parseInt(20 * AUTOLOGOUT_MAX_MINUTE))
+		location = "Logout.asp";
 
 	var ie = window.ActiveXObject;
 	if(ie)
@@ -2216,6 +2250,8 @@ var vpnd_state;
 
 function refresh_info_status(xmldoc)
 {
+	if(AUTOLOGOUT_MAX_MINUTE > 0) updateStatusCounter++;
+
 	var devicemapXML = xmldoc.getElementsByTagName("devicemap");
 	var wanStatus = devicemapXML[0].getElementsByTagName("wan");
 	link_status = wanStatus[0].firstChild.nodeValue;
@@ -2372,7 +2408,7 @@ function refresh_info_status(xmldoc)
 				location.href = "/index.asp";
 		}
 
-		if(allUsbStatus.search("storage") == -1){
+		if(allUsbStatus.search("storage") == -1 || usbDevices.length == 0){
 			$("usb_status").className = "usbstatusoff";
 			$("usb_status").onclick = function(){overHint(2);}
 		}
@@ -2453,7 +2489,7 @@ function refresh_info_status(xmldoc)
 var notification = {
 	stat: "off",
 	flash: "off",
-	flashTime: 10000,
+	flashTimer: 0,
 	hoverText: "",
 	clickText: "",
 	array: [],
@@ -2468,41 +2504,43 @@ var notification = {
 	redirectftp:function(){location.href = 'Advanced_AiDisk_ftp.asp';},
 	redirectsamba:function(){location.href = 'Advanced_AiDisk_samba.asp';},
 	clickCallBack: [],
-	//cClick: function(index){
-	//					notification.array[index] = "off";
-	//					notification.notiClick();
-	//				},
 	notiClick: function(){
-							if(notification.clicking == 0){
-							var txt;
-							txt = '<div id="notiDiv0" width="250"><table id="notiDiv" width="250" style="table-layout:fixed">'
-							for(i=0; i<notification.array.length; i++){
-								if(notification.array[i] != null && notification.array[i] != "off"){
-									txt += '<tr><td width="100%">';
-									txt += '<table id="notiDiv_table3" width="100%" border="0" cellpadding="0" cellspacing="0" bgcolor="#232629" style="table-layout:fixed"><tr><td>';
-					  			//txt += '<table id="notiDiv_table4" bgColor="#232629" width="100%" border="0" cellpadding="0" cellspacing="0" style="table-layout:fixed"><tr><td><b><font face="Verdana,Arial,Helvetica" color="#777" size="1"> </font></b></td><td align="RIGHT">';
-					 				//txt += '<a onclick="return notification.cClick(' + i + ');"><img width="18px" height="18px" src="/images/button-close.png" onmouseover="this.src=\'/images/button-close2.png\'" onmouseout="this.src=\'/images/button-close.png\'" border="0"></a></td></tr></table>';
-					  			txt += '<table id="notiDiv_table5" width="100%"  border="0" cellpadding="5" cellspacing="0" bgcolor="#232629" style="table-layout:fixed"><tr><td valign="TOP">';
-					  			txt += '<div style="white-space:pre-wrap;font-size:13px;color:white;cursor:text">' + notification.desc[i] + '</div>';
-					  			txt += '</td></tr>';
-					  			if( i == 2 ){					  				
-					  				txt += '<tr><td><div style="text-decoration:underline;text-align:right;color:#FFCC00;font-size:14px;cursor: pointer" onclick="' + notification.clickCallBack[i] + '">' + notification.action_desc[i] + '</div></td></tr>';
-					  				if(notification.array[3] != null && notification.array[i] != "off")
-					  				txt += '<tr><td><div style="text-decoration:underline;text-align:right;color:#FFCC00;font-size:14px;cursor: pointer" onclick="' + notification.clickCallBack[i+1] + '">' + notification.action_desc[i+1] + '</div></td></tr>';
-					  				notification.array[3] = "off";
-					  			}else
-					  				txt += '<tr><td><div style="text-decoration:underline;text-align:right;color:#FFCC00;font-size:14px;cursor: pointer" onclick="' + notification.clickCallBack[i] + '">' + notification.action_desc[i] + '</div></td></tr>';
-					  			txt += '</table></td></tr></table></td></tr>'
-				  			}
-							}
-							txt += '</table></div>';
-							$("notification_desc").innerHTML = txt;
-							notification.clicking = 1;
-						}else{
-							$("notification_desc").innerHTML = "";
-							notification.clicking = 0;
-						}
-						},
+		// stop flashing after the event is checked.
+		cookie_help.set("notification_history", [notification.upgrade, notification.wifi_2g ,notification.wifi_5g ,notification.ftp ,notification.samba].join(), 1000);
+		clearInterval(notification.flashTimer);
+		document.getElementById("notification_status").className = "notification_on";
+
+		if(notification.clicking == 0){
+			var txt = '<div id="notiDiv"><table width="100%">'
+
+			for(i=0; i<notification.array.length; i++){
+				if(notification.array[i] != null && notification.array[i] != "off"){
+					txt += '<tr><td><table id="notiDiv_table3" width="100%" border="0" cellpadding="0" cellspacing="0" bgcolor="#232629">';
+		  			txt += '<tr><td><table id="notiDiv_table5" border="0" cellpadding="5" cellspacing="0" bgcolor="#232629" width="100%">';
+		  			txt += '<tr><td valign="TOP" width="100%"><div style="white-space:pre-wrap;font-size:13px;color:white;cursor:text">' + notification.desc[i] + '</div>';
+		  			txt += '</td></tr>';
+
+		  			if( i == 2 ){					  				
+		  				txt += '<tr><td width="100%"><div style="text-decoration:underline;text-align:right;color:#FFCC00;font-size:14px;cursor: pointer" onclick="' + notification.clickCallBack[i] + '">' + notification.action_desc[i] + '</div></td></tr>';
+		  				if(notification.array[3] != null && notification.array[i] != "off")
+		  				txt += '<tr><td width="100%"><div style="text-decoration:underline;text-align:right;color:#FFCC00;font-size:14px;cursor: pointer" onclick="' + notification.clickCallBack[i+1] + '">' + notification.action_desc[i+1] + '</div></td></tr>';
+		  				notification.array[3] = "off";
+		  			}else{
+	  					txt += '<tr><td><table width="100%"><div style="text-decoration:underline;text-align:right;color:#FFCC00;font-size:14px;cursor: pointer" onclick="' + notification.clickCallBack[i] + '">' + notification.action_desc[i] + '</div></table></td></tr>';
+		  			}
+
+		  			txt += '</table></td></tr></table></td></tr>'
+	  			}
+			}
+			txt += '</table></div>';
+
+			$("notification_desc").innerHTML = txt;
+			notification.clicking = 1;
+		}else{
+			$("notification_desc").innerHTML = "";
+			notification.clicking = 0;
+		}
+	},
 	
 	run: function(){
 		var tarObj = document.getElementById("notification_status");
@@ -2513,30 +2551,21 @@ var notification = {
 
 		if(this.stat == "on"){
 			tarObj1.onclick = this.notiClick;
-
-			//tarObj.onmouseout = function(){nd();}
 			tarObj.className = "notification_on";
 			tarObj1.className = "notification_on1";
 		}
 
-		if(this.flash == "on"){
-			for(var i=1; i<this.flashTime; i++){
-				setTimeout(function(){
-					tarObj.className = (tarObj.className == "notification_on") ? "notification_off" : "notification_on";
-				}, i*1000);
-
-				setTimeout(function(){
-					tarObj.className = "notification_on";
-				}, this.flashTime*1000);
-			}
+		if(this.flash == "on" && getCookie_help("notification_history") != [notification.upgrade, notification.wifi_2g ,notification.wifi_5g ,notification.ftp ,notification.samba].join()){
+			notification.flashTimer = setInterval(function(){
+				tarObj.className = (tarObj.className == "notification_on") ? "notification_off" : "notification_on";
+			}, 1000);
 		}
-
 	},
 
 	reset: function(){
 		this.stat = "off";
 		this.flash = "off";
-		this.flashTime = 10000;
+		this.flashTime = 100;
 		this.hoverText = "";
 		this.clickText = "";
 		this.upgrade = 0;

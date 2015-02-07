@@ -64,6 +64,12 @@ time_day = uptimeStr.substring(5,7);//Mon, 01 Aug 2011 16:25:44 +0800(1467 secs 
 time_mon = uptimeStr.substring(9,12);
 time_time = uptimeStr.substring(18,20);
 dstoffset = '<% nvram_get("time_zone_dstoff"); %>';
+
+var isFromHTTPS = false;
+if((location.href.search('https://') >= 0) || (location.href.search('HTTPS://') >= 0)){
+        isFromHTTPS = true;
+}
+
 <% login_state_hook(); %>
 var wireless = [<% wl_auth_list(); %>];	// [[MAC, associated, authorized], ...]
 var http_clientlist_array = '<% nvram_get("http_clientlist"); %>';
@@ -107,15 +113,6 @@ function initial(){
 		hide_https_lanport(document.form.http_enable.value);
 		hide_https_wanport(document.form.http_enable.value);
 	}	
-
-	if(WebDav_support){
-		document.getElementById('http_username_span').style.display = "none";
-		document.form.http_username.disabled = false;
-	}else{
-		document.getElementById('http_username_span').style.display = "";
-		document.form.http_username.disabled = true;
-		document.getElementById('http_username').parentNode.style.display = "none";
-	}
 	
 	if(wifi_tog_btn_support || wifi_hw_sw_support || sw_mode == 2 || sw_mode == 4){		// wifi_tog_btn && wifi_hw_sw && hide WPS button behavior under repeater mode
 			document.form.btn_ez_radiotoggle[0].disabled = true;
@@ -204,18 +201,31 @@ function applyRule(){
 				|| document.form.misc_httpport_x.value != '<% nvram_get("misc_httpport_x"); %>'
 				|| document.form.misc_httpsport_x.value != '<% nvram_get("misc_httpsport_x"); %>'
 			){
-			if(document.form.http_enable.value == "0"){
+			if(document.form.http_enable.value == "0"){	//HTTP
 				if(isFromWAN)
 					document.form.flag.value = "http://" + location.hostname + ":" + document.form.misc_httpport_x.value;
 				else
 					document.form.flag.value = "http://" + location.hostname;
 			}
-			else{
+			else if(document.form.http_enable.value == "1"){	//HTTPS
 				if(isFromWAN)
 					document.form.flag.value = "https://" + location.hostname + ":" + document.form.misc_httpsport_x.value;
 				else
 					document.form.flag.value = "https://" + location.hostname + ":" + document.form.https_lanport.value;
 			}
+			else{	//BOTH
+				if(isFromHTTPS){
+					if(isFromWAN)
+						document.form.flag.value = "https://" + location.hostname + ":" + document.form.misc_httpsport_x.value;
+					else
+						document.form.flag.value = "https://" + location.hostname + ":" + document.form.https_lanport.value;
+				}else{
+					if(isFromWAN)
+						document.form.flag.value = "http://" + location.hostname + ":" + document.form.misc_httpport_x.value;
+					else
+						document.form.flag.value = "http://" + location.hostname;
+				}
+			}   
 		}
 		showLoading();
 		document.form.submit();
@@ -226,7 +236,7 @@ function validForm(){
 	showtext($("alert_msg1"), "");
 	showtext($("alert_msg2"), "");
 
-	var alert_str = validate_account(document.form.http_username, "noalert");
+	var alert_str = validate_username(document.form.http_username);
 
 	if(alert_str != ""){
 		showtext($("alert_msg1"), alert_str);
@@ -234,8 +244,8 @@ function validForm(){
 		document.form.http_username.select();
 		return false;
 	}else{
-                $("alert_msg1").style.display = "none";
-        }
+        $("alert_msg1").style.display = "none";
+    }
 
 	document.form.http_username.value = trim(document.form.http_username.value);
 
@@ -348,6 +358,8 @@ function validForm(){
 		document.form.misc_httpsport_x.focus();
 		return false;
 	}
+	else if(!validate_range_sp(document.form.http_autologout, 10, 999))
+		return false;
 
 	return true;
 }
@@ -675,10 +687,10 @@ function show_http_clientlist(){
 }
 
 function deleteRow(r){
-  var i=r.parentNode.parentNode.rowIndex;
-  $('http_clientlist_table').deleteRow(i);
+	var i=r.parentNode.parentNode.rowIndex;
+	$('http_clientlist_table').deleteRow(i);
   
-  var http_clientlist_value = "";
+	var http_clientlist_value = "";
 	for(i=0; i<$('http_clientlist_table').rows.length; i++){
 		http_clientlist_value += "&#60";
 		http_clientlist_value += $('http_clientlist_table').rows[i].cells[0].innerHTML;
@@ -766,7 +778,6 @@ function setClientIP(ipaddr){
 	over_var = 0;
 }
 
-
 var over_var = 0;
 var isMenuopen = 0;
 
@@ -777,7 +788,6 @@ function hideClients_Block(){
 }
 
 function pullLANIPList(obj){
-	
 	if(isMenuopen == 0){		
 		obj.src = "/images/arrow-top.gif"
 		$("ClientList_Block_PC").style.display = 'block';		
@@ -793,7 +803,6 @@ function hideport(flag){
 	$("accessfromwan_port").style.display = (flag == 1) ? "" : "none";
 }
 
-
 //Viz add 2012.12 show url for https [start]
 function change_url(num, flag){
 	if(flag == 'https_lan'){
@@ -805,7 +814,6 @@ function change_url(num, flag){
 	}		
 }
 //Viz add 2012.12 show url for https [end]
-
 
 /* password item show or not */
 function pass_checked(obj){
@@ -909,8 +917,7 @@ function select_time_zone(){
         <tr>
           <th width="40%"><#Router_Login_Name#></th>
           <td>
-				  	<div id="http_username_span" name="http_username_span" style="color:#FFFFFF;margin-left:8px;"><% nvram_get("http_username"); %></div>
-						<div><input type="text" id="http_username" name="http_username" tabindex="1" style="height:25px;" class="input_15_table" maxlength="20"><br/><span id="alert_msg1"></span></div>
+				<div><input type="text" id="http_username" name="http_username" tabindex="1" style="height:25px;" class="input_15_table" maxlength="20"><br/><span id="alert_msg1" style="color:#FC0;margin-left:8px;"></span></div>
           </td>
         </tr>
 
@@ -930,7 +937,7 @@ function select_time_zone(){
         <tr>
           <th><a class="hintstyle" href="javascript:void(0);" onClick="openHint(11,4)"><#PASS_retype#></a></th>
           <td>
-            <input type="password" autocapitalization="off" name="v_password2" tabindex="3" onKeyPress="return is_string(this, event);" onpaste="return false;" class="input_15_table" maxlength="16" /><br/><span id="alert_msg2"></span>
+            <input type="password" autocapitalization="off" name="v_password2" tabindex="3" onKeyPress="return is_string(this, event);" onpaste="return false;" class="input_15_table" maxlength="16" /><br/><span id="alert_msg2" style="color:#FC0;margin-left:8px;"></span>
           </td>
         </tr>
       </table>
@@ -987,7 +994,7 @@ function select_time_zone(){
         	<td>
 				<input type="text" maxlength="256" class="input_32_table" name="ntp_server0" value="<% nvram_get("ntp_server0"); %>" onKeyPress="return is_string(this, event);">
     	      	<a href="javascript:openLink('x_NTPServer1')"  name="x_NTPServer1_link" style=" margin-left:5px; text-decoration: underline;"><#LANHostConfig_x_NTPServer1_linkname#></a>
-				<div id="svc_hint_div" style="display:none;"><span style="color:#FFCC00;">* Remind: Did not synchronize your system time with NTP server yet.</span></div>
+				<div id="svc_hint_div" style="display:none;"><span style="color:#FFCC00;"><#General_x_SystemTime_syncNTP#></span></div>
 			</td>
         </tr>
 
@@ -1026,6 +1033,14 @@ function select_time_zone(){
            	</td>
         </tr>   					
         
+		<tr id="misc_http_x_tr">
+			<th>Auto Logout</th>
+			<td>
+				<input type="text" class="input_3_table" maxlength="3" name="http_autologout" value='<% nvram_get("http_autologout"); %>'> min
+				<span>(0: Disable)</span>
+			</td>
+		</tr>
+
         <tr id="accessfromwan_port">
            	<th align="right"><a class="hintstyle" href="javascript:void(0);" onClick="openHint(8,3);"><#FirewallConfig_x_WanWebPort_itemname#></a></th>
            	<td>
@@ -1035,7 +1050,7 @@ function select_time_zone(){
         </tr>		  	
 
 				<tr id="http_client_tr">
-				  <th>Only allow specific IP</th>
+				  <th><#System_login_specified_IP#></th>
 				  <td>
 				    <input type="radio" name="http_client" class="input" value="1" <% nvram_match_x("", "http_client", "1", "checked"); %>><#checkbox_Yes#>
 				    <input type="radio" name="http_client" class="input" value="0" <% nvram_match_x("", "http_client", "0", "checked"); %>><#checkbox_No#>
@@ -1046,7 +1061,7 @@ function select_time_zone(){
 			<table width="100%" border="1" align="center" cellpadding="4" cellspacing="0" class="FormTable_table" id="http_client_table">
 				<thead>
 					<tr>
-						<td colspan="4">Specified IP&nbsp;(<#List_limit#>&nbsp;4)</td>
+						<td colspan="4"><#System_login_specified_Iplist#>&nbsp;(<#List_limit#>&nbsp;4)</td>
 					</tr>
 				</thead>
 			
