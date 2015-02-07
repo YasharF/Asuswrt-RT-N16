@@ -234,6 +234,16 @@ enum qtn_vap_scs_cmds {
 #endif
 #define IEEE80211_SCS_THRSHLD_SMPL_AIRTIME_MAX	1000	/* ms */
 #define IEEE80211_SCS_THRSHLD_SMPL_AIRTIME_MIN	1	/* ms */
+/*
+ * Packet rate threshold is determined by how many packets we can hold in buffer without drop
+ * during off-channel period. It is limited by:
+ * - sw queue length of each node/tid
+ * - global resource shared by all node/tid, such as tqew descriptors and msdu headers.
+ * Current value doesn't apply to the scenario when tqew descriptors are already used up by large
+ * number of stations.
+ */
+#define IEEE80211_SCS_THRSHLD_SMPL_TX_PKTRATE	(1024 - 128)	/* margin = 128 + hw ring size */
+#define IEEE80211_SCS_THRSHLD_SMPL_RX_PKTRATE	IEEE80211_SCS_THRSHLD_SMPL_TX_PKTRATE /* assume qtn peer */
 #define IEEE80211_SCS_THRSHLD_ATTEN_INC_DFT	5	/* db */
 #define IEEE80211_SCS_THRSHLD_ATTEN_INC_MIN     0       /* db */
 #define IEEE80211_SCS_THRSHLD_ATTEN_INC_MAX     20      /* db */
@@ -311,6 +321,11 @@ enum qtn_vap_scs_cmds {
 							((_v) / (_duration) * IEEE80211_SCS_CCA_INTF_SCALE))
 
 #define IEEE80211_SCS_SMOOTH(_old, _new, _fctr)	(((_old) * (_fctr) + (_new) * (100 - (_fctr))) / 100)
+
+#define IEEE80211_SCS_OFFCHAN_WHOLE_DUR(_dwell_us)	((_dwell_us) +					\
+							(2 * QTN_SWITCH_CHANNEL_TIME_AVG) +		\
+							IEEE80211_SCS_SENDING_QOSNULL_TIME_AVG +	\
+							IEEE80211_SCS_SMPL_TIME_MARGIN)
 
 #define IEEE80211_SCS_VALUE_S			0
 #define IEEE80211_SCS_VALUE_M			0xffff
@@ -485,10 +500,11 @@ enum qtn_ocac_cmds {
 #define QTN_IS_INTEL_5300_NODE		0x0000020
 #define QTN_IS_SAMSUNG_GALAXY_NODE	0x0000040
 #define QTN_IS_NOT_4ADDR_CAPABLE_NODE	0x0000080
-#define QTN_AC_BE_INHERITANCE		0x0000100
-#define QTN_IS_INTEL_NODE               0x0000200
-#define QTN_IS_IPAD_AIR_NODE	0x0000400
-#define QTN_IS_IPAD4_NODE	0x0000800
+#define QTN_AC_BE_INHERITANCE_UPTO_VO	0x0000100
+#define QTN_AC_BE_INHERITANCE_UPTO_VI	0x0000200
+#define QTN_IS_INTEL_NODE		0x0000400
+#define QTN_IS_IPAD_AIR_NODE		0x0000800
+#define QTN_IS_IPAD4_NODE		0x0001000
 
 /*
  * Definitions relating to individual fields from phy_stats,

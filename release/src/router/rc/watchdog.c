@@ -50,6 +50,7 @@
 #include <sys/wait.h>
 #include <sys/ioctl.h>
 #include <sys/reboot.h>
+#include <sys/sysinfo.h>
 #ifdef RTCONFIG_PUSH_EMAIL
 #include <push_log.h>
 #endif
@@ -153,6 +154,7 @@ void erase_nvram(void)
 		case MODEL_RTAC56S:
 		case MODEL_RTAC56U:
 		case MODEL_RTAC68U:
+		case MODEL_DSLAC68U:
 		case MODEL_RTAC87U:
 			eval("mtd-erase2", "nvram");
 			break;
@@ -167,6 +169,7 @@ int init_toggle(void)
 		case MODEL_RTAC56S:
 		case MODEL_RTAC56U:
 		case MODEL_RTAC68U:
+		case MODEL_DSLAC68U:
 		case MODEL_RTAC87U:
 			nvram_set("btn_ez_radiotoggle", "1");
 			return BTN_WIFI_TOG;
@@ -480,6 +483,12 @@ void btn_check(void)
 	}
 #endif
 
+#ifdef RTCONFIG_BCMWL6
+#ifdef RTCONFIG_PROXYSTA
+        if (is_psta(0) || is_psta(1))
+                return;
+#endif
+#endif
 	if (btn_pressed_setup < BTNSETUP_START)
 	{
 		if (button_pressed(BTN_WPS) &&
@@ -1458,6 +1467,53 @@ void push_mail(void)
 }
 #endif
 
+#ifdef RTCONFIG_DSL
+
+#define DSL_LOSS_TIME_TH	18000
+
+void dsl_sync_check(void)
+{
+	static long last_loss_time = 0;
+	static int last_status = 0;	//0: others, 1: up
+	struct sysinfo info;
+
+	if(nvram_get_int("dsltmp_syncloss_apply")) {
+		nvram_set("dsltmp_syncloss_apply", "0");
+		nvram_set("dsltmp_adslsyncsts", "down");
+		nvram_set("dsltmp_syncloss", "0");
+		last_loss_time = 0;
+		last_status = 0;
+	}
+
+	if(nvram_match("dsltmp_syncloss", "2"))
+		return;
+
+	if(nvram_match("dsltmp_adslsyncsts", "up")) {
+		if(!last_status)
+			last_status = 1;
+	}
+	else {
+		if(last_status) {
+			last_status = 0;
+			sysinfo(&info);
+			if(!last_loss_time) {	//first time
+				last_loss_time = info.uptime;
+			}
+			else {
+				if(info.uptime - last_loss_time < DSL_LOSS_TIME_TH) {
+					nvram_set("dsltmp_syncloss", "1");
+				}
+				else {
+					last_loss_time = info.uptime;
+				}
+			}
+		}
+		else
+			;//wait to up
+	}
+}
+#endif
+
 #ifdef RTCONFIG_USER_LOW_RSSI
 #define ETHER_ADDR_STR_LEN	18
 
@@ -1750,6 +1806,10 @@ void watchdog(int sig)
 #endif
 	auto_firmware_check();
 
+#ifdef RTCONFIG_DSL
+	dsl_sync_check();
+#endif
+
 	return;
 }
 
@@ -1798,6 +1858,8 @@ watchdog_main(int argc, char *argv[])
 	nvram_set("btn_rst", "0");
 	nvram_set("btn_ez", "0");
 	nvram_set("btn_wifi_sw", "0");
+	nvram_set("dsltmp_syncloss", "0");
+	nvram_set("dsltmp_syncloss_apply", "0");
 #endif
 	nvram_unset("wps_ign_btn");
 

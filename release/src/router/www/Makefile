@@ -91,6 +91,7 @@ ifeq ($(RTCONFIG_4M_SFP),y)
 	rm -rf $(INSTALLDIR)/www/images/qis/winxp.jpg
 #	rm -rf $(INSTALLDIR)/www/Advanced_WANPort_Content.asp
 	rm -rf $(INSTALLDIR)/www/mediaserver.asp
+	rm -rf $(INSTALLDIR)/www/ajax_dms_status.asp
 	rm -rf $(INSTALLDIR)/www/Advanced_PerformanceTuning_Content.asp
 	rm -rf $(INSTALLDIR)/www/Advanced_IPv6_Content.asp
 	rm -rf $(INSTALLDIR)/www/Advacned_SwitchCtrl_Content.asp
@@ -113,16 +114,21 @@ endif
 ifneq ($(RTCONFIG_PROXYSTA),y)
 	rm -rf $(INSTALLDIR)/www/images/New_ui/mb.jpg
 endif
+
 ifeq ($(RTCONFIG_DSL),y)
 	rm -rf $(INSTALLDIR)/www/images/Model_producticon.png
 	rm -rf $(INSTALLDIR)/www/qis/QIS_welcome.htm
-endif
-ifneq ($(BUILD_NAME),DSL-N55U)
-ifneq ($(BUILD_NAME),DSL-N55U-B)
+	rm -rf $(INSTALLDIR)/www/images/New_ui/rt.jpg
+	rm -rf $(INSTALLDIR)/www/images/New_ui/ap.jpg
+else
 	rm -rf $(INSTALLDIR)/www/Main_Spectrum_Content.asp
 	rm -rf $(INSTALLDIR)/www/SNR.svg
 	rm -rf $(INSTALLDIR)/www/BPC.svg
 	rm -rf $(INSTALLDIR)/www/ajax_signals.asp
+endif
+
+ifneq ($(BUILD_NAME),DSL-N55U)
+ifneq ($(BUILD_NAME),DSL-N55U-B)
 ifneq ($(BUILD_NAME),RT-N56U)
 ifneq ($(RTCONFIG_CLOUDSYNC),y)
 	rm -rf $(INSTALLDIR)/www/images/cloudsync
@@ -133,13 +139,7 @@ ifneq ($(RTCONFIG_CLOUDSYNC),y)
 	rm -rf $(INSTALLDIR)/www/*cloud*.asp
 endif
 endif
-else
-	rm -rf $(INSTALLDIR)/www/images/New_ui/rt.jpg
-	rm -rf $(INSTALLDIR)/www/images/New_ui/ap.jpg
 endif
-else
-	rm -rf $(INSTALLDIR)/www/images/New_ui/rt.jpg
-	rm -rf $(INSTALLDIR)/www/images/New_ui/ap.jpg
 endif
 
 ifneq ($(RTCONFIG_IPV6),y)
@@ -181,6 +181,7 @@ ifneq ($(RTCONFIG_USB),y)
 	rm -rf $(INSTALLDIR)/www/images/New_ui/printstatus.png
 	rm -rf $(INSTALLDIR)/www/aidisk
 	rm -rf $(INSTALLDIR)/www/mediaserver.asp
+	rm -rf $(INSTALLDIR)/www/ajax_dms_status.asp
 	rm -rf $(INSTALLDIR)/www/Advanced_AiDisk_ftp.asp
 	rm -rf $(INSTALLDIR)/www/Advanced_AiDisk_samba.asp
 	rm -rf $(INSTALLDIR)/www/Advanced_AiDisk_others.asp
@@ -224,8 +225,6 @@ ifneq ($(RTCONFIG_USB),y)
 	rm -rf $(INSTALLDIR)/www/disk_functions.js
 endif
 ifneq ($(MODEM),y)
-	-rm -f $(INSTALLDIR)/www/images/modem_unplug.png
-	-rm -f $(INSTALLDIR)/www/images/modem_plug.png
 	-rm -f $(INSTALLDIR)/www/qis/QIS_modem.htm
 endif
 endif

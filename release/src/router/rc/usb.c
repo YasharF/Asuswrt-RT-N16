@@ -71,7 +71,7 @@ void tune_bdflush(void)
 #ifndef RTCONFIG_BCMARM
 	f_write_string("/proc/sys/vm/dirty_expire_centisecs", "200", 0, 0);
 #else
-        printf("no tune_bdflush\n");
+	printf("no tune_bdflush\n");
 #endif
 }
 #else
@@ -190,16 +190,16 @@ int
 fill_smbpasswd_input_file(const char *passwd)
 {
 	FILE *fp;
-	
+
 	unlink("/tmp/smbpasswd");
 	fp = fopen("/tmp/smbpasswd", "w");
-	
+
 	if (fp && passwd)
 	{
 		fprintf(fp,"%s\n", passwd);
 		fprintf(fp,"%s\n", passwd);
 		fclose(fp);
-		
+
 		return 1;
 	}
 	else
@@ -220,7 +220,7 @@ void start_usb(void)
 
 	if (nvram_get_int("usb_enable")) {
 #ifdef RTCONFIG_BCMARM
-                hotplug_usb_init();
+		hotplug_usb_init();
 #endif
 		modprobe(USBCORE_MOD);
 
@@ -288,9 +288,9 @@ void start_usb(void)
 #endif
 #ifdef RTCONFIG_HFS
 			if(nvram_get_int("usb_fs_hfs")){
-#ifdef RTCONFIG_TUXERA
+#ifdef RTCONFIG_TUXERA_HFS
 				modprobe("thfsplus");
-#else
+#elif defined(RTCONFIG_PARAGON_HFS)
 #ifdef RTCONFIG_UFSD_DEBUG
 				modprobe("ufsd_debug");
 #else
@@ -356,10 +356,10 @@ void start_usb(void)
 		modprobe("asix");
 		modprobe("cdc_ether");
 		modprobe("rndis_host");
-#ifndef RTCONFIG_USB_LESSMODEM
-		modprobe("net1080");
-		modprobe("zaurus");
-#endif
+		modprobe("cdc_ncm");
+		modprobe("cdc_wdm");
+		modprobe("qmi_wwan");
+		modprobe("cdc_mbim");
 #endif
 	}
 }
@@ -370,10 +370,10 @@ void remove_usb_modem_modules(void)
 #ifdef RTCONFIG_USB_BECEEM
 	modprobe_r("drxvi314");
 #endif
-#ifndef RTCONFIG_USB_LESSMODEM
-	modprobe_r("zaurus");
-	modprobe_r("net1080");
-#endif
+	modprobe_r("cdc_mbim");
+	modprobe_r("qmi_wwan");
+	modprobe_r("cdc_wdm");
+	modprobe_r("cdc_ncm");
 	modprobe_r("rndis_host");
 	modprobe_r("cdc_ether");
 	modprobe_r("asix");
@@ -423,9 +423,9 @@ void remove_usb_storage_module(void)
 #endif
 #endif
 #ifdef RTCONFIG_HFS
-#ifdef RTCONFIG_TUXERA
+#ifdef RTCONFIG_TUXERA_HFS
 	modprobe_r("thfsplus");
-#else
+#elif defined(RTCONFIG_PARAGON_HFS)
 #ifdef RTCONFIG_UFSD_DEBUG
 	modprobe_r("ufsd_debug");
 	modprobe_r("jnl_debug");
@@ -656,7 +656,7 @@ int mount_r(char *mnt_dev, char *mnt_dir, char *_type)
 #endif
 
 			if (nvram_invmatch("smbd_cset", ""))
-				sprintf(options + strlen(options), ",iocharset=%s%s", 
+				sprintf(options + strlen(options), ",iocharset=%s%s",
 						isdigit(nvram_get("smbd_cset")[0]) ? "cp" : "",
 						nvram_get("smbd_cset"));
 
@@ -702,11 +702,11 @@ int mount_r(char *mnt_dev, char *mnt_dir, char *_type)
 				sprintf(options + strlen(options), ",codepage=%s" + (options[0] ? 0 : 1), cp);
 				sprintf(flagfn, "nls_cp%s", cp);
 				TRACE_PT("USB %s(%s) is setting the code page to %s!\n", mnt_dev, type, flagfn);
-			
+
 				cp = nvram_get("smbd_nlsmod");
 				if ((cp) && (*cp != 0) && (strcmp(cp, flagfn) != 0))
 				modprobe_r(cp);
-			
+
 				modprobe(flagfn);
 				nvram_set("smbd_nlsmod", flagfn);
 			}
@@ -727,6 +727,9 @@ int mount_r(char *mnt_dev, char *mnt_dir, char *_type)
 
 #ifndef RTCONFIG_BCMARM
 			sprintf(options + strlen(options), ",noatime" + (options[0] ? 0 : 1));
+#endif
+#ifdef RTCONFIG_KERNEL_HFSPLUS
+			sprintf(options + strlen(options), ",force" + (options[0] ? 0 : 1));
 #endif
 
 			if(nvram_invmatch("usb_hfs_opt", ""))
@@ -807,10 +810,13 @@ int mount_r(char *mnt_dev, char *mnt_dir, char *_type)
 			/* try HFS in case it's installed */
 			if(ret != 0 && !strncmp(type, "hfs", 3)){
 				if (nvram_get_int("usb_fs_hfs")) {
-#ifdef RTCONFIG_TUXERA
+#ifdef RTCONFIG_TUXERA_HFS
 					ret = eval("mount", "-t", "thfsplus", "-o", options, mnt_dev, mnt_dir);
-#else
+#elif defined(RTCONFIG_PARAGON_HFS)
 					ret = eval("mount", "-t", "ufsd", "-o", options, mnt_dev, mnt_dir);
+#elif defined(RTCONFIG_KERNEL_HFSPLUS)
+					eval("fsck.hfsplus", "-f", mnt_dev);//Scan
+					ret = eval("mount", "-t", "hfsplus", "-o", options, mnt_dev, mnt_dir);
 #endif
 				}
 			}
@@ -1793,8 +1799,8 @@ void write_ftpd_conf()
 	{
 		fprintf(fp, "enable_iconv=YES\n");
 		if (nvram_match("ftp_lang", "TW")) {
-			fprintf(fp, "remote_charset=cp950\n");		
-			modprobe("nls_cp950");	
+			fprintf(fp, "remote_charset=cp950\n");
+			modprobe("nls_cp950");
 		}
 		else if (nvram_match("ftp_lang", "CN")) {
 			fprintf(fp, "remote_charset=cp936\n");
@@ -1811,7 +1817,7 @@ void write_ftpd_conf()
 }
 
 /*
- * st_ftp_modex: 0:no-ftp, 1:anonymous, 2:account 
+ * st_ftp_modex: 0:no-ftp, 1:anonymous, 2:account
  */
 
 void
@@ -1825,9 +1831,9 @@ start_ftpd(void)
 	if (nvram_match("enable_ftp", "0")) return;
 
 	write_ftpd_conf();
-	
+
 	killall("vsftpd", SIGHUP);
-	
+
 	if (!pids("vsftpd"))
 		system("vsftpd /etc/vsftpd.conf &");
 
@@ -1959,8 +1965,8 @@ start_samba(void)
 	char *nv, *nvp, *b;
 	char *tmp_ascii_user, *tmp_ascii_passwd;
 #ifdef RTCONFIG_BCMARM
-        int cpu_num = sysconf(_SC_NPROCESSORS_CONF);
-        int taskset_ret = -1;
+	int cpu_num = sysconf(_SC_NPROCESSORS_CONF);
+	int taskset_ret = -1;
 #endif
 
 	if (getpid() != 1) {
@@ -1975,12 +1981,12 @@ start_samba(void)
 #endif
 #if 0
 #ifdef RTCONFIG_BCMARM
-        add_samba_rules();
+	add_samba_rules();
 #endif
 #endif
 	mkdir_if_none("/var/run/samba");
 	mkdir_if_none("/etc/samba");
-	
+
 	unlink("/etc/smb.conf");
 	unlink("/etc/smbpasswd");
 
@@ -2026,10 +2032,17 @@ _dprintf("%s: cmd=%s.\n", __FUNCTION__, cmd);
 	xstart("nmbd", "-D", "-s", "/etc/smb.conf");
 #ifdef RTCONFIG_BCMARM
 #ifdef SMP
+#if 0
 	if(cpu_num > 1)
 		taskset_ret = cpu_eval(NULL, "1", "ionice", "-c1", "-n0", "smbd", "-D", "-s", "/etc/smb.conf");
 	else
 		taskset_ret = eval("ionice", "-c1", "-n0", "smbd", "-D", "-s", "/etc/smb.conf");
+#else
+	if(cpu_num > 1)
+		taskset_ret = cpu_eval(NULL, "1", "smbd", "-D", "-s", "/etc/smb.conf");
+	else
+		taskset_ret = eval("smbd", "-D", "-s", "/etc/smb.conf");
+#endif
 
 	if(taskset_ret != 0)
 #endif
@@ -2052,17 +2065,17 @@ void stop_samba(void)
 	/* clean up */
 	unlink("/var/log/smb");
 	unlink("/var/log/nmb");
-	
+
 	eval("rm", "-rf", "/var/run/samba");
 
 	logmessage("Samba Server", "smb daemon is stoped");
 #if 0
 #ifdef RTCONFIG_BCMARM
-        del_samba_rules();
+	del_samba_rules();
 #endif
 #endif
 #ifdef RTCONFIG_GROCTRL
-        enable_gro(0);
+	enable_gro(0);
 #endif
 }
 #endif	// RTCONFIG_SAMBASRV
@@ -2070,45 +2083,45 @@ void stop_samba(void)
 #ifdef RTCONFIG_MEDIA_SERVER
 #define MEDIA_SERVER_APP	"minidlna"
 
-/* 
+/*
  * 1. if (dms_dbdir) exist and file.db there, use it
  * 2. find the first and the largest write-able directory in /tmp/mnt
- * 3. /var/cache/minidlna 
+ * 3. /var/cache/minidlna
  */
 int find_dms_dbdir_candidate(char *dbdir)
 {
-        disk_info_t *disk_list, *disk_info;
-        partition_info_t *partition_info, *picked;
-        u64 max_size = 256*1024;
+	disk_info_t *disk_list, *disk_info;
+	partition_info_t *partition_info, *picked;
+	u64 max_size = 256*1024;
 	int found;
 
-        disk_list = read_disk_data();
-        if(disk_list == NULL){
-                cprintf("Can't get any disk's information.\n");
-                return 0;
-        }
+	disk_list = read_disk_data();
+	if(disk_list == NULL){
+		cprintf("Can't get any disk's information.\n");
+		return 0;
+	}
 
 	found = 0;
 	picked = NULL;
 
-        for(disk_info = disk_list; disk_info != NULL; disk_info = disk_info->next) {
-                for(partition_info = disk_info->partitions; partition_info != NULL; partition_info = partition_info->next){
-                        if(partition_info->mount_point == NULL){
-                                cprintf("Skip if it can't be mounted.\n");
-                                continue;
-                        }
-			if(strncmp(partition_info->permission, "rw", 2)!=0) {
-				cprintf("Skip if permission is not rw\n"); 
+	for(disk_info = disk_list; disk_info != NULL; disk_info = disk_info->next) {
+		for(partition_info = disk_info->partitions; partition_info != NULL; partition_info = partition_info->next){
+			if(partition_info->mount_point == NULL){
+				cprintf("Skip if it can't be mounted.\n");
 				continue;
 			}
-                               
+			if(strncmp(partition_info->permission, "rw", 2)!=0) {
+				cprintf("Skip if permission is not rw\n");
+				continue;
+			}
+
 			if(partition_info->size_in_kilobytes > max_size && (partition_info->size_in_kilobytes - partition_info->used_kilobytes)>128*1024) {
 				max_size = partition_info->size_in_kilobytes;
 				picked = partition_info;
-			} 
-                }
-        }                          
-        if(picked && picked->mount_point) {
+			}
+		}
+	}
+	if(picked && picked->mount_point) {
 		strcpy(dbdir, picked->mount_point);
 		found = 1;
 	}
@@ -2125,21 +2138,21 @@ void find_dms_dbdir(char *dbdir)
 
   	strcpy(dbdir_t, nvram_safe_get("dms_dbdir"));
 
-        /* if previous dms_dbdir there, use it */
-        if(!strcmp(dbdir, nvram_default_get("dms_dbdir"))==0) {
-                sprintf(dbfile, "%s/file.db", dbdir_t);
-                if (check_if_file_exist(dbfile)) {
-                        strcpy(dbdir, dbdir_t);
-                        found = 1;
-                }
-        }
+	/* if previous dms_dbdir there, use it */
+	if(!strcmp(dbdir_t, nvram_default_get("dms_dbdir"))) {
+		sprintf(dbfile, "%s/file.db", dbdir_t);
+		if (check_if_file_exist(dbfile)) {
+			strcpy(dbdir, dbdir_t);
+			found = 1;
+		}
+	}
 
 	/* find the first write-able directory */
-        if(!found && find_dms_dbdir_candidate(dbdir_t)) {
+	if(!found && find_dms_dbdir_candidate(dbdir_t)) {
       		sprintf(dbdir, "%s/minidlna", dbdir_t);
 		found = 1;
 	}
-	
+
  	/* use default dir */
 	if(!found)
 		strcpy(dbdir, nvram_default_get("dms_dbdir"));
@@ -2149,6 +2162,11 @@ void find_dms_dbdir(char *dbdir)
 	return;
 }
 
+#define TYPE_AUDIO	0x01
+#define TYPE_VIDEO	0x02
+#define TYPE_IMAGES	0x04
+#define ALL_MEDIA	0x07
+
 void start_dms(void)
 {
 	FILE *f;
@@ -2156,15 +2174,23 @@ void start_dms(void)
 	char dbdir[100], *dmsdir;
 	char *argv[] = { MEDIA_SERVER_APP, "-f", "/etc/"MEDIA_SERVER_APP".conf", "-R", NULL };
 	static int once = 1;
-	int i;
+	int i, j;
 	char serial[18];
+	char *nv, *nvp, *b, *c;
+	char *nv2, *nvp2;
+	int dircount = 0, sharecount = 0;
+	char dirlist[32][1024];
+	unsigned char typelist[32];
+	int default_dms_dir_used = 0;
+	unsigned char type = 0;
+	char types[5];
 
 	if (getpid() != 1) {
 		notify_rc("start_dms");
 		return;
 	}
 
-	if(!is_routing_enabled() && !is_lan_connected())
+	if (!is_routing_enabled() && !is_lan_connected())
 		set_invoke_later(INVOKELATER_DMS);
 
 	if (nvram_get_int("dms_sas") == 0)
@@ -2183,18 +2209,80 @@ void start_dms(void)
 			// default: dmsdir=/tmp/mnt, dbdir=/var/cache/minidlna
 			// after setting dmsdir, dbdir="dmsdir"/minidlna
 
-			dmsdir = nvram_safe_get("dms_dir");
-			if(!check_if_dir_exist(dmsdir)) 
-				dmsdir = nvram_default_get("dms_dir");
+			nv = nvp = strdup(nvram_safe_get("dms_dir_x"));
+			nv2 = nvp2 = strdup(nvram_safe_get("dms_dir_type_x"));
 
-			if(strcmp(dmsdir, nvram_default_get("dms_dir"))==0) {
-				find_dms_dbdir(dbdir);
+			if (nv) {
+				while ((b = strsep(&nvp, "<")) != NULL) {
+					if (!strlen(b)) continue;
+
+					if (!default_dms_dir_used &&
+						!strcmp(b, nvram_default_get("dms_dir")))
+						default_dms_dir_used = 1;
+
+					if (check_if_dir_exist(b))
+						strncpy(dirlist[dircount++], b, 1024);
+				}
 			}
+
+			dircount = 0;
+			if (nv2) {
+				while ((c = strsep(&nvp2, "<")) != NULL) {
+					if (!strlen(c)) continue;
+
+					type = 0;
+					while (*c)
+					{
+						if (*c == ',')
+							break;
+
+						if (*c == 'A' || *c == 'a')
+							type |= TYPE_AUDIO;
+						else if (*c == 'V' || *c == 'v')
+							type |= TYPE_VIDEO;
+						else if (*c == 'P' || *c == 'p')
+							type |= TYPE_IMAGES;
+						else
+							type = ALL_MEDIA;
+
+						c++;
+					}
+
+					typelist[dircount++] = type;
+				}
+			}
+
+			if (nv) free(nv);
+			if (nv2) free(nv2);
+
+			if (!dircount)
+			{
+				strcpy(dirlist[dircount++], nvram_default_get("dms_dir"));
+				default_dms_dir_used = 1;
+			}
+
+			if (default_dms_dir_used)
+				find_dms_dbdir(dbdir);
 			else {
-				if(dmsdir[strlen(dmsdir)-1]=='/') sprintf(dbdir, "%sminidlna", dmsdir);
-				else sprintf(dbdir, "%s/minidlna", dmsdir);
+				for (i = 0; i < dircount; i++)
+				{
+					if (!strcmp(dirlist[i], nvram_default_get("dms_dir")))
+						continue;
+
+					if (dirlist[i][strlen(dirlist[i])-1]=='/')
+						sprintf(dbdir, "%sminidlna", dirlist[i]);
+					else
+						sprintf(dbdir, "%s/minidlna", dirlist[i]);
+
+					break;
+				}
 			}
 			mkdir_if_none(dbdir);
+			if (!check_if_dir_exist(dbdir))
+			{
+				strcpy(dbdir, nvram_default_get("dms_dbdir"));
+				mkdir_if_none(dbdir);
+			}
 
 			nvram_set("dms_dbcwd", dbdir);
 
@@ -2207,28 +2295,62 @@ void start_dms(void)
 				"network_interface=%s\n"
 				"port=%d\n"
 				"friendly_name=%s\n"
-//				"db_dir=%s/.db\n"
 				"db_dir=%s\n"
 				"enable_tivo=%s\n"
 				"strict_dlna=%s\n"
 				"presentation_url=http://%s:80/\n"
 				"inotify=yes\n"
 				"notify_interval=600\n"
-				"album_art_names=Cover.jpg/cover.jpg/Thumb.jpg/thumb.jpg\n"
-				"media_dir=%s\n"
-				"serial=%s\n"
-				"model_number=%s.%s\n",
+				"album_art_names=Cover.jpg/cover.jpg/Thumb.jpg/thumb.jpg\n",
 				nvram_safe_get("lan_ifname"),
 				(port < 0) || (port >= 0xffff) ? 0 : port,
-				is_valid_hostname(nvram_get("computer_name")) ? nvram_get("computer_name") : get_productid(),
+				is_valid_hostname(nvram_get("dms_friendly_name")) ? nvram_get("dms_friendly_name") : get_productid(),
 				dbdir,
 				nvram_get_int("dms_tivo") ? "yes" : "no",
 				nvram_get_int("dms_stdlna") ? "yes" : "no",
-				nvram_safe_get("lan_ipaddr"),
-				dmsdir,
+				nvram_safe_get("lan_ipaddr"));
+
+			for (i = 0; i < dircount; i++)
+			{
+				type = typelist[i];
+
+				if (type == ALL_MEDIA)
+					types[0] = 0;
+				else
+				{
+					j = 0;
+					if (type & TYPE_AUDIO)
+						types[j++] = 'A';
+					if (type & TYPE_VIDEO)
+						types[j++] = 'V';
+					if (type & TYPE_IMAGES)
+						types[j++] = 'P';
+
+					types[j++] =  ',';
+					types[j] =  0;
+				}
+
+				if (check_if_dir_exist(dirlist[i]))
+				{
+					fprintf(f,
+						"media_dir=%s%s\n",
+						types,
+						dirlist[i]);
+
+					sharecount++;
+				}
+			}
+
+			if (!sharecount)
+			fprintf(f,
+				"media_dir=%s\n",
+				nvram_default_get("dms_dir"));
+
+			fprintf(f,
+				"serial=%s\n"
+				"model_number=%s.%s\n",
 				serial,
-				rt_version, rt_serialno
-				);
+				rt_version, rt_serialno);
 
 			fclose(f);
 		}
@@ -2284,7 +2406,7 @@ write_mt_daapd_conf(char *servername)
 		return;
 
 	dmsdir = nvram_safe_get("dms_dir");
-	if(!check_if_dir_exist(dmsdir)) 
+	if(!check_if_dir_exist(dmsdir))
 		dmsdir = nvram_default_get("dms_dir");
 #if 1
 	fprintf(fp, "web_root /etc/web\n");
@@ -2333,8 +2455,8 @@ start_mt_daapd()
 	if (nvram_invmatch("daapd_enable", "1"))
 		return;
 
-	if (is_valid_hostname(nvram_safe_get("computer_name")))
-		strncpy(servername, nvram_safe_get("computer_name"), sizeof(servername));
+	if (is_valid_hostname(nvram_safe_get("daapd_friendly_name")))
+		strncpy(servername, nvram_safe_get("daapd_friendly_name"), sizeof(servername));
 	else
 		servername[0] = '\0';
 	if(strlen(servername)==0) strncpy(servername, get_productid(), sizeof(servername));
@@ -2473,7 +2595,7 @@ void start_webdav(void)	// added by Vanic
 	}
 /*
 #ifndef RTCONFIG_WEBDAV
-        system("sh /opt/etc/init.d/S50aicloud scan");
+	system("sh /opt/etc/init.d/S50aicloud scan");
 #else
 */
 	//static char *lighttpd_monitor_argv[] = { "lighttpd-monitor", NULL, NULL };
@@ -2481,7 +2603,7 @@ void start_webdav(void)	// added by Vanic
 
 	if (nvram_get_int("webdav_aidisk") || nvram_get_int("webdav_proxy"))
 		nvram_set("enable_webdav", "1");
-	else if (!nvram_get_int("webdav_aidisk") && !nvram_get_int("webdav_proxy") && nvram_get_int("enable_webdav")) 
+	else if (!nvram_get_int("webdav_aidisk") && !nvram_get_int("webdav_proxy") && nvram_get_int("enable_webdav"))
 	{
 		// enable both when enable_webdav by other apps
 		nvram_set("webdav_aidisk", "1");
@@ -2492,7 +2614,7 @@ void start_webdav(void)	// added by Vanic
 
 #ifndef RTCONFIG_WEBDAV
 	if(f_exists("/opt/etc/init.d/S50aicloud"))
-	        system("sh /opt/etc/init.d/S50aicloud scan");
+		system("sh /opt/etc/init.d/S50aicloud scan");
 #else
 	/* WebDav directory */
 	mkdir_if_none("/tmp/lighttpd");
@@ -2503,13 +2625,13 @@ void start_webdav(void)	// added by Vanic
 
 	/* tmp/lighttpd/permissions */
 	write_webdav_permissions();
-	
+
 	/* WebDav SSL support */
 	//write_webdav_server_pem();
 
 	/* write WebDav configure file*/
 	system("/sbin/write_webdav_conf");
-	
+
 	if (!f_exists("/tmp/lighttpd.conf")) return;
 
 	if (!pids("lighttpd")){
@@ -2535,7 +2657,7 @@ void stop_webdav(void)
 #ifndef RTCONFIG_WEBDAV
 	if(f_exists("/opt/etc/init.d/S50aicloud"))
 		system("sh /opt/etc/init.d/S50aicloud scan");
-#else	
+#else
 	if (pids("lighttpd-monitor")){
 		kill_pidfile_tk("/tmp/lighttpd/lighttpd-monitor.pid");
 		unlink("/tmp/lighttpd/lighttpd-monitor.pid");
@@ -2782,7 +2904,10 @@ void start_nas_services(int force)
 		return;
 	}
 
-	if(!check_if_dir_empty("/mnt")) 
+	if(check_if_dir_exist("/mnt"))
+		eval("/usr/sbin/usbtest.sh");
+
+	if(!check_if_dir_empty("/mnt"))
 	{
 #ifdef RTCONFIG_WEBDAV
 		// webdav still needed if no disk is mounted
@@ -2872,7 +2997,7 @@ void restart_sambaftp(int stop, int start)
 			system("sh /opt/etc/init.d/S50aicloud scan");
 #endif
 	}
-	
+
 	if (start) {
 #ifdef RTCONFIG_SAMBA_SRV
 		create_passwd();
@@ -3555,7 +3680,7 @@ void webdav_account_default(void)
 			if((vstrsep(b, ">", &accname, &accpasswd) != 2)) continue;
 
 			right = find_webdav_right(accname);
-				
+
 			if(i==0) sprintf(new, "%s>%d", accname, right);
 			else sprintf(new, "%s<%s>%d", new, accname, right);
 			i++;

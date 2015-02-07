@@ -11,11 +11,11 @@
 #define DIR_ADSL_TO_PC 1
 
 #define MAX_RESP_BUF_NUM 1024 //Ren:24 -> 1024
-#define MAX_RESP_BUF_SIZE 256
+#define MAX_RESP_BUF_SIZE 512
 
+#define ETH_P_TCCONSOLE	0xaaaa
 
-
-
+#define TC_PROMPT_SYMBOL	"tc>"
 
 #define BROADCAST_ADDR (PUCHAR)"\xff\xff\xff\xff\xff\xff"
 //#define TEST_MAC_ADDR (PUCHAR)"\x00\x11\x22\x33\x44\x55"
@@ -82,3 +82,35 @@ enum {
     QOS_GFR,
     QOS_NRT_VBR
 };
+
+#define DEFAULT_IPADDR "169.254.0.1"
+
+#ifdef RTCONFIG_DSL_TCLINUX
+#define REMOTE_FILE_FWVER "/etc/fwver.conf"
+#define LOCAL_FILE_FWVER "/tmp/adsl/fwver.conf"
+#define REMOTE_FILE_ADSL_FWVER "/proc/tc3162/adsl_fwver"
+#define LOCAL_FILE_ADSL_FWVER "/tmp/adsl/adsl_fwver"
+#define REMOTE_FILE_ADSL_CONF "/var/tmp/adsl.conf"
+#define LOCAL_FILE_ADSL_CONF "/tmp/adsl/adsl.conf"
+#define REMOTE_FILE_INFO_ADSL "/var/tmp/info_adsl.txt"
+#define LOCAL_FILE_INFO_ADSL "/tmp/adsl/info_adsl.txt"
+#define REMOTE_FILE_AUTOPVC_COMMON "/var/tmp/autopvc_common.txt"
+#define LOCAL_FILE_AUTOPVC_COMMON "/tmp/adsl/autopvc_common.txt"
+#define REMOTE_FILE_TCLINUX_HEADER "/var/tmp/tc_hdr.bin"
+#define LOCAL_FILE_TCLINUX_HEADER "/tmp/adsl/tc_hdr.bin"
+#define REMOTE_FILE_CMD_RESULT "/var/tmp/cmd.txt"
+#define LOCAL_FILE_CMD_RESULT "/tmp/adsl/cmd.txt"
+#define REMOTE_FILE_CMD_SCRIPT "/var/tmp/cmd.sh"
+#define LOCAL_FILE_CMD_SCRIPT "/tmp/adsl/cmd.sh"
+#define REMOTE_FILE_DSL_PERF "/proc/tc3162/adsl_perf"
+#define LOCAL_FILE_DSL_PERF "/tmp/adsl/adsl_perf"
+#define REMOTE_FILE_ADSL_BPC_US "/proc/tc3162/adsl_showbpc_us"
+#define REMOTE_FILE_VDSL_BPC_US "/proc/tc3162/vdsl_showbpc_us"
+#define LOCAL_FILE_DSL_BPC_US "/var/tmp/spectrum-bpc-us"
+#define REMOTE_FILE_ADSL_BPC_DS "/proc/tc3162/adsl_showbpc_ds"
+#define REMOTE_FILE_VDSL_BPC_DS "/proc/tc3162/vdsl_showbpc_ds"
+#define LOCAL_FILE_DSL_BPC_DS "/var/tmp/spectrum-bpc-ds"
+#define REMOTE_FILE_ADSL_SNR "/proc/tc3162/adsl_showsnr"
+#define REMOTE_FILE_VDSL_SNR "/proc/tc3162/vdsl_showsnr"
+#define LOCAL_FILE_DSL_SNR "/var/tmp/spectrum-snr"
+#endif

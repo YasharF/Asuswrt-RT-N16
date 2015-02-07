@@ -31,8 +31,10 @@ install:
 #	@cp $(SRCFILE)/mkntfs $(INSTALLDIR)/usr/sbin
 	@cp $(SRCFILE)/chkntfs $(INSTALLDIR)/usr/sbin
 	@cp $(SRCFILE)/ufsd.ko $(DSTDIR)
+	@cp $(SRCFILE)/jnl.ko $(DSTDIR)
 #	@chmod 775 $(INSTALLDIR)/usr/sbin/mkntfs
 	@chmod 775 $(INSTALLDIR)/usr/sbin/chkntfs
 	@chmod 664 $(DSTDIR)/ufsd.ko
+	@chmod 664 $(DSTDIR)/jnl.ko
 
 .phony: all clean install

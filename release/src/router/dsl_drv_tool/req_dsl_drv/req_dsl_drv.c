@@ -39,7 +39,7 @@ int main(int argc, char* argv[])
 	if ((msqid_from_d=msgget(IPC_PRIVATE,0700))<0)
 	{
 		printf("msgget err\n");
-		return;
+		return -1;
 	}
 	else
 	{
@@ -96,19 +96,28 @@ int main(int argc, char* argv[])
             break;
         }
     }    	  
-	
 
-    send_buf.mtype=IPC_RELOAD_PVC;
-    strcpy(send_buf.mtext,"reload");
-    if(msgsnd(msqid_to_d,&send_buf,MAX_IPC_MSG_BUF,0)<0)
-    {
-        printf("msgsnd fail (IPC_RELOAD_PVC)\n");
-        goto delete_msgq_and_quit;
-    }
-    else
-    {
-        printf("msgsnd ok (IPC_RELOAD_PVC)\n");
-    }
+	if (strcmp(argv[1],"reloadpvc") == 0)
+	{
+		send_buf.mtype=IPC_RELOAD_PVC;
+		strcpy(send_buf.mtext,"reload");
+	}
+	else if (strcmp(argv[1],"dslsetting") == 0)
+	{
+		send_buf.mtype=IPC_RELOAD_DSL_SETTING;
+		strcpy(send_buf.mtext,"dslsetting");;
+	}
+
+	if(msgsnd(msqid_to_d,&send_buf,MAX_IPC_MSG_BUF,0)<0)
+	{
+		printf("msgsnd fail\n");
+		goto delete_msgq_and_quit;
+	}
+	else
+	{
+		printf("msgsnd ok\n");
+	}
+
     // wait daemon response
     while (1)
     {
@@ -134,7 +143,7 @@ delete_msgq_and_quit:
 	delete_msg_q(msqid_from_d);
 
 	printf("EXIT req_dsl_drv\n");
-	
+	return 0;
 
 }
 

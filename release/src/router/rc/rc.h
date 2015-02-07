@@ -74,7 +74,9 @@ extern char wan6face[];
 extern int g_reboot;
 
 #ifdef RTCONFIG_BCMARM
+#ifndef LINUX_KERNEL_VERSION
 #define LINUX_KERNEL_VERSION LINUX_VERSION_CODE
+#endif
 
 static inline int before(int ver1, int ver2)
 {
@@ -459,6 +461,8 @@ extern void stop_dhcp6c(void);
 
 #ifdef RTCONFIG_WPS
 extern int wpsaide_main(int argc, char *argv[]);
+extern int stop_wpsaide();
+extern int start_wpsaide();
 #endif
 
 // auth.c
@@ -691,9 +695,10 @@ extern int write_gct_conf(void);
 #endif
 extern int is_android_phone(const int mode, const unsigned int vid, const unsigned int pid);
 extern int is_storage_cd(const int mode, const unsigned int vid, const unsigned int pid);
+extern void get_wdm_by_usbnet(const char *usbnet, char *wdm_name, size_t size);
 extern int write_3g_conf(FILE *fp, int dno, int aut, const unsigned int vid, const unsigned int pid);
 extern int init_3g_param(const char *port_path, const unsigned int vid, const unsigned int pid);
-extern int write_3g_ppp_conf(const char *modem_node);
+extern int write_3g_ppp_conf(void);
 #endif
 
 //services.c
@@ -719,6 +724,7 @@ extern void start_dhcp6s(void);
 extern void stop_dhcp6s(void);
 extern void start_ipv6(void);
 extern void stop_ipv6(void);
+extern void ipv6_sysconf(const char *ifname, const char *name, int value);
 #endif
 extern int wps_band_radio_off(int wps_band);
 #ifdef CONFIG_BCMWL5
@@ -786,8 +792,14 @@ extern int firmware_check_main(int argc, char *argv[]);
 #ifdef RTCONFIG_DSL
 extern int check_tc_upgrade(void);
 extern int start_tc_upgrade(void);
+#ifdef RTCONFIG_DSL_TCLINUX
+extern void start_dsl_autodet(void);
+extern void stop_dsl_autodet(void);
 #endif
-
+#endif
+#ifdef RTCONFIG_PUSH_EMAIL
+extern void start_DSLsendmail(void);
+#endif
 #ifdef RTCONFIG_TIMEMACHINE
 extern int start_timemachine(void);
 extern void stop_timemachine(void);
@@ -826,6 +838,9 @@ int site_survey_for_channel(int n, const char *wif, int *HT_EXT);
 #endif
 #endif	/* RTCONFIG_WIRELESSREPEATER */
 
+#ifdef RTCONFIG_BWDPI
+extern int bwdpi_main(int argc, char **argv);
+#endif
 
 #ifdef BTN_SETUP
 enum BTNSETUP_STATE

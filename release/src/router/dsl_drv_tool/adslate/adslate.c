@@ -15,8 +15,13 @@
 #include <stdlib.h>
 #include <signal.h>
 #include <errno.h>
+#include <unistd.h>
 #include <bcmnvram.h>
+#ifdef RTCONFIG_RALINK
 #include "ra_reg_rw_ate.h"
+#else
+#include "switch_control.h"
+#endif
 #else
 #include <stdio.h>
 #include <string.h>
@@ -26,7 +31,7 @@
 #define EINTR 0
 #endif
 
-#include "../dsl_define.h"
+#include "../msg_define.h"
 
 
 enum {
@@ -70,7 +75,7 @@ void ate_delete_msg_q(void)
 
 void adsl_ate(int argc, char* argv[])
 {
-    char buf[32];
+    char buf[256];
     msgbuf send_buf;    
     msgbuf receive_buf;        
     int infolen;
@@ -209,7 +214,7 @@ void adsl_ate(int argc, char* argv[])
         goto delete_msgq_and_quit;
     }
 #endif                                
-    
+
     send_buf.mtype=IPC_CLIENT_MSG_Q_ID;
     pInt = (int*)send_buf.mtext;      
     *pInt = m_msqid_from_d;
@@ -222,7 +227,7 @@ void adsl_ate(int argc, char* argv[])
     {
         myprintf("msgsnd ok (IPC_CLIENT_MSG_Q_ID)\n");
     }    
-    
+
     send_buf.mtype=IPC_START_AUTO_DET;
     strcpy(send_buf.mtext,"startdet");
     if(msgsnd(m_msqid_to_d,&send_buf,MAX_IPC_MSG_BUF,0)<0)
@@ -234,6 +239,7 @@ void adsl_ate(int argc, char* argv[])
     {
         myprintf("msgsnd ok (IPC_START_AUTO_DET)\n");
     }
+
     // wait daemon response
     while (1)
     {
@@ -260,10 +266,11 @@ void adsl_ate(int argc, char* argv[])
 #ifndef WIN32
     if (strcmp(argv[1],"bridgemode") == 0)
     {
-        // tell driver that we want bridge mode
-        switch_bridge_mode();
-        // delete iptv interfaces    
 #if DSL_N55U == 1
+		// tell driver that we want bridge mode
+		switch_bridge_mode();
+
+		// delete iptv interfaces
 		system("ifconfig eth2.1.1 down");
 		system("ifconfig eth2.1.2 down");
 		system("ifconfig eth2.1.3 down");
@@ -279,10 +286,14 @@ void adsl_ate(int argc, char* argv[])
 		// 8 = change switich ic VLAN
 		// 100 = reset and enable adsl bridge
 		system("rtkswitch 8 100");
-#else
-#error "new model"
+		system("brctl show");
+#elif defined DSL_AC68U
+		if(argv[2])
+			switch_bridge_mode(atoi(argv[2]));
+		else
+			switch_bridge_mode(0);
 #endif
-        system("brctl show");
+		printf("Done\n");
         goto delete_msgq_and_quit;
     }
 #endif
@@ -397,6 +408,63 @@ void adsl_ate(int argc, char* argv[])
         *pWord++ = type;
         myprintf("msg :%s\n",send_buf.mtext);
     }        
+#ifdef RTCONFIG_DSL_TCLINUX
+	else if (!strcmp(argv[1],"cmd"))
+	{
+		send_buf.mtype = IPC_ATE_CMD;
+		if(argc == 3) {
+			if(strlen(argv[2]) >= MAX_IPC_MSG_BUF) {
+				myprintf("%s %d: Command out of buffer\n", __FUNCTION__, __LINE__);
+				goto delete_msgq_and_quit;
+			}
+			else
+				strcpy(send_buf.mtext, argv[2]);
+		}
+		else {
+			strcpy(send_buf.mtext, "");
+		}
+		myprintf("IPC_ATE_CMD: %s\n", send_buf.mtext);
+	}
+	else if (!strcmp(argv[1],"getdslperf"))
+	{
+		send_buf.mtype = IPC_ATE_GET_DSL_PERF;
+		strcpy(send_buf.mtext, "");
+		myprintf("IPC_ATE_GET_DSL_PERF\n");
+	}
+	else if (!strcmp(argv[1],"led"))
+	{
+		send_buf.mtype = IPC_ATE_LED;
+		strcpy(send_buf.mtext, argv[2]);
+		myprintf("IPC_ATE_LED\n");
+	}
+	else if (!strcmp(argv[1],"showsnr"))
+	{
+		send_buf.mtype = IPC_SHOW_SNR;
+		myprintf("IPC_SHOW_SNR\n");
+	}
+	else if (!strcmp(argv[1],"showbpc"))
+	{
+		send_buf.mtype = IPC_SHOW_BPC;
+		myprintf("IPC_SHOW_BPC\n");
+	}
+#ifdef RTCONFIG_VDSL
+	else if (strcmp(argv[1],"addptm") == 0)
+	{
+		int idx, ext_idx, vlan_active, vid;
+		idx = atoi(argv[2]);
+		ext_idx = atoi(argv[3]);
+		vlan_active = atoi(argv[4]);
+		vid = atoi(argv[5]);
+		send_buf.mtype=IPC_ADD_PTM;
+		pWord = (unsigned short*)send_buf.mtext;
+		*pWord++ = idx;	//idx (8-9)
+		*pWord++ = ext_idx;	//multiservice, not support currently
+		*pWord++ = vlan_active;	//enable 802.1Q ?
+		*pWord++ = vid;	//vid
+		myprintf("IPC_ADD_PTM :%s\n", send_buf.mtext);
+	}
+#endif
+#endif
     else 
     {
         printf("error input\n");
@@ -449,6 +517,28 @@ void adsl_ate(int argc, char* argv[])
                         fclose(fpLog);                   
                     }
                 }
+#ifdef RTCONFIG_DSL_TCLINUX
+				else if( IPC_ATE_GET_DSL_PERF == receive_buf.mtype) {
+					memset(buf, 0, sizeof(buf));
+					fp = fopen("/tmp/adsl/adsl_perf","rb");
+					if (fp) {
+						while(fgets(buf, sizeof(buf)-1, fp)) {
+							printf(buf);
+						}
+						fclose(fp);
+					}
+				}
+				else if( IPC_ATE_CMD == receive_buf.mtype) {
+					memset(buf, 0, sizeof(buf));
+					fp = fopen("/tmp/adsl/cmd.txt","rb");
+					if (fp) {
+						while(fgets(buf, sizeof(buf)-1, fp)) {
+							printf(buf);
+						}
+						fclose(fp);
+					}
+				}
+#endif
                 printf(receive_buf.mtext);
                 printf("\n");
                 break;

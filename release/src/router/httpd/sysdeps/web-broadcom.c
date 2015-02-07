@@ -754,7 +754,7 @@ wl_status(int eid, webs_t wp, int argc, char_t **argv, int unit)
 }
 
 sta_info_t *
-wl_sta_info(const char *ifname, struct ether_addr *ea)
+wl_sta_info(char *ifname, struct ether_addr *ea)
 {
 	static char buf[sizeof(sta_info_t)];
 	sta_info_t *sta = NULL;
@@ -803,6 +803,8 @@ print_rate_buf(int raw_rate, char *buf)
 
 	return buf;
 }
+
+int wl_control_channel(int unit);
 
 int
 ej_wl_status(int eid, webs_t wp, int argc, char_t **argv, int unit)
@@ -2464,7 +2466,6 @@ static int wl_sta_list(int eid, webs_t wp, int argc, char_t **argv, int unit) {
 	int i, firstRow = 1;
 	char ea[ETHER_ADDR_STR_LEN];
 	char *value;
-	char word[256], *next;
 	char name_vif[] = "wlX.Y_XXXXXXXXXX";
 	int ii;
 	int ret = 0;

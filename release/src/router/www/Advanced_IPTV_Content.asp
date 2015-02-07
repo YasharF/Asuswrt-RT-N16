@@ -474,7 +474,7 @@ function validate_range_null(o, min, max, def) {		//Viz add 2013.03 allow to set
 		</table>
 <!--###HTML_PREP_ELSE###-->
 <!--
-[DSL-N55U][DSL-N55U-B]
+[DSL-N55U][DSL-N55U-B][DSL-AC68U]
 {DSL do not support unifw}
 	  <table width="100%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3"  class="FormTable">
 	  	<thead>

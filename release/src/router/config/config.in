@@ -41,6 +41,10 @@ config RTCONFIG_BCMFA
 	bool "BCM FA"
 	default n
 
+config RTCONFIG_RGMII_BCM_FA
+	bool "BCM FA on RGMII hardware"
+	default n
+
 config RTCONFIG_5301X
 	bool "Bcm 5301x"
 	default y
@@ -170,6 +174,14 @@ config RTCONFIG_DSL_ANNEX_B
 	bool "DSL Annex B Support"
 	default n
 
+config RTCONFIG_DSL_TCLINUX
+	bool "DSL Support with TCLINUX"
+	default n
+
+config RTCONFIG_VDSL
+	bool "VDSL Support"
+	default n
+
 config RTCONFIG_DUALWAN
 	bool "Dual WAN Support"
 	default n
@@ -252,6 +264,16 @@ config RTCONFIG_NTFS
 config RTCONFIG_HFS
 	bool "HFS Support"
 	depends on RTCONFIG_USB
+	default n
+
+config RTCONFIG_PARAGON_HFS
+	bool "HFS Support by Paragon"
+	depends on RTCONFIG_HFS
+	default n
+
+config RTCONFIG_TUXERA_HFS
+	bool "HFS Support by Tuxera"
+	depends on RTCONFIG_HFS
 	default n
 
 config RTCONFIG_EXFAT
@@ -588,4 +610,17 @@ config RTCONFIG_QTN
 
 config RTCONFIG_RGMII_BRCM5301X
 	bool "Config 5301x to RGMII mode"
+	default n
+
+config RTCONFIG_KERNEL_HFSPLUS
+	bool "Kernel HFSPLUS support"
+	depends on RTCONFIG_HFS
+	default n
+
+config RTCONFIG_N18UTXBF
+	bool "enable TXBF for RT-N18U"
+	default n
+
+config RTCONFIG_BWDPI
+	bool "TrendMicro DPI engine and iQoS and Partenl Control"
 	default n

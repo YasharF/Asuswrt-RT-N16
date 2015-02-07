@@ -6,6 +6,7 @@
 <meta HTTP-EQUIV="Expires" CONTENT="-1">
 <link rel="stylesheet" type="text/css" href="../form_style.css">
 <link rel="stylesheet" type="text/css" href="qis_style.css">
+<script type="text/JavaScript" language="JavaScript" src="../jquery.js"></script>
 <style>
 span{
 	border:0px solid #FFFFFF;
@@ -20,6 +21,7 @@ span{
 </style>
 <script>
 
+var $j = jQuery.noConflict();
 var country_code = "";
 var selected_country = "";
 var w_Setting = "<% nvram_get("w_Setting"); %>";
@@ -61,7 +63,7 @@ function setIptvNumPvc() {
 function showCountryList(o){
 	var code = "";
 	var showed_country = "";
-	code +="<select	name='country' onchange='showAllList(this.value);'>";
+	code +="<select	name='country' class='input_option' onchange='showAllList(this.value);'>";
 	for(var i = 0; i < ISP_List.length; i++){
 		if(showed_country != ISP_List[i][1]){
 			code +="<option value='"+ISP_List[i][1];
@@ -82,7 +84,7 @@ function showCountryList(o){
 function showCityList(o){
 	var code = "";
 	var showedCity = "";
-	code +="<select	name='city' onchange='showRussiaISPList(this.value);'>";
+	code +="<select	name='city' class='input_option' onchange='showRussiaISPList(this.value);'>";
 	for(var i = 0; i < ISP_List.length; i++){
 		if((showedCity != ISP_List[i][3]) && (o == ISP_List[i][1])){
 			code +="<option value='"+ISP_List[i][3]+"'>"+ISP_List[i][3]+"</option>";
@@ -96,7 +98,7 @@ function showCityList(o){
 
 function showNomoISPList(o){
 	var code = "";
-	code +="<select	id='ISP' name='ISP' onChange='ShowPVC(this.value);'>";
+	code +="<select	id='ISP' name='ISP' class='input_option' onChange='ShowPVC(this.value);'>";
 	var first_element = 0;
 	for(var i = 0; i < ISP_List.length; i++){
 		if(o == ISP_List[i][1]){
@@ -121,7 +123,7 @@ function showRussiaISPList(o){
 	var code = "";
 	var First_ISP= "";
 	var showed_ISP = "";
-	code +="<select	id='ISP' name='ISP' onChange='ShowPVC(this.value); showRussiaISPServiceByIdx(ISPlocatedCity, this.value)'>";
+	code +="<select	id='ISP' name='ISP' class='input_option' onChange='ShowPVC(this.value); showRussiaISPServiceByIdx(ISPlocatedCity, this.value)'>";
 	var first_element = 0;
 	for(var i = ru_idx_start; i < ISP_List.length; i++){
 		if((showed_ISP != ISP_List[i][4]) && (o == ISP_List[i][3])){
@@ -158,7 +160,7 @@ function showRussiaISPServiceByIdx(c, idx){
    	else {
       	    $("Service_tr").style.display="";
 	var code = "";
-	code +="<select	id='ISPSVC' name='ISPSVC' onChange='ChgSVC(this.value);'>";
+	code +="<select	id='ISPSVC' name='ISPSVC' class='input_option' onChange='ChgSVC(this.value);'>";
 	var first_element = 0;
 	for(var i = ru_idx_start; i < ISP_List.length; i++){
 		if((c == ISP_List[i][3]) && (isp_str == ISP_List[i][4])){
@@ -183,7 +185,7 @@ function showRussiaISPService(c, o){
    	else {
       	    $("Service_tr").style.display="";
 	var code = "";
-	code +="<select	id='ISPSVC' name='ISPSVC' onChange='ChgSVC(this.value);'>";
+	code +="<select	id='ISPSVC' name='ISPSVC' class='input_option' onChange='ChgSVC(this.value);'>";
 	var first_element = 0;
 	for(var i = ru_idx_start; i < ISP_List.length; i++){
 		if((c == ISP_List[i][3]) && (o == ISP_List[i][4])){
@@ -408,6 +410,11 @@ function btnNext() {
 		document.form.dsltmp_cfg_country.value = ISP_List[isp_idx][1];
 	}
 
+	if(parent.based_modelid == "DSL-AC68U"){
+			var RetryCountDown_fail = 5;
+			update_dsl_info();
+	}
+
 	if (connection_type==0 || connection_type==1)
 	{
 		//pppoe or pppoa
@@ -448,6 +455,19 @@ function gotoIndex(){
 		parent.location.href = '/index.asp';
 	}
 }
+
+function update_dsl_info(){
+	$j.ajax({
+		url: '/start_dsl_autodet.asp',
+		dataType: 'script',
+		error: function(xhr){
+			update_dsl_info();		
+		},
+		success: function(response){
+				// trigger hook only
+		}
+	});	
+}
 </script>
 </head>
 
@@ -467,6 +487,7 @@ function gotoIndex(){
 <input type="hidden" name="dsltmp_cfg_iptv_num_pvc" value="">
 <input type="hidden" name="dsltmp_cfg_ispname" value="">
 <input type="hidden" name="dsltmp_cfg_country" value="">
+<input type="hidden" name="dsltmp_transmode" value="atm">
 <input type="hidden" name="ISP_value" value="">
 <input type="hidden" name="ISPSVC_value" value="">
 <input type="hidden" name="dsltmp_qis_dsl_pvc_set" value="1">
@@ -543,16 +564,16 @@ function gotoIndex(){
 			</tr>
 			<tr>
 				<th width="40%">VPI:</th>
-				<td><input type='text' name='user_vpi' size='2' maxlength="3"><span> 0-255</span></td>
+				<td><input type='text' name='user_vpi' size='2' maxlength="3" class="input_6_table"><span> 0-255</span></td>
 			</tr>
 			<tr>
 				<th>VCI:</th>
-				<td><input type='text' name='user_vci' size='4' maxlength="5"><span> 32-65535</span></td>
+				<td><input type='text' name='user_vci' size='4' maxlength="5" class="input_6_table"><span> 32-65535</span></td>
 			</tr>
 			<tr>
 				<th><#Layer3Forwarding_x_ConnectionType_itemname#>:</th>
 				<td>
-				<select	name='user_prctl'>
+				<select	name='user_prctl' class='input_option'>
 				<option value = 0>PPPoE</option>
 				<option value = 1>PPPoA</option>
 				<option value = 2>MER</option>
@@ -564,7 +585,7 @@ function gotoIndex(){
 			<tr>
 				<th><#prtcl_JS_encmode#>:</th>
 				<td>
-				<select	name='user_encap'>
+				<select	name='user_encap' class='input_option'>
 				<option value = 0>LLC</option>
 				<option value = 1>VC-Mux</option>
 				</select>

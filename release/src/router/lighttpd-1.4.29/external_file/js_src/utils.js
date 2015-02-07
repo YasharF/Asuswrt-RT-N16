@@ -249,11 +249,12 @@ function isIE(){
 		is_ie = true;
 	}
 	else if (!document.all) {
+		
     	if (navigator.appName == 'Netscape')
 	   	{
 			var ua = navigator.userAgent;
 	        var re  = new RegExp("Trident/.*rv:([0-9]{1,}[\.0-9]{0,})");
-	        if (re.exec(ua) != null){
+	        if (re.exec(ua) != null){	        	
 	        	rv = parseFloat( RegExp.$1 );
 	        	if(rv>=11)
 	        		is_ie = true;

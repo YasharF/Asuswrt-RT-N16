@@ -185,7 +185,7 @@ function valid_form(){
 		<tr>
 		<td><input name="dslx_annex" type="radio" value="4"> Annex A/I/J/L/M </td>
 		</tr>
-[OTHER]
+[DSL-N55U-B]
 		<tr>
 		<td><input name="dslx_annex" type="radio" value="0"> Annex B </td>
 		</tr>

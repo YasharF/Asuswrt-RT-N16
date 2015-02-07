@@ -1013,12 +1013,16 @@ int isSerialInterface(const char *interface_name)
 
 int isACMInterface(const char *interface_name)
 {
-	char interface_class[4];
+	char interface_class[4], interface_subclass[4];
 
 	if(get_usb_interface_class(interface_name, interface_class, 4) == NULL)
 		return 0;
 
-	if(strcmp(interface_class, "02"))
+	if(get_usb_interface_subclass(interface_name, interface_subclass, 4) == NULL)
+		return 0;
+
+	// mbim interface is class: 02, subclass: 0e.
+	if(strcmp(interface_class, "02") || !strcmp(interface_subclass, "0e"))
 		return 0;
 
 	return 1;

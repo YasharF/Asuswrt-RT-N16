@@ -28,10 +28,11 @@
 #endif
 
 #include "../msg_define.h"
+#include "bcmnvram.h"
 
-static int m_Cnt = 0;
+static unsigned int m_Cnt = 0;
 
-extern void UpdateAllAdslSts(int cnt, int from_ate);
+extern void UpdateAllAdslSts(unsigned int cnt, int from_ate);
 extern void DispAllPvc();
 extern int AddPvc(int idx, int vlan_id, int vpi, int vci, int encap, int mode);
 extern int DelAllPvc();
@@ -45,6 +46,20 @@ extern void myprintf(const char *fmt, ...);
 extern void SleepMs(int ms);
 extern int SetAdslMode(int EnumAdslModeValue, int FromAteCmd);
 extern int SetAdslType(int EnumAdslTypeValue, int FromAteCmd);
+extern int CustomTcCmd(char* cmd);
+extern char* strcpymax(char *to, const char*from, int max_to_len);
+extern void reload_pvc(void);
+extern void reload_dsl_setting(void);
+#ifdef RTCONFIG_DSL_TCLINUX
+extern void InitAutoDet(void);
+extern int HandleAutoDet(void);
+extern int CommitAdslEntry(void);
+extern int GetDslPerf(void);
+extern int AllLedOnOff(char *onoff);
+#ifdef RTCONFIG_VDSL
+extern void AddPtm(int idx, int ext_idx, int vlan_active, int vlan_id);
+#endif
+#endif
 
 // sync variables
 volatile int m_start_polling=0;
@@ -107,7 +122,7 @@ void init_sigaction(void)
 void init_time() 
 { 
     struct itimerval value; 
-    value.it_value.tv_sec=10;//Ren:3 -> 10
+    value.it_value.tv_sec=2;
     value.it_value.tv_usec=0; 
     value.it_interval=value.it_value; 
     setitimer(ITIMER_REAL,&value,NULL); 
@@ -135,7 +150,6 @@ int CreateMsgQ()
 // adslate <-> tp_init
 // auto_det <-> tp_init
 	char buf[32];
-	FILE* fp;
 	int ret_val = 0;
 	if ((m_msqid_to_d=msgget(IPC_PRIVATE,0700))<0)
 	{
@@ -333,19 +347,114 @@ int RcvMsgQ()
             myprintf("SET MODE:%d %d\n",mode,type);
             set_ret_mode = SetAdslMode(mode,1);
             set_ret_type = SetAdslType(type,1);
+#ifdef RTCONFIG_DSL_TCLINUX
+			CommitAdslEntry();
+#endif
             send_buf.mtype=IPC_ATE_SET_ADSL_MODE;
-            if (set_ret_mode == 0 && set_ret_type) strcpy(send_buf.mtext,"OK");
+            if (set_ret_mode == 0 && set_ret_type == 0) strcpy(send_buf.mtext,"OK");
             else strcpy(send_buf.mtext,"FAIL");            
         }    
         else if (IPC_RELOAD_PVC == receive_buf.mtype)
         {
-            int del_ret;
             myprintf("TP_INIT:IPC_RELOAD_PVC\n");                        
-            del_ret = DelAllPvc();
 			reload_pvc();
             send_buf.mtype=IPC_RELOAD_PVC;			
             strcpy(send_buf.mtext,"OK");
         }
+		else if (IPC_RELOAD_DSL_SETTING == receive_buf.mtype)
+		{
+			myprintf("TP_INIT:IPC_RELOAD_DSL_SETTING\n");
+			reload_dsl_setting();
+			send_buf.mtype=IPC_RELOAD_DSL_SETTING;
+			strcpy(send_buf.mtext,"OK");
+		}
+#ifdef RTCONFIG_DSL_TCLINUX
+		else if (IPC_ATE_CMD == receive_buf.mtype)
+		{
+			int ret;
+			ret = CustomTcCmd(receive_buf.mtext);
+			send_buf.mtype=IPC_ATE_CMD;
+			if(ret)
+				strcpy(send_buf.mtext, "Fail");
+			else
+				strcpy(send_buf.mtext, "Done");
+		}
+		else if (IPC_INIT_AUTO_DET == receive_buf.mtype)
+		{
+			InitAutoDet();
+			send_buf.mtype=IPC_INIT_AUTO_DET;
+			strcpy(send_buf.mtext, "");
+		}
+		else if (IPC_GET_AUTO_DET_RESULT == receive_buf.mtype)
+		{
+			int ret;
+			ret = HandleAutoDet();
+			send_buf.mtype=IPC_GET_AUTO_DET_RESULT;
+			if(ret)
+				strcpy(send_buf.mtext, "Wait");
+			else
+				strcpy(send_buf.mtext, "Done");
+		}
+		else if (IPC_ATE_GET_DSL_PERF == receive_buf.mtype)
+		{
+			int ret;
+			ret = GetDslPerf();
+			send_buf.mtype=IPC_ATE_GET_DSL_PERF;
+			if(ret)
+				strcpy(send_buf.mtext, "FAIL");
+			else
+				strcpy(send_buf.mtext, "Done");
+		}
+		else if (IPC_ATE_LED == receive_buf.mtype)
+		{
+			int ret;
+			ret = AllLedOnOff(receive_buf.mtext);
+			send_buf.mtype=IPC_ATE_LED;
+			if(ret)
+				strcpy(send_buf.mtext, "FAIL");
+			else
+				strcpy(send_buf.mtext, "Done");
+		}
+		else if (IPC_SHOW_SNR == receive_buf.mtype)
+		{
+			int ret;
+			ret = getSNR();
+			send_buf.mtype=IPC_SHOW_SNR;
+			if(ret)
+				strcpy(send_buf.mtext, "FAIL");
+			else
+				strcpy(send_buf.mtext, "Done");
+		}
+		else if (IPC_SHOW_BPC == receive_buf.mtype)
+		{
+			int ret;
+			ret = getBitsPerCarrier();
+			send_buf.mtype=IPC_SHOW_BPC;
+			if(ret)
+				strcpy(send_buf.mtext, "FAIL");
+			else
+				strcpy(send_buf.mtext, "Done");
+		}
+#ifdef RTCONFIG_VDSL
+		else if (IPC_ADD_PTM == receive_buf.mtype)
+		{
+			unsigned short idx;
+			unsigned short ext_idx;
+			unsigned short vlan_active;
+			unsigned short vid;
+			unsigned short* pWord;
+			pWord=(unsigned short*)(&receive_buf.mtext[0]);
+			idx = *pWord++;
+			ext_idx = *pWord++;
+			vlan_active = *pWord++;
+			vid = *pWord++;
+			myprintf("ADDPTM: %u %u %u %u\n", idx, ext_idx, vlan_active, vid);
+			AddPtm(idx, ext_idx, vlan_active, vid);
+			send_buf.mtype=IPC_ADD_PTM;
+			strcpy(send_buf.mtext, "Done");
+		}
+#endif
+#endif
         
         if (bSendResp)
         {

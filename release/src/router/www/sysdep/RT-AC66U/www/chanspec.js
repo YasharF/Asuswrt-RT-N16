@@ -72,7 +72,7 @@ function wl_chanspec_list_change(){
 						else if(bw_cap == "2"){		// 40MHz
 							$('wl_nctrlsb_field').style.display = "";
 								for(var i=0;i<wl_channel_list_5g.length;i++){			
-									if(based_modelid == "RT-AC68U" && (country == "EU" && (parseInt(wl_channel_list_5g[i]) == 116 || parseInt(wl_channel_list_5g[i]) == 140)))
+									if((based_modelid == "RT-AC68U" || based_modelid == "RT-AC68U_V2" || based_modelid == "RT-AC69U" || based_modelid == "DSL-AC68U" || based_modelid == "RT-AC87U") && (country == "EU" && (parseInt(wl_channel_list_5g[i]) == 116 || parseInt(wl_channel_list_5g[i]) == 140)))
 										wl_channel_list_5g[i] = wl_channel_list_5g[i];
 									else
 										wl_channel_list_5g[i] = wlextchannel_fourty(wl_channel_list_5g[i]);	
@@ -359,7 +359,7 @@ function change_channel(obj){
 		}
 	}
 	
-	if(based_modelid == "RT-AC68U"){
+	if( (based_modelid == "RT-AC68U" || based_modelid == "RT-AC68U_V2" || based_modelid == "RT-AC69U" || based_modelid == "DSL-AC68U" || based_modelid == "RT-AC87U") && country == "EU"){
 		if(document.form.wl_channel.value  == 0){
 			$('dfs_checkbox').style.display = "";
 			document.form.acs_dfs.disabled = false;

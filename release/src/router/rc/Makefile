@@ -41,6 +41,15 @@ CFLAGS += -I$(SRCBASE)/shared/bcmwifi/include -DHAVE_TYPE_FLOAT
 CFLAGS += -I$(SRCBASE)/common/include
 LDFLAGS += -L$(TOP)/libbcm -lbcm
 LDFLAGS += -lgcc_s
+ifeq ($(RTCONFIG_QTN),y)
+CFLAGS += -I$(TOP)/libqcsapi_client -I$(TOP)/httpd
+LDFLAGS += -L$(TOP)/libqcsapi_client -lqcsapi_client
+endif
+endif
+
+ifeq ($(RTCONFIG_BWDPI),y)
+CFLAGS += -I$(TOP)/bwdpi/
+LDFLAGS += -L$(TOP)/bwdpi -lbwdpi
 endif
 
 ifeq ($(RTCONFIG_BCMSMP),y)
@@ -109,6 +118,9 @@ OBJS += init-ralink-dsl.o
 endif
 else
 OBJS += init-broadcom.o wps-broadcom.o broadcom.o
+ifeq ($(RTCONFIG_DSL),y)
+OBJS += init-broadcom-dsl.o
+endif
 endif
 
 # TODO, speedtest
@@ -164,7 +176,10 @@ endif
 
 ifeq ($(RTCONFIG_DSL),y)
 OBJS += dsl.o
+ifeq ($(RTCONFIG_RALINK),y)
 OBJS += dsl-upg.o
+endif
+OBJS += dsl_fb.o
 endif
 
 ifeq ($(RTCONFIG_BCMWL6),y)
@@ -193,8 +208,21 @@ ifeq ($(RTCONFIG_TIMEMACHINE),y)
 OBJS += timemachine.o
 endif
 
+ifeq ($(RTCONFIG_QTN),y)
+OBJS += qtn.o
+OBJS += find_host_addr.o
+endif
+
+ifeq ($(RTCONFIG_BWDPI),y)
+OBJS += bwdpi.o
+endif
+
 ifeq ($(RTCONFIG_BCMARM),y)
+ifeq ($(RTCONFIG_QTN),y)
+vpath %.c sysdeps sysdeps/broadcom sysdeps/ralink sysdeps/qtn $(TOP)/libqcsapi_client/qcsapi_rpc_common/client $(SRCBASE)/shared
+else
 vpath %.c sysdeps sysdeps/broadcom sysdeps/ralink $(SRCBASE)/shared
+endif
 else
 vpath %.c sysdeps sysdeps/broadcom sysdeps/ralink
 endif
@@ -336,6 +364,12 @@ endif
 	@cd $(INSTALLDIR)/sbin && ln -sf rc get_phy_speed
 	@cd $(INSTALLDIR)/sbin && ln -sf rc firmware_check
 	@cd $(INSTALLDIR)/sbin && ln -sf rc test_endian
+ifeq ($(RTCONFIG_BWDPI),y)
+	@cd $(INSTALLDIR)/sbin && ln -sf rc bwdpi
+endif
+ifeq ($(RTCONFIG_USB_MODEM),y)
+	@cd $(INSTALLDIR)/sbin && ln -sf rc write_3g_ppp_conf
+endif
 
 clean:
 	rm -f rc *.o .*.depend

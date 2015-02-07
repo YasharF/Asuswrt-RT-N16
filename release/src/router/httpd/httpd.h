@@ -34,7 +34,9 @@
 
 #define DEFAULT_LOGIN_MAX_NUM	5
 
+#ifndef ARRAY_SIZE
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
+#endif
 
 /* Generic MIME type handler */
 struct mime_handler {
@@ -207,6 +209,7 @@ extern void logmessage(char *logheader, char *fmt, ...);
 extern int is_private_subnet(const char *ip);
 extern char* INET6_rresolve(struct sockaddr_in6 *sin6, int numeric);
 extern char *trim_r(char *str);
+extern int is_wlif_up(const char *ifname);
 
 /* web-*.c */
 extern int ej_wl_status(int eid, webs_t wp, int argc, char_t **argv, int unit);

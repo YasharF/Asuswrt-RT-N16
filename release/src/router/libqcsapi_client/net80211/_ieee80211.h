@@ -1237,23 +1237,4 @@ struct ieee80211_neighbor_report_response {
 	(IEEE80211_BINTVAL_VALID(_bi) ? \
 	 (_bi) : IEEE80211_BINTVAL_DEFAULT)
 
-#ifndef DSP_BUILD
-/*
- * Set the locally administered bit (2nd LSB) and:
- * case 1: the base address is locally administered - add the MBSSID to bits [4:2]
- * case 2: the base address is not locally administered - set bits [4:2] with the MBSS ID
- */
-static __inline__ void qtn_set_vap_bssid(u_int8_t *bssid, u_int8_t id) {
-	if (id) {
-		if (bssid[0] & 0x2) {
-			bssid[0] = (bssid[0] & 0xE3) |
-					(((bssid[0] & 0x1C) + (id << 2)) & 0x1C);
-		} else {
-			bssid[0] &= 0xE3;
-			bssid[0] |= ((id << 2) | 0x02);
-		}
-	}
-}
-#endif
-
 #endif /* _NET80211__IEEE80211_H_ */

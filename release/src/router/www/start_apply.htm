@@ -128,6 +128,9 @@ function initial(){
 			}
 		}
 	}
+	else if(current_page.indexOf("Feedback") >= 0){
+		setTimeout("parent.redirect();", 20000);		
+	}	
 	else if(getflag == "ddnscheck"){
 		setTimeout("parent.go_index_page();", 2000);
 	}

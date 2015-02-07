@@ -260,6 +260,11 @@ function submitForm(){
 		document.form.sw_mode.value = 1;
 	//}
 
+	if(document.form.dslx_transmode.value == "atm")
+		document.form.dsl0_enable.value = 1;
+	else //PTM
+		document.form.dsl8_enable.value = 1;
+
 	//parent.w_Setting_tmp = document.form.w_Setting.value
 	//document.getElementById("loadingIcon").style.display = "";
 	//document.form.wan_nat_x.value = parent.document.QKform.wan_nat_x.value;
@@ -361,7 +366,7 @@ function gotoHome(){
 <input type="hidden" name="lan_ipaddr_rt" value="" disabled>
 <input type="hidden" name="lan_netmask_rt" value="" disabled>
 <input type="hidden" name="http_passwd" value="<% nvram_get("password"); %>">
-<input type="hidden" name="dsl0_enable" value="1">
+<input type="hidden" name="dsl0_enable" value="0">
 <input type="hidden" name="dsl0_vpi" value="<% nvram_get("dsltmp_qis_vpi"); %>">
 <input type="hidden" name="dsl0_vci" value="<% nvram_get("dsltmp_qis_vci"); %>">
 <input type="hidden" name="dsl0_proto" value="<% nvram_get("dsltmp_qis_proto"); %>">
@@ -403,6 +408,10 @@ function gotoHome(){
 <input type="hidden" name="dsl6_enable" value="0">
 <input type="hidden" name="dsl7_enable" value="0">
 <!-- IPTV end -->
+<input type="hidden" name="dsl8_enable" value="0">
+<input type="hidden" name="dsl8_proto" value="<% nvram_get("dsltmp_qis_proto"); %>">
+<input type="hidden" name="dsl8_dot1q" value="<% nvram_get("dsltmp_cfg_dot1q"); %>">
+<input type="hidden" name="dsl8_vid" value="<% nvram_get("dsltmp_cfg_vid"); %>">
 <input type="hidden" name="dslx_pppoe_username" value="<% nvram_get("dsltmp_qis_pppoe_username"); %>">
 <input type="hidden" name="dslx_pppoe_passwd" value="<% nvram_get("dsltmp_qis_pppoe_passwd"); %>">
 <input type="hidden" name="dslx_pppoe_idletime" value="<% nvram_get("dsltmp_qis_pppoe_idletime"); %>">
@@ -419,6 +428,7 @@ function gotoHome(){
 <input type="hidden" name="dslx_ipaddr" value="<% nvram_get("dsltmp_qis_ipaddr"); %>">
 <input type="hidden" name="dslx_netmask" value="<% nvram_get("dsltmp_qis_netmask"); %>">
 <input type="hidden" name="dslx_gateway" value="<% nvram_get("dsltmp_qis_gateway"); %>">
+<input type="hidden" name="dslx_transmode" value="<% nvram_get("dsltmp_transmode"); %>">
 <input type="hidden" name="dslx_dnsenable" value="<% nvram_get("dsltmp_qis_dnsenable"); %>">
 <input type="hidden" name="dslx_dns1" value="<% nvram_get("dsltmp_qis_dns1"); %>">
 <input type="hidden" name="dslx_dns2" value="<% nvram_get("dsltmp_qis_dns2"); %>">

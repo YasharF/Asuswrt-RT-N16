@@ -82,6 +82,15 @@ function getFolderOrder(folder_barcode){
 	return parseInt(folder_barcode.substring(getPoolBarcode(folder_barcode).length+1));
 }
 
+function count_last_pool_num(disk_order){
+	var last_pool_num = 0;
+
+	for(var i = 0; i < this.selectedDiskOrder; ++i)
+		last_pool_num += parseInt(foreign_disk_pool_number()[i]);
+
+	return last_pool_num;
+}
+
 function setSelectedDiskOrder(selectedId){
 	this.selectedDiskBarcode = getDiskBarcode(selectedId.substring(1));
 	this.selectedPoolBarcode = "";
@@ -97,7 +106,7 @@ function setSelectedPoolOrder(selectedId){
 	this.selectedFolderBarcode = "";
 	
 	this.selectedDiskOrder = getDiskOrder(this.selectedDiskBarcode);
-	this.selectedPoolOrder = this.selectedDiskOrder+getPoolOrder(this.selectedPoolBarcode);
+	this.selectedPoolOrder = count_last_pool_num(this.selectedDiskOrder)+getPoolOrder(this.selectedPoolBarcode);
 	this.selectedFolderOrder = -1;
 }
 
@@ -107,7 +116,7 @@ function setSelectedFolderOrder(selectedId){
 	this.selectedFolderBarcode = getFolderBarcode(selectedId.substring(1));
 	
 	this.selectedDiskOrder = getDiskOrder(this.selectedDiskBarcode);
-	this.selectedPoolOrder = this.selectedDiskOrder+getPoolOrder(this.selectedPoolBarcode);
+	this.selectedPoolOrder = count_last_pool_num(this.selectedDiskOrder)+getPoolOrder(this.selectedPoolBarcode);
 	this.selectedFolderOrder = 1+getFolderOrder(this.selectedFolderBarcode);
 }
 

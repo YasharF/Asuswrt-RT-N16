@@ -59,8 +59,8 @@ helpcontent[3] = new Array("",
 						   "<#WLANConfig11b_x_EnhanInter_itemdesc#>", //21
 						   "<#WLANConfig11b_x_IgmpSnEnable_itemdesc#>",
 						   "<#WLANConfig11b_x_SchedEnable_itemdesc#>",
-							 "<#WLANConfig11b_x_ExpBeam_desc#>",
-							 "<#WLANConfig11b_x_ImpBeam_desc#>",
+							 "<#WLANConfig11b_x_ExpBeam_desc#> (It's also called [Explicit Beamforming].)",
+							 "<#WLANConfig11b_x_ImpBeam_desc#> (It's also called [Implicit Beamforming].)",
 							 "<#WLANConfig11b_x_AMPDU_desc#>",
 							 "<#WLANConfig11b_x_ACK_desc#>",
 							 "<#WLANConfig11b_x_TurboQAM_desc#>",
@@ -251,7 +251,11 @@ helpcontent[24] = new Array("",
 helpcontent[25] = new Array("",
 							"<#DSL_Stab_Adjustment#>",
 							"<#DSL_SRA_itemdesc#>",
-							"<#DSL_Bitswap_id#>");
+							"<#DSL_Bitswap_id#>",
+							"This item allows you to tweak the target SNRM of VDSL. For instance with a SNR Down at 8dB, you could set to 7dB or lower value to maximize the downstream performance, 5dB (Max.performance) but please note that the lower the value, DSL modem router will be weaker to defend the line noise, thus sync lost might occur, so please adjust with proper value. However if your VDSL connection is unstable or not able to establish a connection, for this case then set to a higher value such as 9dB ~ 30dB.",
+							"This item allows you to tweak the Tx Power of VDSL. Reduce Tx Power(-1 dB ~ -7 dB) would increase the downstream performance(reduce more Tx Power leads to higher downstream data rate), but will impact upstream and vice versa.",
+							"This item configures Rx AGC(Auto Gain Control) GAIN for VDSL, if tweak the Stability Adjustment (VDSL) setting still could not get desired downstream speed, then could try to set Rx AGC GAIN Adjustment to High Performance mode. However if your VDSL connection is unstable and has some CRC then could set to Stable mode.",
+							"This item allows you to control whether to Enable/Disable UPBO(Upstream Power Back Off) for VDSL. DSLAM could use UPBO to reduce the Tx Power of your xDSL modem router, in some cases abnormal UPBO control from DSLAM could leads to sync up issue(such as not enough Tx Power to sync with minimum rate). Thus with this feature now you could disable UPBO and won’t get affected by DSLAM setting.");
 							
 //DualWAN
 helpcontent[26] = new Array("",
@@ -259,4 +263,5 @@ helpcontent[26] = new Array("",
 							"<#dualwan_pingtime_target#>",
 							"<#dualwan_pingtime_interval#>",
 							"<#dualwan_pingtime_delay#>",
-							"<#dualwan_pingtime_upper#>");
+							"<#dualwan_pingtime_upper#>", 
+							"Once switched to secondary wan, firmware can still detect the primary wan. When primary wan keep IP over the set value (Interval+delay)*failback count, the connection switched back to primary wan.");

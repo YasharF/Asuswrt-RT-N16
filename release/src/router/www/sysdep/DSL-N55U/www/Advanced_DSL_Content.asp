@@ -335,21 +335,49 @@ function initial(){
 
 	// WAN port
 	genWANSoption();
-	change_wan_unit();
-	if(!dualWAN_support) {
+	change_wan_unit(document.form.wan_unit);	
+		
+	if(!dualWAN_support && !vdsl_support) {
 		$("WANscap").style.display = "none";
-	}
+	}else if (!vdsl_support){
+		free_options(document.form.dsltmp_transmode);
+		document.form.dsltmp_transmode.options[0] = new Option("ADSL WAN (ATM)", "atm");
+	}		
 }
 
-function change_wan_unit(){
+function show_is_active_dslx_transmode(){
+	if(!vdsl_support)
+		$("active_dslmode").innerHTML = "";
+	else if(document.form.dsltmp_transmode.value == "<% nvram_get("dslx_transmode"); %>")
+		$("active_dslmode").innerHTML = "( Active )";
+	else
+		$("active_dslmode").innerHTML = "( Not Active )";		
+}
+
+function change_wan_unit(obj){
 	if(!dualWAN_support) return;
-	if(document.form.wan_unit.options[document.form.wan_unit.selectedIndex].text == "LAN") {
+	
+	if(obj.options[obj.selectedIndex].text == "DSL"){
+		if(document.form.dsltmp_transmode){
+			document.form.dsltmp_transmode.style.display = "";
+		}		
+		
+		show_is_active_dslx_transmode();
+			
+	}else if(document.form.dsltmp_transmode){
+		document.form.dsltmp_transmode.style.display = "none";
+	}
+	
+	if(obj.options[obj.selectedIndex].text == "WAN" || obj.options[obj.selectedIndex].text == "Ethernet LAN"){
 		document.form.current_page.value = "Advanced_WAN_Content.asp";
 	}
-	else if(document.form.wan_unit.options[document.form.wan_unit.selectedIndex].text == "USB") {
+	else if(obj.options[obj.selectedIndex].text == "USB") {
 		document.form.current_page.value = "Advanced_Modem_Content.asp";
 	}
-	else {
+	else if(obj.options[obj.selectedIndex].text == "DSL" && document.form.dsltmp_transmode.value == "ptm"){
+		document.form.current_page.value = "Advanced_VDSL_Content.asp";
+	}
+	else{
 		return false;
 	}
 
@@ -358,14 +386,28 @@ function change_wan_unit(){
 	document.form.submit();
 }
 
+function change_dsl_transmode(obj){
+	if(obj.value == "atm"){
+		return false;
+	}else{ // ptm
+		document.form.current_page.value = "Advanced_VDSL_Content.asp";
+	}	
+	FormActions("apply.cgi", "change_dslx_transmode", "", "");
+	document.form.target = "";
+	document.form.submit();
+}
+
 function genWANSoption(){
 	if(!dualWAN_support) return;
-	for(i=0; i<wans_dualwan.split(" ").length; i++)
-		document.form.wan_unit.options[i] = new Option(wans_dualwan.split(" ")[i].toUpperCase(), i);
+	
+	for(i=0; i<wans_dualwan.split(" ").length; i++){
+		var wans_dualwan_NAME = wans_dualwan.split(" ")[i].toUpperCase();	
+		if(wans_dualwan_NAME == "LAN")
+			wans_dualwan_NAME = "Ethernet LAN";
+		if(wans_dualwan_NAME != "NONE")
+			document.form.wan_unit.options[i] = new Option(wans_dualwan_NAME, i);
+	}
 	document.form.wan_unit.selectedIndex = '<% nvram_get("wan_unit"); %>';
-
-	if(wans_dualwan.search(" ") < 0 || wans_dualwan.split(" ")[1] == 'none')
-		$("WANscap").style.display = "none";
 }
 
 function change_dsl_unit_idx(idx,iptv_row){
@@ -471,6 +513,9 @@ function applyRule(){
 			document.form.action_script.value = "reboot";		
 			document.form.action_wait.value = "<% get_default_reboot_time(); %>";				
 		}
+		
+		document.form.dslx_transmode.value = document.form.dsltmp_transmode.value;
+		
 		document.form.submit();
 	}
 }
@@ -603,17 +648,11 @@ function done_validating(action){
 function disable_pvc_summary() {
 	//$("dsl_pvc_summary").style.display = "none";
 	$("DSL_WAN_table").style.display = "none";
-	if(dualWAN_support){
-		$("WANscap").style.display = "none";
-	}
 }
 
 function enable_pvc_summary() {
 	//$("dsl_pvc_summary").style.display = "";
 	$("DSL_WAN_table").style.display = "";
-	if(dualWAN_support){
-		$("WANscap").style.display = "";
-	}
 }
 
 function disable_all_ctrl() {
@@ -1019,6 +1058,7 @@ function pass_checked(obj){
 <input type="hidden" name="lan_netmask" value="<% nvram_get("lan_netmask"); %>" />
 <input type="hidden" name="dsl_unit" value="" />
 <input type="hidden" name="dsl_enable" value="" />
+<input type="hidden" name="dslx_transmode" value="">
 <input type="hidden" name="wan_enable" value="" disabled>
 <!--input type="hidden" name="wan_unit" value="" disabled-->
 <span id="bridgePPPoE_relay"></span>
@@ -1056,7 +1096,12 @@ function pass_checked(obj){
 										<tr>
 											<th><#wan_type#></th>
 											<td align="left">
-												<select id="wan_unit" class="input_option" name="wan_unit" onchange="change_wan_unit();"></select>											
+												<select id="wan_unit" class="input_option" name="wan_unit" onchange="change_wan_unit(this);"></select>
+												<select id="dsltmp_transmode" name="dsltmp_transmode" class="input_option" style="margin-left:7px;" onChange="change_dsl_transmode(this);">
+													<option value="atm" <% nvram_match("dsltmp_transmode", "atm", "selected"); %>>ADSL WAN (ATM)</option>
+													<option value="ptm" <% nvram_match("dsltmp_transmode", "ptm", "selected"); %>>VDSL WAN (PTM)</option>
+												</select>
+												<span id="active_dslmode"></span>
 											</td>
 										</tr>
 									</table>
@@ -1288,7 +1333,7 @@ function pass_checked(obj){
 												<a class="hintstyle" href="javascript:void(0);" onClick="openHint(7,6);"><#PPPConnection_IdleDisconnectTime_itemname#></a>
 											</th>
 											<td>
-												<input type="text" maxlength="10" class="input_12_table" name="dslx_pppoe_idletime" value="<% nvram_get("dslx_pppoe_idletime"); %>" onkeypress="return is_number(this,event)" />
+												<input type="text" maxlength="10" class="input_12_table" name="dslx_pppoe_idletime" value="<% nvram_get("dslx_pppoe_idletime"); %>" onkeypress="return is_number(this,event)" />&nbsp<#Second#>
 											</td>
 										</tr>
 										<tr>

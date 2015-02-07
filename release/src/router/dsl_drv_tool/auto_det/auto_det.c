@@ -47,7 +47,7 @@ static int m_msqid_to_d=0;
 static int m_msqid_from_d=0;
 static char time_diff[6];
 static char Language[4];
-char recv_msg[20];
+char recv_msg[MAX_IPC_MSG_BUF];
 int AdslAteQuit = 0;
 
 FILE* m_FpDbgMsg = NULL;
@@ -103,7 +103,7 @@ int recv_ipc(void)
 			//printf("%d",receive_buf.mtype);
 			//printf(receive_buf.mtext);
 			//printf("\n");
-			memset(recv_msg, 0, 20);
+			memset(recv_msg, 0, sizeof(recv_msg));
 			strcpy(recv_msg, receive_buf.mtext);
 			status = 1;
 			break;
@@ -482,7 +482,7 @@ void auto_det_main(char* auto_det_list)
 				sprintf(MsgBuf, "%d: IPC_ADD_PVC %d/%d, %d\n", i, detect_pvc[i].vpi, detect_pvc[i].vci, detect_pvc[i].prtcl);
 				PutMsg(MsgBuf);						   
 				send_buf.mtype=IPC_ADD_PVC;
-				memset(&send_buf.mtext, 0, 20);
+				memset(&send_buf.mtext, 0, MAX_IPC_MSG_BUF);
 				pWord = (unsigned short*)send_buf.mtext;
 				*pWord++ = i; // idx (0-7)
 				*pWord++ = i+1; // always equal to idx_1

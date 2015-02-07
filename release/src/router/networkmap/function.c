@@ -1763,19 +1763,15 @@ int FindAllApp(unsigned char *src_ip, P_CLIENT_DETAIL_INFO_TABLE p_client_detail
 	        {
         	        p_client_detail_info_tab->type[p_client_detail_info_tab->detail_info_num] = 3;
 	        }
-        	else if( (strstr(description.description, "nas")!=NULL) )
+        	else if( strstr(description.description, "nas") )
         	{
                 	p_client_detail_info_tab->type[p_client_detail_info_tab->detail_info_num] = 4;
         	}
-	        else if( (strstr(description.description, "cam")!=NULL) )
+	        else if( strstr(description.description, "cam") )
 	        {	
         	        p_client_detail_info_tab->type[p_client_detail_info_tab->detail_info_num] = 5;
 	        }
-                else if( (strstr(description.description, "xbox")!=NULL))
-                {
-                        p_client_detail_info_tab->type[p_client_detail_info_tab->detail_info_num] = 8;
-                }
-                else if( (strstr(description.description, "ps")!=NULL) ) 
+                else if( strstr(description.modelname, "Xbox") )
                 {
                         p_client_detail_info_tab->type[p_client_detail_info_tab->detail_info_num] = 8;
                 }

@@ -102,6 +102,7 @@ SEP=echo "\033[41;1m   $@   \033[0m"
 #
 # standard packages
 #
+obj-$(RTCONFIG_QTN) += libqcsapi_client
 obj-$(RTCONFIG_DMALLOC) += dmalloc
 
 ifeq ($(RTN14U)$(RTAC52U)$(RTAC51U)$(RTN11P),y)
@@ -127,11 +128,10 @@ else
 obj-y += hw_nat
 endif
 endif
+endif
 ifeq ($(RTCONFIG_DSL),y)
 obj-y += dsl_drv_tool
 endif
-endif
-
 ifneq ($(or $(findstring linux-2.6.36,$(LINUXDIR)),$(findstring linux-3.x,$(LINUXDIR))),)
 obj-y += iptables-1.4.x
 obj-y += iproute2-3.x
@@ -140,6 +140,9 @@ obj-y += iptables
 obj-y += iproute2
 endif
 
+ifeq ($(RTCONFIG_BWDPI),y)
+obj-y += bwdpi
+endif
 obj-y += rc
 ifeq ($(RTCONFIG_USB),y)
 obj-y += rom
@@ -205,9 +208,11 @@ obj-$(RTCONFIG_USB_PRINTER) += LPRng
 
 obj-$(RTCONFIG_USB_MODEM) += sdparm-1.02
 obj-$(RTCONFIG_USB_MODEM) += comgt-0.32
+obj-$(RTCONFIG_USB_MODEM) += uqmi
 
 ifneq ($(or $(findstring linux-2.6.36.x,$(LINUXDIR)),$(findstring linux-2.6.36,$(LINUXDIR)),$(findstring linux-3.x,$(LINUXDIR))),)
-obj-$(RTCONFIG_USB_MODEM) += usbmodeswitch-1.2.3
+#obj-$(RTCONFIG_USB_MODEM) += usbmodeswitch-1.2.3
+obj-$(RTCONFIG_USB_MODEM) += usb-modeswitch-2.1.1
 else
 obj-$(RTCONFIG_USB_MODEM) += usbmodeswitch
 endif
@@ -269,10 +274,10 @@ else
 obj-$(RTCONFIG_NTFS) += ufsd
 endif
 endif
-ifeq ($(RTCONFIG_TUXERA),y)
-obj-$(RTCONFIG_HFS) += tuxera
-else
-obj-$(RTCONFIG_HFS) += ufsd
+ifeq ($(RTCONFIG_HFS),y)
+obj-$(RTCONFIG_PARAGON_HFS) += ufsd
+obj-$(RTCONFIG_TUXERA_HFS) += tuxera
+obj-$(RTCONFIG_KERNEL_HFSPLUS) += diskdev_cmds-332.14
 endif
 obj-$(RTCONFIG_EBTABLES) += ebtables
 obj-$(RTCONFIG_IPV6) += libdaemon
@@ -422,7 +427,6 @@ endif
 
 obj-$(RTCONFIG_TCPDUMP) += libpcap
 obj-$(RTCONFIG_TCPDUMP) += tcpdump-4.4.0
-obj-$(RTCONFIG_QTN) += libqcsapi_client
 
 obj-clean := $(foreach obj, $(obj-y) $(obj-n) $(obj-), $(obj)-clean)
 obj-install := $(foreach obj,$(obj-y),$(obj)-install)
@@ -722,11 +726,11 @@ endif
 	$(if $(RTCONFIG_USB_MODEM),@cp -f,@mv) $(TARGETDIR)/lib/modules/*/kernel/drivers/net/usb/asix.*o $(PLATFORMDIR)/extras/ || true
 	$(if $(RTCONFIG_USB_MODEM),@cp -f,@mv) $(TARGETDIR)/lib/modules/*/kernel/drivers/net/usb/cdc_ether.*o $(PLATFORMDIR)/extras/ || true
 	$(if $(RTCONFIG_USB_MODEM),@cp -f,@mv) $(TARGETDIR)/lib/modules/*/kernel/drivers/net/usb/rndis_host.*o $(PLATFORMDIR)/extras/ || true
+	$(if $(RTCONFIG_USB_MODEM),@cp -f,@mv) $(TARGETDIR)/lib/modules/*/kernel/drivers/net/usb/cdc_ncm.*o $(PLATFORMDIR)/extras/ || true
+	$(if $(RTCONFIG_USB_MODEM),@cp -f,@mv) $(TARGETDIR)/lib/modules/*/kernel/drivers/net/usb/cdc_wdm.*o $(PLATFORMDIR)/extras/ || true
+	$(if $(RTCONFIG_USB_MODEM),@cp -f,@mv) $(TARGETDIR)/lib/modules/*/kernel/drivers/net/usb/qmi_wwan.*o $(PLATFORMDIR)/extras/ || true
+	$(if $(RTCONFIG_USB_MODEM),@cp -f,@mv) $(TARGETDIR)/lib/modules/*/kernel/drivers/net/usb/cdc_mbim.*o $(PLATFORMDIR)/extras/ || true
 	$(if $(RTCONFIG_USB_MODEM),@cp -f,@mv) $(TARGETDIR)/lib/modules/*/kernel/drivers/usb/sierra.*o $(PLATFORMDIR)/extras/ || true
-	$(if $(RTCONFIG_USB_MODEM),$(if $(RTCONFIG_USB_LESSMODEM),@mv,@cp -f),@mv) $(TARGETDIR)/lib/modules/*/kernel/drivers/net/usb/net1080.*o $(PLATFORMDIR)/extras/ || true
-	$(if $(RTCONFIG_USB_MODEM),$(if $(RTCONFIG_USB_LESSMODEM),@mv,@cp -f),@mv) $(TARGETDIR)/lib/modules/*/kernel/drivers/net/usb/zaurus.*o $(PLATFORMDIR)/extras/ || true
-	$(if $(RTCONFIG_USB_MODEM),$(if $(RTCONFIG_USB_LESSMODEM),@mv,@cp -f),@mv) $(TARGETDIR)/lib/modules/*/kernel/drivers/usb/ftdi_sio.*o $(PLATFORMDIR)/extras/ || true
-	$(if $(RTCONFIG_USB_MODEM),$(if $(RTCONFIG_USB_LESSMODEM),@mv,@cp -f),@mv) $(TARGETDIR)/lib/modules/*/kernel/drivers/usb/pl2303.*o $(PLATFORMDIR)/extras/ || true
 
 	@mv $(TARGETDIR)/lib/modules/*/kernel/drivers/usb/usbkbd.*o $(PLATFORMDIR)/extras/ || true
 	@mv $(TARGETDIR)/lib/modules/*/kernel/drivers/usb/usbmouse.*o $(PLATFORMDIR)/extras/ || true
@@ -821,6 +825,15 @@ ifeq ($(RTCONFIG_QTN),y)
 	# install qtn boot-code and firmware
 	install -D qtnimage/topaz-linux.lzma.img $(TARGETDIR)/rom/qtn/topaz-linux.lzma.img
 	install -D qtnimage/u-boot.bin $(TARGETDIR)/rom/qtn/u-boot.bin
+endif
+ifeq ($(RTCONFIG_BWDPI),y)
+	install -d $(TARGETDIR)/usr/bwdpi/
+	cp -f bwdpi_bin/*.so $(TARGETDIR)/usr/bwdpi/
+	cp -f bwdpi_bin/*.ko $(TARGETDIR)/usr/bwdpi/
+	cp -f bwdpi_bin/*.trf $(TARGETDIR)/usr/bwdpi/
+	install -D bwdpi_bin/qosd $(TARGETDIR)/usr/sbin/qosd
+	install -D bwdpi_bin/wred $(TARGETDIR)/usr/sbin/wred
+	install -D bwdpi_bin/bwdpi-rule-agent $(TARGETDIR)/usr/sbin/bwdpi-rule-agent
 endif
 	@echo ---
 
@@ -1076,7 +1089,7 @@ wb: openssl libxml2 curl-7.21.7
 
 push_log: wb
 
-rc: nvram$(BCMEX) shared libbcmcrypto libdisk $(PUSH_LOG)
+rc: nvram$(BCMEX) shared libbcmcrypto libdisk $(PUSH_LOG) $(if $(RTCONFIG_QTN),libqcsapi_client) $(if $(CONFIG_LIBBCM),libbcm)
 
 bridge/stamp-h1:
 	cd bridge && CFLAGS="-Os -g $(EXTRACFLAGS)" \
@@ -1233,7 +1246,7 @@ miniupnpd-install:
 	$(STRIP) $(INSTALLDIR)/miniupnpd/usr/sbin/miniupnpd
 
 # !!TB
-shared: busybox
+shared: busybox $(if $(RTCONFIG_QTN),libqcsapi_client)
 ifeq ($(RTCONFIG_RALINK),y)
 	make -C wireless_tools wireless.h	
 endif
@@ -1388,11 +1401,22 @@ usbmodeswitch-1.2.3: libusb-0.1.12
 		-Wl,-R/lib:/usr/lib:/opt/usr/lib:/usr/local/share -lpthread \
 		-I$(TOP)/libusb-0.1.12 -L$(TOP)/libusb-0.1.12/.libs -lusb"
 
-usbmodeswitch-1.2.3-install: usbmodeswitch-1.2.3 usbmodeswitch-1.2.3-install
+usbmodeswitch-1.2.3-install: usbmodeswitch-1.2.3
 	install -D usbmodeswitch-1.2.3/usb_modeswitch $(INSTALLDIR)/usbmodeswitch-1.2.3/usr/sbin/usb_modeswitch
 	$(STRIP) -s $(INSTALLDIR)/usbmodeswitch-1.2.3/usr/sbin/usb_modeswitch
 	@mkdir -p $(TARGETDIR)/rom/etc
 	@sed 's/#.*//g;s/[ \t]\+/ /g;s/^[ \t]*//;s/[ \t]*$$//;/^$$/d' < $(TOP)/usbmodeswitch-1.2.3/usb_modeswitch.conf > $(TARGETDIR)/rom/etc/usb_modeswitch.conf
+
+usb-modeswitch-2.1.1: libusb10
+	$(MAKE) -C $@ CC=$(CC) CFLAGS="-Os $(EXTRACFLAGS) \
+		-Wl,-R/lib:/usr/lib:/opt/usr/lib:/usr/local/share -lpthread \
+		-I$(TOP)/libusb10/libusb -L$(TOP)/libusb10/libusb/.libs -lusb-1.0"
+
+usb-modeswitch-2.1.1-install: usb-modeswitch-2.1.1
+	install -D usb-modeswitch-2.1.1/usb_modeswitch $(INSTALLDIR)/usb-modeswitch-2.1.1/usr/sbin/usb_modeswitch
+	$(STRIP) -s $(INSTALLDIR)/usb-modeswitch-2.1.1/usr/sbin/usb_modeswitch
+	@mkdir -p $(TARGETDIR)/rom/etc
+	@sed 's/#.*//g;s/[ \t]\+/ /g;s/^[ \t]*//;s/[ \t]*$$//;/^$$/d' < $(TOP)/usb-modeswitch-2.1.1/usb_modeswitch.conf > $(TARGETDIR)/rom/etc/usb_modeswitch.conf
 
 libusb-0.1.12/stamp-h1:
 	cd libusb-0.1.12 && CFLAGS="-Os -Wall $(EXTRACFLAGS)" LIBS="-lpthread" \
@@ -1507,7 +1531,7 @@ radvd/stamp-h1:
 	LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections $(EXTRALDFLAGS)" \
 	$(CONFIGURE) --prefix="" --disable-dependency-tracking \
 	DAEMON_CFLAGS="-I$(TOP)/libdaemon" \
-	DAEMON_LIBS="-ldaemon -L$(TOP)/libdaemon/libdaemon/.libs $(EXTRALDFLAGS2)"
+	DAEMON_LIBS="-ldaemon -L$(TOP)/libdaemon/libdaemon/.libs $(EXTRALDFLAGS2) $(if $(RTCONFIG_QTN),-L$(TOP)/libqcsapi_client -lqcsapi_client)"
 	-@$(MAKE) -C radvd clean
 	@touch $@
 
@@ -1546,7 +1570,7 @@ ndisc6-clean:
 ndisc6-install: ndisc6
 	install -D ndisc6/rdnssd/rdnssd $(INSTALLDIR)/ndisc6/usr/sbin/rdnssd
 	$(STRIP) $(INSTALLDIR)/ndisc6/usr/sbin/rdnssd
-ifeq ($(RTCONFIG_RALINK),y)
+ifneq ($(RTCONFIG_BCMWL6),y)
 	install -D $(shell dirname $(shell which $(CXX)))/../lib/librt.so.0 $(TARGETDIR)/lib/librt.so.0
 endif
 
@@ -2422,7 +2446,7 @@ openvpn/stamp-h1: lzo
 	export OPENSSL_SSL_CFLAGS="-I$(TOP)/openssl"; \
 	export OPENSSL_SSL_LIBS="-L$(TOP)/openssl -lssl"; \
 	CFLAGS="-Os -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
-	LDFLAGS="$(EXTRALDFLAGS) -L$(TOP)/nvram$(BCMEX) -lnvram -L$(TOP)/shared -lshared -L$(TOP)/zlib -lz -L$(TOP)/lzo/src/.libs -L$(TOP)/openpam/lib/libpam/.libs -ffunction-sections -fdata-sections -Wl,--gc-sections" \
+	LDFLAGS="$(EXTRALDFLAGS) -L$(TOP)/nvram$(BCMEX) -lnvram -L$(TOP)/shared -lshared $(if $(RTCONFIG_QTN),-L$(TOP)/libqcsapi_client -lqcsapi_client) -L$(TOP)/zlib -lz -L$(TOP)/lzo/src/.libs -L$(TOP)/openpam/lib/libpam/.libs -ffunction-sections -fdata-sections -Wl,--gc-sections" \
 	CPPFLAGS="-I$(TOP)/lzo/include -I$(TOP)/openssl/include -I$(TOP)/openpam/include -I$(TOP)/shared -I$(SRCBASE)/include" \
 	IPROUTE="/usr/sbin/ip" \
 	$(CONFIGURE) --prefix= \
@@ -2541,9 +2565,11 @@ eapd$(BCMEX)-clean:
 	-@cd eapd$(BCMEX)/linux && make clean
 
 lighttpd-1.4.29/stamp-h1:
-	cd lighttpd-1.4.29 && \
-	   ./preconfigure-script \
-	touch $@
+ifneq ($(RTCONFIG_QTN),y)
+	cd lighttpd-1.4.29 && ./preconfigure-script touch $@
+else
+	cd lighttpd-1.4.29 && ./preconfigure-script-qtn touch $@
+endif
 
 lighttpd-1.4.29: shared nvram$(BCMEX) libdisk samba-3.5.8 pcre-8.31 libxml2 sqlite libexif openssl wb push_log lighttpd-1.4.29/stamp-h1
 
@@ -2877,7 +2903,7 @@ expat-2.0.1-clean:
 #avahi-0.6.31
 avahi-0.6.31/stamp-h1: shared nvram$(BCMEX) expat-2.0.1 libdaemon
 	cd $(TOP)/avahi-0.6.31 && \
-	$(CONFIGURE) LDFLAGS="-L$(TOP)/expat-2.0.1/.libs" CFLAGS="-I$(TOP)/expat-2.0.1/lib -I$(TOP)/shared -I$(SRCBASE)/include" --prefix=$(INSTALLDIR)/avahi-0.6.31/usr --with-distro=archlinux --disable-glib --disable-gobject --disable-qt3 --disable-qt4 --disable-gtk --disable-dbus --disable-expat --disable-gdbm --disable-python --disable-pygtk --disable-python-dbus --disable-mono --disable-monodoc --disable-gtk3 --with-xml=none  LIBDAEMON_LIBS="-L$(TOP)/libdaemon/libdaemon/.libs -ldaemon -L$(TOP)/nvram$(BCMEX) -lnvram -L$(TOP)/shared -lshared" LIBDAEMON_CFLAGS="-I$(TOP)/libdaemon" --disable-autoipd --with-xml=expat --disable-stack-protector --with-avahi-user="admin" --with-avahi-group="root"
+	$(CONFIGURE) LDFLAGS="-L$(TOP)/expat-2.0.1/.libs" CFLAGS="-I$(TOP)/expat-2.0.1/lib -I$(TOP)/shared -I$(SRCBASE)/include" --prefix=$(INSTALLDIR)/avahi-0.6.31/usr --with-distro=archlinux --disable-glib --disable-gobject --disable-qt3 --disable-qt4 --disable-gtk --disable-dbus --disable-expat --disable-gdbm --disable-python --disable-pygtk --disable-python-dbus --disable-mono --disable-monodoc --disable-gtk3 --with-xml=none  LIBDAEMON_LIBS="-L$(TOP)/libdaemon/libdaemon/.libs -ldaemon -L$(TOP)/nvram$(BCMEX) -lnvram -L$(TOP)/shared -lshared $(if $(RTCONFIG_QTN),-L$(TOP)/libqcsapi_client -lqcsapi_client)" LIBDAEMON_CFLAGS="-I$(TOP)/libdaemon" --disable-autoipd --with-xml=expat --disable-stack-protector --with-avahi-user="admin" --with-avahi-group="root"
 	touch $@
 
 avahi-0.6.31: avahi-0.6.31/stamp-h1
@@ -2960,6 +2986,16 @@ tftp-install:
 	#install -D tftp-1.0/tftpc $(INSTALLDIR)/tftp/usr/sbin/tftpc
 	#$(STRIP) -s $(INSTALLDIR)/tftp/usr/sbin/tftpc
 
+bwdpi:
+	cd bwdpi && CC=$(CC) && $(MAKE)
+
+bwdpi-clean:
+	cd bwdpi && $(MAKE) clean
+
+bwdpi-install: bwdpi
+	install -D bwdpi/libbwdpi.so $(INSTALLDIR)/bwdpi/usr/lib/libbwdpi.so
+	$(STRIP) $(INSTALLDIR)/bwdpi/usr/lib/libbwdpi.so
+
 NORTON_DIR := $(SRCBASE)/router/norton${BCMEX}
 
 .PHONY: norton${BCMEX} norton${BCMEX}-install norton${BCMEX}-clean
@@ -2988,6 +3024,28 @@ email-3.1.3-clean:
 email-3.1.3-install: email-3.1.3
 	install -D email-3.1.3/src/email $(INSTALLDIR)/email-3.1.3/usr/sbin/email
 	$(STRIP) $(INSTALLDIR)/email-3.1.3/usr/sbin/email
+
+#diskdev_cmds-332.14
+diskdev_cmds-332.14:
+	@$(SEP)
+	cd $(TOP)/diskdev_cmds-332.14 && \
+	make -f Makefile.lnx
+
+diskdev_cmds-332.14-install: diskdev_cmds-332.14
+	install -D diskdev_cmds-332.14/newfs_hfs.tproj/newfs_hfs $(INSTALLDIR)/diskdev_cmds-332.14/usr/sbin/mkfs.hfsplus
+	install -D diskdev_cmds-332.14/fsck_hfs.tproj/fsck_hfs $(INSTALLDIR)/diskdev_cmds-332.14/usr/sbin/fsck.hfsplus
+	$(STRIP) $(INSTALLDIR)/diskdev_cmds-332.14/usr/sbin/mkfs.hfsplus
+	$(STRIP) $(INSTALLDIR)/diskdev_cmds-332.14/usr/sbin/fsck.hfsplus
+	cd $(INSTALLDIR)/diskdev_cmds-332.14/usr/sbin && \
+	ln -s mkfs.hfsplus mkfs.hfs && \
+	ln -s fsck.hfsplus fsck.hfs
+
+diskdev_cmds-332.14-clean:
+	cd $(TOP)/diskdev_cmds-332.14 && \
+	make -f Makefile.lnx clean
+	rm -f $(INSTALLDIR)/diskdev_cmds-332.14/usr/sbin/mkfs.hfs 
+	rm -f $(INSTALLDIR)/diskdev_cmds-332.14/usr/sbin/fsck.hfs 
+	
 
 #
 # Generic rules

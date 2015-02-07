@@ -91,6 +91,10 @@ typedef unsigned int __u32;   // 1225 ham
 #endif
 #include "bcmnvram_f.h"
 
+#ifdef RTCONFIG_QTN
+#include "web-qtn.h"
+#endif
+
 /* A multi-family sockaddr. */
 typedef union {
     struct sockaddr sa;
@@ -193,9 +197,9 @@ struct language_table language_tables[] = {
 	{"th-TH-TH", "TH"},
 	{"tr", "TR"},
 	{"tr-TR", "TR"},
-	{"zh", "TW"}, 
+	{"zh", "TW"},
 	{"zh-tw", "TW"},
-	{"zh-Hant-TW", "TW"},   
+	{"zh-Hant-TW", "TW"},
 	{"zh-hk", "TW"},
 	{"uk", "UK"},
 	{NULL, NULL}
@@ -221,9 +225,9 @@ static void handle_request(void);
 /* added by Joey */
 //2008.08 magic{
 //int redirect = 1;
-int redirect = 0;	
-int change_passwd = 0;	
-int reget_passwd = 0;	
+int redirect = 0;
+int change_passwd = 0;
+int reget_passwd = 0;
 int x_Setting = 0;
 int skip_auth = 0;
 int isLogout = 0;
@@ -239,7 +243,7 @@ unsigned int login_ip_tmp=0; // the ip of the current session.
 unsigned int login_try=0;
 unsigned int last_login_ip = 0;	// the last logined ip 2008.08 magic
 /* limit login IP addr; 2012.03 Yau */
-unsigned int access_ip[4]; 
+unsigned int access_ip[4];
 unsigned int MAX_login;
 
 // 2008.08 magic {
@@ -341,7 +345,7 @@ auth_check( char* dirname, char* authorization ,char* url)
 	if(isLogout == 1){
 		isLogout = 0;
 		send_authenticate( dirname );
-                return 0;
+		return 0;
 	}
 
 	login_timestamp_tmp = uptime();
@@ -373,14 +377,14 @@ auth_check( char* dirname, char* authorization ,char* url)
 		return 1;
 
 	/* Basic authorization info? */
-	if ( !authorization || strncmp( authorization, "Basic ", 6 ) != 0) 
+	if ( !authorization || strncmp( authorization, "Basic ", 6 ) != 0)
 	{
 		__send_authenticate( dirname );
 		return 0;
 	}
 
 	/* Decode it. */
-	l = b64_decode( &(authorization[6]), authinfo, sizeof(authinfo) );
+	l = b64_decode( &(authorization[6]), (unsigned char*) authinfo, sizeof(authinfo) );
 	authinfo[l] = '\0';
 	/* Split into user and password. */
 	authpass = strchr( authinfo, ':' );
@@ -455,7 +459,7 @@ send_headers( int status, char* title, char* extra_header, char* mime_type )
     {
     time_t now;
     char timebuf[100];
- 
+
     (void) fprintf( conn_fp, "%s %d %s\r\n", PROTOCOL, status, title );
     (void) fprintf( conn_fp, "Server: %s\r\n", SERVER_NAME );
     now = time( (time_t*) 0 );
@@ -612,7 +616,7 @@ int web_write(const char *buffer, int len, FILE *stream)
 {
 	int n = len;
 	int r = 0;
-	
+
 	while (n > 0) {
 		r = fwrite(buffer, 1, n, stream);
 		if (( r == 0) && (errno != EINTR)) return -1;
@@ -863,7 +867,7 @@ handle_request(void)
 
 		// check exception first
 		for (exhandler = &except_mime_handlers[0]; exhandler->pattern; exhandler++) {
-			if(match(exhandler->pattern, url)) 
+			if(match(exhandler->pattern, url))
 			{
 				mime_exception = exhandler->flag;
 				break;
@@ -910,10 +914,10 @@ handle_request(void)
 				}
 
 				if(!fromapp) {
-					if (	!strstr(url, "QIS_") 
+					if (	!strstr(url, "QIS_")
 							&& !strstr(url, ".js")
-							&& !strstr(url, ".css") 
-							&& !strstr(url, ".gif") 
+							&& !strstr(url, ".css")
+							&& !strstr(url, ".gif")
 							&& !strstr(url, ".png"))
 						http_login(login_ip_tmp, url);
 				}
@@ -957,7 +961,7 @@ handle_request(void)
 			if (strcasecmp(method, "head") != 0 && handler->output) {
 				handler->output(file, conn_fp);
 			}
-			
+
 			break;
 		}
 	}
@@ -994,7 +998,7 @@ void http_login_cache(usockaddr *u) {
 }
 
 void http_get_access_ip(void) {
-        struct in_addr tmp_access_addr;
+	struct in_addr tmp_access_addr;
 	char tmp_access_ip[32];
 	char *nv, *nvp, *b;
 	int i=0, p=0;
@@ -1002,24 +1006,24 @@ void http_get_access_ip(void) {
 	for(; i<ARRAY_SIZE(access_ip); i++)
 		access_ip[i]=0;
 
-        nv = nvp = strdup(nvram_safe_get("http_clientlist"));
+	nv = nvp = strdup(nvram_safe_get("http_clientlist"));
 
-        if (nv) {
-                while ((b = strsep(&nvp, "<")) != NULL) {
-                        if (strlen(b)==0) continue;
-                        sprintf(tmp_access_ip, "%s", b);
-                        inet_aton(tmp_access_ip, &tmp_access_addr);
-			
+	if (nv) {
+		while ((b = strsep(&nvp, "<")) != NULL) {
+			if (strlen(b)==0) continue;
+			sprintf(tmp_access_ip, "%s", b);
+			inet_aton(tmp_access_ip, &tmp_access_addr);
+
 			if (p >= ARRAY_SIZE(access_ip)) {
 				_dprintf("%s: access_ip out of range (p %d addr %x)!\n",
 					__func__, p, (unsigned int)tmp_access_addr.s_addr);
 				break;
 			}
-                        access_ip[p] = (unsigned int)tmp_access_addr.s_addr;
+			access_ip[p] = (unsigned int)tmp_access_addr.s_addr;
 			p++;
-                }
-                free(nv);
-        }
+		}
+		free(nv);
+	}
 }
 
 void http_login(unsigned int ip, char *url) {
@@ -1059,17 +1063,17 @@ void http_login(unsigned int ip, char *url) {
 
 int http_client_ip_check(void) {
 
-        int i = 0;
-        if(nvram_match("http_client", "1")) {
-                while(i<ARRAY_SIZE(access_ip)) {
-                        if(access_ip[i]!=0) {
-                                if(login_ip_tmp==access_ip[i])
-                                        return 1;
-                        }
-                        i++;
-                }
+	int i = 0;
+	if(nvram_match("http_client", "1")) {
+		while(i<ARRAY_SIZE(access_ip)) {
+			if(access_ip[i]!=0) {
+				if(login_ip_tmp==access_ip[i])
+					return 1;
+			}
+			i++;
+		}
 		return 0;
-        }
+	}
 
 	return 1;
 }
@@ -1092,7 +1096,7 @@ int http_login_check(void)
 		return 1;
 	else if (login_ip == login_ip_tmp && (login_port == http_port || !login_port))
 		return 2;
-	
+
 	return 3;
 }
 
@@ -1100,11 +1104,11 @@ void http_login_timeout(unsigned int ip)
 {
 	time_t now, login_ts;
 	unsigned int login_port = nvram_get_int("login_port");
-	
+
 //	time(&now);
 	now = uptime();
 	login_ts = atol(nvram_safe_get("login_timestamp"));
-	
+
 // 2007.10 James. for really logout. {
 	//if (login_ip!=ip && (unsigned long)(now-login_timestamp) > 60) //one minitues
 	if (((login_ip != 0 && login_ip != ip) || (login_port != http_port || !login_port)) && ((unsigned long)(now-login_ts) > 60)) //one minitues
@@ -1122,11 +1126,11 @@ void http_logout(unsigned int ip)
 		last_login_ip = login_ip;
 		login_ip = 0;
 		login_timestamp = 0;
-		
+
 		nvram_set("login_ip", "");
 		nvram_set("login_timestamp", "");
 		nvram_set("login_port", "");
-		
+
 // 2008.03 James. {
 		if (change_passwd == 1) {
 			change_passwd = 0;
@@ -1247,7 +1251,7 @@ load_dictionary (char *lang, pkw_t pkw)
 #endif  // RELOAD_DICT
 			break;
 		}
-		
+
 //		printf ("Open (%s) failure. errno %d (%s)\n", dfn, errno, strerror (errno));
 		if (dfp == NULL && strcmp (dfn, eng_dict) == 0) {
 			return 0;
@@ -1265,7 +1269,7 @@ load_dictionary (char *lang, pkw_t pkw)
 	printf ("dict_size %d\n", dict_size);
 
 #ifdef RTCONFIG_DYN_DICT_NAME
-	dyn_dict_buf = malloc(dict_size);
+	dyn_dict_buf = (char *) malloc(dict_size);
 	fseek (dfp, 0L, SEEK_SET);
 	// skip BOM
 	fread (dummy_buf, 1, 3, dfp);
@@ -1277,11 +1281,11 @@ load_dictionary (char *lang, pkw_t pkw)
 	free(dyn_dict_buf);
 
 	dict_size = sizeof(char) * strlen(dyn_dict_buf_new);
-	pkw->buf = q = malloc (dict_size);
+	pkw->buf = (unsigned char *) (q = malloc (dict_size));
 	strcpy(pkw->buf, dyn_dict_buf_new);
 	free(dyn_dict_buf_new);
 #else
-	pkw->buf = q = malloc (dict_size);
+	pkw->buf = (unsigned char *) (q = malloc (dict_size));
 
 	fseek (dfp, 0L, SEEK_SET);
 	// skip BOM
@@ -1292,7 +1296,7 @@ load_dictionary (char *lang, pkw_t pkw)
 #endif
 	// calc how many dict item , dict_item
 	remain_dict = dict_size;
-	tmp_ptr = pkw->buf;
+	tmp_ptr = (char *) pkw->buf;
 	dict_item = 0;
 	while (remain_dict>0) {
 		if (*tmp_ptr == 0x0a) {
@@ -1310,13 +1314,13 @@ load_dictionary (char *lang, pkw_t pkw)
 	}
 	// allocate memory according dict_item
 	pkw->idx = malloc (dict_item * sizeof(unsigned char*));
-	
-	printf ("dict_item %d\n", dict_item);	
+
+	printf ("dict_item %d\n", dict_item);
 
 	// get all string start and put to pkw->idx
 	remain_dict = dict_size;
 	for (dict_item_idx = 0; dict_item_idx < dict_item; dict_item_idx++) {
-		pkw->idx[dict_item_idx] = q;
+		pkw->idx[dict_item_idx] = (unsigned char *) q;
 		while (remain_dict>0) {
 			if (*q == 0x0a) {
 				*q=0;
@@ -1331,7 +1335,7 @@ load_dictionary (char *lang, pkw_t pkw)
 			remain_dict--;
 		}
 	}
-	
+
 	pkw->len = dict_item;
 
 	fclose (dfp);
@@ -1368,17 +1372,17 @@ search_desc (pkw_t pkw, char *name)
 	char *ret = NULL;
 	int dict_idx;
 	char name_buf[128];
-	
-/*	
+
+/*
 	printf("search_desc:");
 	printf(name);
 	printf("\n");
-*/	
+*/
 
 	if (pkw == NULL || (pkw != NULL && pkw->len <= 0))      {
 		return NULL;
 	}
-	
+
 	// remove equal
 	memset(name_buf,0,sizeof(name_buf));
 	// minus one for reserver one char for string zero char
@@ -1388,8 +1392,8 @@ search_desc (pkw_t pkw, char *name)
 		}
 		name_buf[i]=*name++;
 	}
-	
-/*	
+
+/*
 	for (i = 0; i < pkw->len; ++i)  {
 		char *p;
 		p = pkw->idx[i];
@@ -1398,28 +1402,28 @@ search_desc (pkw_t pkw, char *name)
 			break;
 		}
 	}
-*/	
+*/
 
 /*
 	printf("search_desc:");
 	printf(name_buf);
 	printf("\n");
-*/	
+*/
 
 	dict_idx = atoi(name_buf);
-//	printf("%d , %d\n",dict_idx,pkw->len);	
+//	printf("%d , %d\n",dict_idx,pkw->len);
 	if (dict_idx < pkw->len) {
-		ret = pkw->idx[dict_idx];
+		ret = (char *) pkw->idx[dict_idx];
 	}
 	else {
-		ret = pkw->idx[0];
+		ret = (char *) pkw->idx[0];
 	}
-	
-/*	
+
+/*
 	printf("ret:");
 	printf(ret);
-	printf("\n");	
-*/	
+	printf("\n");
+*/
 
 	return ret;
 }
@@ -1568,6 +1572,10 @@ void reapchild()	// 0527 add
 	wait(NULL);
 }
 
+#ifdef RTCONFIG_QTN
+extern char *wl_ether_etoa(const struct ether_addr *n);
+#endif
+
 int do_ssl = 0; 	// use Global for HTTPS upgrade judgment in web.c
 int ssl_stream_fd; 	// use Global for HTTPS stream fd in web.c
 int main(int argc, char **argv)
@@ -1578,35 +1586,70 @@ int main(int argc, char **argv)
 	char pidfile[32];
 	fd_set active_rfds;
 	conn_list_t pool;
-        int c;
-        //int do_ssl = 0;
+	int c;
+	//int do_ssl = 0;
 
 	do_ssl = 0; // default
 	// usage : httpd -s -p [port]
 	if(argc) {
-        	while ((c = getopt(argc, argv, "sp:")) != -1) {
-                	switch (c) {
-                	case 's':
-                        	do_ssl = 1;
-                        	break;
+		while ((c = getopt(argc, argv, "sp:")) != -1) {
+			switch (c) {
+			case 's':
+				do_ssl = 1;
+				break;
 			case 'p':
 				http_port = atoi(optarg);
 				break;
 			default:
 				fprintf(stderr, "ERROR: unknown option %c\n", c);
 				break;
-                	}
-        	}
+			}
+		}
 	}
 
 #ifdef RTCONFIG_QTN
 	time_t start_time = uptime();
-	int ret = 0;
-	ret = c_rpc_qcsapi_init();
+	int ret;
+QTN_RESET:
+	ret = rpc_qcsapi_init();
 	if (ret < 0) {
 		dbG("Qcsapi qcsapi init error, return: %d\n", ret);
 	}
-	dbG("Qcsapi qcsapi init takes %d secodns\n", uptime() - start_time);
+	else if (nvram_get_int("qtn_restore_defaults"))
+	{
+		nvram_unset("qtn_restore_defaults");
+//		eval("qcsapi_sockrpc", "update_bootcfg_param", "ipaddr", "1.1.1.2");
+		rpc_qcsapi_restore_default_config(0);
+		dbG("Restaring Qcsapi init...\n");
+		sleep(15);
+		goto QTN_RESET;
+	}
+
+	qcsapi_init();
+
+	dbG("Qcsapi qcsapi init takes %ld seconds\n", uptime() - start_time);
+
+	qcsapi_mac_addr wl_mac_addr;
+	ret = rpc_qcsapi_interface_get_mac_addr(WIFINAME, &wl_mac_addr);
+	if (ret < 0)
+		dbG("rpc_qcsapi_interface_get_mac_addr, return: %d\n", ret);
+	else
+	{
+		nvram_set("1:macaddr", wl_ether_etoa((struct ether_addr *) &wl_mac_addr));
+		nvram_set("wl1_hwaddr", wl_ether_etoa((struct ether_addr *) &wl_mac_addr));
+	}
+
+	ret = qcsapi_wps_set_ap_pin(WIFINAME, nvram_safe_get("wps_device_pin"));
+	if (ret < 0)
+		dbG("Qcsapi qcsapi_wps_set_ap_pin %s error, return: %d\n", WIFINAME, ret);
+	ret = qcsapi_wps_registrar_set_pp_devname(WIFINAME, 0, (const char *) get_productid());
+	if (ret < 0)
+		dbG("Qcsapi qcsapi_wps_registrar_set_pp_devname %s error, return: %d\n", WIFINAME, ret);
+	ret = rpc_qcsapi_wifi_disable_wps(WIFINAME, !nvram_get_int("wps_enable"));
+	if (ret < 0)
+		dbG("Qcsapi rpc_qcsapi_wifi_disable_wps %s error, return: %d\n", WIFINAME, ret);
+
+	nvram_set("qtn_ready", "1");
 #endif
 
 	//websSetVer();
@@ -1639,7 +1682,7 @@ int main(int argc, char **argv)
 		fprintf(stderr, "can't bind to any address\n" );
 		exit(errno);
 	}
-	
+
 	FILE *pid_fp;
 	if (http_port==SERVER_PORT)
 		strcpy(pidfile, "/var/run/httpd.pid");
@@ -1663,7 +1706,7 @@ int main(int argc, char **argv)
 		struct timeval tv;
 		fd_set rfds;
 		conn_item_t *item, *next;
-		
+
 		memcpy(&rfds, &active_rfds, sizeof(rfds));
 		if (pool.count < MAX_CONN_ACCEPT) {
 			FD_SET(listen_fd, &rfds);
@@ -1671,7 +1714,7 @@ int main(int argc, char **argv)
 		} else  max_fd = -1;
 		TAILQ_FOREACH(item, &pool.head, entry)
 			max_fd = (item->fd > max_fd) ? item->fd : max_fd;
-		
+
 		/* Wait for new connection or incoming request */
 		tv.tv_sec = MAX_CONN_TIMEOUT;
 		tv.tv_usec = 0;
@@ -1713,7 +1756,7 @@ int main(int argc, char **argv)
 		TAILQ_FOREACH_SAFE(item, &pool.head, entry, next) {
 			if (count && !FD_ISSET(item->fd, &rfds))
 				continue;
-			
+
 			/* Delete from active connections */
 			FD_CLR(item->fd, &active_rfds);
 			TAILQ_REMOVE(&pool.head, item, entry);
@@ -1772,20 +1815,20 @@ int main(int argc, char **argv)
 #ifdef RTCONFIG_HTTPS
 void save_cert(void)
 {
-        if (eval("tar", "-C", "/", "-czf", "/tmp/cert.tgz", "etc/cert.pem", "etc/key.pem") == 0) {
-                if (nvram_set_file("https_crt_file", "/tmp/cert.tgz", 8192)) {
-                        nvram_commit_x();
-                }
-        }
-        unlink("/tmp/cert.tgz");
+	if (eval("tar", "-C", "/", "-czf", "/tmp/cert.tgz", "etc/cert.pem", "etc/key.pem") == 0) {
+		if (nvram_set_file("https_crt_file", "/tmp/cert.tgz", 8192)) {
+			nvram_commit_x();
+		}
+	}
+	unlink("/tmp/cert.tgz");
 }
 
 void erase_cert(void)
 {
-        unlink("/etc/cert.pem");
-        unlink("/etc/key.pem");
-        nvram_unset("https_crt_file");
-        //nvram_unset("https_crt_gen");
+	unlink("/etc/cert.pem");
+	unlink("/etc/key.pem");
+	nvram_unset("https_crt_file");
+	//nvram_unset("https_crt_gen");
 	nvram_set("https_crt_gen", "0");
 }
 
@@ -1796,7 +1839,7 @@ void start_ssl(void)
 	int retry;
 	unsigned long long sn;
 	char t[32];
-	
+
 	//fprintf(stderr,"[httpd] start_ssl running!!\n");
 	//nvram_set("https_crt_gen", "1");
 
@@ -1835,7 +1878,7 @@ void start_ssl(void)
 		if ((save) && (*nvram_safe_get("https_crt_file")) == 0) {
 			save_cert();
 		}
-		
+
 		if (mssl_init("/etc/cert.pem", "/etc/key.pem")) return;
 
 		erase_cert();

@@ -3,6 +3,7 @@ include ../common.mak
 CFLAGS += -Os -Wall $(EXTRACFLAGS) -fPIC
 CFLAGS += -I. -I$(TOP)/shared -I$(SRCBASE)/include
 CFLAGS += -I$(LINUXDIR)/include
+CFLAGS += -D__EXPORTED_HEADERS__
 
 ifeq ($(RTCONFIG_SHP),y)
 CFLAGS += -DSHP
@@ -17,6 +18,11 @@ CFLAGS += -I$(SRCBASE)/shared/bcmwifi/include
 CFLAGS += -I$(SRCBASE)/common/include
 else
 CFLAGS += -I$(SRCBASE)/shared
+endif
+
+ifeq ($(RTCONFIG_QTN),y)
+CFLAGS += -I$(TOP)/libqcsapi_client
+LDFLAGS += -L$(TOP)/libqcsapi_client -lqcsapi_client
 endif
 
 ifeq ($(RTCONFIG_BCMSMP),y)
@@ -68,6 +74,9 @@ endif
 else
 OBJS += wl.o wl_linux.o
 OBJS += broadcom.o api-broadcom.o
+ifeq ($(RTCONFIG_DSL_TCLINUX),y)
+OBJS += api-tclinux.o
+endif
 endif
 
 ifeq ($(RTCONFIG_USB),y)

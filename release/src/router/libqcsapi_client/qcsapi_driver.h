@@ -70,6 +70,7 @@ typedef enum {
 	e_qcsapi_option = 1,
 	e_qcsapi_counter,
 	e_qcsapi_rates,
+	e_qcsapi_modulation,
 	e_qcsapi_index,
 	e_qcsapi_select_SSID,
 	e_qcsapi_SSID_index,
@@ -257,6 +258,8 @@ typedef enum {
 	e_qcsapi_wifi_get_bw_per_association,
 	e_qcsapi_wifi_get_tx_phy_rate_per_association,
 	e_qcsapi_wifi_get_rx_phy_rate_per_association,
+	e_qcsapi_wifi_get_tx_mcs_per_association,
+	e_qcsapi_wifi_get_rx_mcs_per_association,
 	e_qcsapi_wifi_get_achievable_tx_phy_rate_per_association,
 	e_qcsapi_wifi_get_achievable_rx_phy_rate_per_association,
 
@@ -312,6 +315,7 @@ typedef enum {
 	e_qcsapi_wifi_set_bgscan_dwell_times,
 	e_qcsapi_wifi_get_bgscan_dwell_times,
 	e_qcsapi_wifi_start_scan,
+	e_qcsapi_wifi_cancel_scan,
 	e_qcsapi_wifi_get_scan_status,
 	e_qcsapi_wifi_get_cac_status,
 	e_qcsapi_wifi_wait_scan_completes,
@@ -335,8 +339,12 @@ typedef enum {
 	e_qcsapi_SSID_set_key_passphrase,
 	e_qcsapi_SSID_get_wps_SSID,
 	e_qcsapi_wifi_vlan_config,
+	e_qcsapi_wifi_show_vlan_config,
 	e_qcsapi_enable_vlan_pass_through,
 	e_qcsapi_br_vlan_promisc,
+	e_qcsapi_add_ipff,
+	e_qcsapi_del_ipff,
+	e_qcsapi_get_ipff,
 
 	e_qcsapi_wifi_disable_wps,
 	e_qcsapi_wifi_get_results_AP_scan,
@@ -476,6 +484,13 @@ typedef enum {
 
 	e_qcsapi_get_custom_value,
 
+	e_qcsapi_wifi_get_mlme_stats_per_mac,
+	e_qcsapi_wifi_get_mlme_stats_per_association,
+	e_qcsapi_wifi_get_mlme_stats_macs_list,
+
+	e_qcsapi_get_nss_cap,
+	e_qcsapi_set_nss_cap,
+
 	e_qcsapi_nosuch_api = 0
 } qcsapi_entry_point;
 
@@ -490,6 +505,7 @@ typedef struct qcsapi_generic_parameter {
 		qcsapi_counter_type	counter;
 		qcsapi_option_type	option;
 		qcsapi_rate_type	typeof_rates;
+		qcsapi_mimo_type	modulation;
 		char			the_SSID[ IW_ESSID_MAX_SIZE + 10 ];
 	} parameter_type;
 } qcsapi_generic_parameter;

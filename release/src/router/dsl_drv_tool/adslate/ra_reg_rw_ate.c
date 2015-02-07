@@ -7,7 +7,7 @@
 #include <linux/types.h>
 #include <linux/ioctl.h>
 
-#include "../dsl_define.h"
+#include "../msg_define.h"
 
 #include "ra_ioctl.h"
 #include "ra_reg_rw_ate.h"

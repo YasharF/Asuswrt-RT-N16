@@ -195,6 +195,7 @@ extern int is_no_partition(const char *discname);
 enum {
 	MODEL_UNKNOWN,
 	MODEL_DSLN55U,
+	MODEL_DSLAC68U,
 	MODEL_EAN66,
 	MODEL_RTN11P,
 	MODEL_RTN13U,
@@ -568,5 +569,9 @@ extern void add_wan_phy(char *phy);
 
 /* semaphore.c */
 extern void init_spinlock(void);
+
+/* misc.c */
+extern int is_psta(int unit);
+extern int is_psr(int unit);
 
 #endif

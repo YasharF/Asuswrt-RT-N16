@@ -228,17 +228,7 @@ function addRow_Group(upper, flag, idx){
 		}
 		
 		if(validForm(flag)){
-			//check same rule  //match(description) is not accepted		
-			if(item_num >= 2){
-				for(i=0; i<rule_num; i++){
-					if(i != idx && description_obj.value.toLowerCase() == $(table_id).rows[i].cells[1].innerHTML.toLowerCase()){
-						alert("<#JS_duplicate#>");
-						description_obj.focus();
-						description_obj.select();
-						return false;
-					}	
-				}
-			}
+			
 			duplicateCheck.tmpIdx = "";
 			duplicateCheck.saveTotmpIdx(idx);
 			duplicateCheck.tmpStr = "";
@@ -292,17 +282,6 @@ function addRow_Group(upper, flag, idx){
 		}
 		
 		if(validForm(flag)){
-			//Viz check same rule  //match(description) is not accepted
-			if(item_num >= 2){
-				for(i=0; i<rule_num; i++){
-					if(description_obj.value.toLowerCase() == $(table_id).rows[i].cells[1].innerHTML.toLowerCase()){
-						alert("<#JS_duplicate#>");
-						description_obj.focus();
-						description_obj.select();
-						return false;
-					}	
-				}
-			}
 
 			duplicateCheck.tmpStr = "";
 			duplicateCheck.saveToTmpStr(type_obj, 0);
@@ -351,9 +330,9 @@ var duplicateCheck = {
 	isDuplicate: function(){
 		var vpnc_clientlist_row = vpnc_clientlist_array.split('<');
 		for(var i=0; i<vpnc_clientlist_row.length; i++){
-			//alert(i+"; "+this.tmpIdx+" ; "+vpnc_clientlist_array.search(this.tmpStr));
-			if(i != this.tmpIdx && vpnc_clientlist_row[i].search(this.tmpStr) != -1)
-				return true;
+			//alert(i+"; "+this.tmpIdx+" ; "+vpnc_clientlist_row[i].search(this.tmpStr)+" ; "+this.tmpStr);
+			if((this.tmpIdx == "" || i != this.tmpIdx) && vpnc_clientlist_row[i].search(this.tmpStr) >= 0)
+					return true;
 		}
 		return false;		
 	}

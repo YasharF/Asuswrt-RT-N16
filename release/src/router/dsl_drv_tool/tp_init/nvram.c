@@ -12,18 +12,35 @@
 #include "fw_conf.h"
 #include <memory.h>
 #include <string.h>
+#include <stdlib.h>
 
-#include "../dsl_define.h"
-
+#include "../msg_define.h"
+#include "shared.h"
+#include "shutils.h"
 
 extern void myprintf(const char *fmt, ...);
+extern void AddPtm(int idx, int ext_idx, int vlan_active, int vlan_id);
 extern int AddPvc(int idx, int vlan_id, int vpi, int vci, int encap, int mode);
+extern int DelAllPvc(void);
 extern int SetQosToPvc(int idx, int SvcCat, int Pcr, int Scr, int Mbs);
 extern int SetAdslMode(int EnumAdslModeValue, int FromAteCmd);
 extern int SetAdslType(int EnumAdslTypeValue, int FromAteCmd);
 extern int SetSNRMOffset(int EnumSNRMOffsetValue, int FromAteCmd); /* Paul add 2012/9/24 */
 extern int SetSRA(int EnumSRAValue, int FromAteCmd); /* Paul add 2012/10/15 */
 extern int SetBitswap(int EnumBitswapValue, int FromAteCmd); /* Paul add 2013/10/23 */
+extern void disable_polling(void);
+extern void wait_polling_stop(void);
+extern void enable_polling(void);
+#ifdef RTCONFIG_DSL_TCLINUX
+extern int HandleAdslEntry(void);
+extern int CommitAdslEntry(void);
+#ifdef RTCONFIG_VDSL
+extern int SetVdslTargetSNRM(int SNRMValue, int FromAteCmd);
+extern int SetVdslTxPowerGainOffset(int VdslTxPowerGainOffset, int FromAteCmd);
+extern int SetVdslRxAutoGainCtrl(int VdslRxAutoGainCtrl, int FromAteCm);
+extern int SetVdslUpPowerBackOff(char *VdslUpPowerBackOff, int FromAteCm);
+#endif
+#endif
 
 extern char* strcpymax(char *to, const char*from, int max_to_len);
 //
@@ -107,7 +124,6 @@ void nvram_load_one_pvc(PVC_PARAM* pPvcSetting, int idx)
 	{
 		pPvcSetting->mode = 2;	
 	}	
-
     
 #else
     pPvcSetting->vpi = 0;
@@ -282,92 +298,154 @@ int write_ipvc_mode(int config_num, int iptv_port)
     return internet_pvc;
 }
 
-int nvram_set_adsl_fw_setting(int config_num, int iptv_port, int internet_pvc, int chg_mode)
+int nvram_set_adsl_fw_setting(int config_num, int iptv_port, int internet_pvc)
 {
-	int i;    
+	int i, j;
+	int pvc_idx;
+#ifdef RTCONFIG_DSL_TCLINUX
+#ifdef RTCONFIG_VDSL
+	int dot1q;
+	int vid;
+#endif
+#endif
+	char prefix[32] = "dslxx_XXX";
+	char tmp[16];
+
+	DelAllPvc();
+
+#ifdef RTCONFIG_VDSL
+	if(nvram_match("dslx_transmode", "ptm"))
+	{
+		//for(i=8; i<=9; i++) {
+			i = 8;
+			for(j=0; j<config_num; j++) {
+				if(j)
+					snprintf(prefix, sizeof(prefix), "dsl%d.%d_", i, j);
+				else
+					snprintf(prefix, sizeof(prefix), "dsl%d_", i);
+
+				memset(tmp, 0, sizeof(tmp));
+				dot1q = nvram_get_int(strcat_r(prefix, "dot1q", tmp));
+				memset(tmp, 0, sizeof(tmp));
+				vid = nvram_get_int(strcat_r(prefix, "vid", tmp));
+
+				AddPtm(i, j, dot1q, vid);
+			}
+		//}
+	}
+	else	//ATM
+#endif
+	{
+		// add internet pvc to first vlan
+		for (i=0; i<MAX_PVC; i++)
+		{
+			if (m_pvc[i].enabled == 0)
+			{
+				// this is a empty pvc , we do not add it
+			}
+			else
+			{
+				if (internet_pvc == i)
+				{
+					int ret;
+					myprintf("PVC%d : %d %d %d %d\n", i, m_pvc[i].vpi, m_pvc[i].vci, m_pvc[i].encap, m_pvc[i].mode);
+					ret = AddPvc(0, 1, m_pvc[i].vpi, m_pvc[i].vci, m_pvc[i].encap, m_pvc[i].mode);
+					myprintf("%d\n", ret );
+					ret = SetQosToPvc(0,m_pvc[i].svc_cat,m_pvc[i].pcr,m_pvc[i].scr,m_pvc[i].mbs);
+					myprintf("%d\n", ret );
+					break;
+				}
+			}
+		}
+
+		if (iptv_port != 0)
+		{
+			// add other pvcs
+			pvc_idx = 1;
+			for (i=0; i<MAX_PVC; i++)
+			{
+				if (m_pvc[i].enabled == 0)
+				{
+					// this is a empty pvc , we do not add it
+				}
+				else
+				{
+					if (internet_pvc != i)
+					{
+						int ret;
+						myprintf("PVC%d : %d %d %d %d\n", i, m_pvc[i].vpi, m_pvc[i].vci, m_pvc[i].encap, m_pvc[i].mode);
+						ret = AddPvc(pvc_idx, pvc_idx+1, m_pvc[i].vpi, m_pvc[i].vci, m_pvc[i].encap, m_pvc[i].mode);
+						myprintf("%d\n", ret );
+						ret = SetQosToPvc(pvc_idx,m_pvc[i].svc_cat,m_pvc[i].pcr,m_pvc[i].scr,m_pvc[i].mbs);
+						myprintf("%d\n", ret );
+						pvc_idx++;
+					}
+				}
+			}
+		}
+	}
+
+    return 0;
+}
+
+void reload_dsl_setting(void)
+{
 	int EnumAdslType;
 	int EnumAdslMode;
 	int EnumSNRM_Offset;
 	int EnumSRA_;
-	int EnumBitswap_;	
-	int all_bridge_pvc = 1;	    
-	int pvc_idx;
-	FILE* fp;
-	if (chg_mode)
-	{
-	    // load setting from nvram
+	int EnumBitswap_;
+#ifdef RTCONFIG_DSL_TCLINUX
+#ifdef RTCONFIG_VDSL
+	int VdslTargetSNRM;
+	int VdslTxPowerGainOffset;
+	int VdslRxAutoGainCtrl;
+	char *VdslUpPowerBackOff;
+#endif
+#endif
+
+#ifdef RTCONFIG_DSL_TCLINUX
+	HandleAdslEntry();
+#endif
+	// load setting from nvram
 #if DSL_N55U_ANNEX_B == 1
-		EnumAdslType=EnumAdslTypeB;
+	EnumAdslType=EnumAdslTypeB;
 #else
-	    EnumAdslType=nvram_load_adsl_type();
-#endif	
-	    EnumAdslMode=nvram_load_adsl_mode();
-	    EnumSNRM_Offset=nvram_load_SNRM_offset(); /* Paul add 2012/9/24 */
-	    EnumSRA_=nvram_load_SRA(); /* Paul add 2012/10/15 */
-	    EnumBitswap_=nvram_load_Bitswap(); /* Paul add 2013/10/23 */
+	EnumAdslType=nvram_load_adsl_type();
+#endif
+	EnumAdslMode=nvram_load_adsl_mode();
+	EnumSNRM_Offset=nvram_load_SNRM_offset(); /* Paul add 2012/9/24 */
+	EnumSRA_=nvram_load_SRA(); /* Paul add 2012/10/15 */
+	EnumBitswap_=nvram_load_Bitswap(); /* Paul add 2013/10/23 */
 
-	    // set the setting to adsl fw    
-	    SetAdslType(EnumAdslType,0);
-	    SetAdslMode(EnumAdslMode,0);
-	    SetSNRMOffset(EnumSNRM_Offset,0); /* Paul add 2012/9/24 */
-	    SetSRA(EnumSRA_,0); /* Paul add 2012/10/15 */
-	    SetBitswap(EnumBitswap_,0); /* Paul add 2013/10/23 */
-	    myprintf("ADSL MODE : %d\n", EnumAdslType);                
-	    myprintf("ADSL TYPE : %d\n", EnumAdslMode); 
-			myprintf("SNRM Offset: %d\n", EnumSNRM_Offset); /* Paul add 2012/9/24 */
-			myprintf("SRA: %d\n", EnumSRA_); /* Paul add 2012/10/15 */
-			myprintf("Bitswap: %d\n", EnumBitswap_); /* Paul add 2013/10/23 */
-    }
-    
-    // add internet pvc to first vlan
-    for (i=0; i<MAX_PVC; i++)
-    {
-        if (m_pvc[i].enabled == 0)
-        {
-            // this is a empty pvc , we do not add it
-        }
-        else
-        {
-            if (internet_pvc == i)
-            {
-                int ret;        
-                myprintf("PVC%d : %d %d %d %d\n", i, m_pvc[i].vpi, m_pvc[i].vci, m_pvc[i].encap, m_pvc[i].mode);
-                ret = AddPvc(0, 1, m_pvc[i].vpi, m_pvc[i].vci, m_pvc[i].encap, m_pvc[i].mode);
-                myprintf("%d\n", ret );            
-                ret = SetQosToPvc(0,m_pvc[i].svc_cat,m_pvc[i].pcr,m_pvc[i].scr,m_pvc[i].mbs);
-                myprintf("%d\n", ret );
-                break;
-            }
-        }
-    }
-        
-    if (iptv_port != 0)
-    {
-        // add other pvcs
-        pvc_idx = 1;
-        for (i=0; i<MAX_PVC; i++)
-        {
-            if (m_pvc[i].enabled == 0)
-            {
-                // this is a empty pvc , we do not add it
-            }
-            else
-            {
-                if (internet_pvc != i)
-                {
-                    int ret;        
-                    myprintf("PVC%d : %d %d %d %d\n", i, m_pvc[i].vpi, m_pvc[i].vci, m_pvc[i].encap, m_pvc[i].mode);
-                    ret = AddPvc(pvc_idx, pvc_idx+1, m_pvc[i].vpi, m_pvc[i].vci, m_pvc[i].encap, m_pvc[i].mode);
-                    myprintf("%d\n", ret );            
-                    ret = SetQosToPvc(pvc_idx,m_pvc[i].svc_cat,m_pvc[i].pcr,m_pvc[i].scr,m_pvc[i].mbs);
-                    myprintf("%d\n", ret );
-					pvc_idx++;
-                }
-            }
-        }        
-    }        
-
-    return 0;
+	// set the setting to adsl fw
+	SetAdslType(EnumAdslType,0);
+	SetAdslMode(EnumAdslMode,0);
+	SetSNRMOffset(EnumSNRM_Offset,0); /* Paul add 2012/9/24 */
+	SetSRA(EnumSRA_,0); /* Paul add 2012/10/15 */
+	SetBitswap(EnumBitswap_,0); /* Paul add 2013/10/23 */
+	myprintf("ADSL MODE : %d\n", EnumAdslType);
+	myprintf("ADSL TYPE : %d\n", EnumAdslMode);
+	myprintf("SNRM Offset: %d\n", EnumSNRM_Offset); /* Paul add 2012/9/24 */
+	myprintf("SRA: %d\n", EnumSRA_); /* Paul add 2012/10/15 */
+	myprintf("Bitswap: %d\n", EnumBitswap_); /* Paul add 2013/10/23 */
+#ifdef RTCONFIG_DSL_TCLINUX
+#ifdef RTCONFIG_VDSL
+	VdslTargetSNRM = nvram_get_int("dslx_vdsl_target_snrm");
+	VdslTxPowerGainOffset = nvram_get_int("dslx_vdsl_tx_gain_off");
+	VdslRxAutoGainCtrl = nvram_get_int("dslx_vdsl_rx_agc");
+	VdslUpPowerBackOff = nvram_safe_get("dslx_vdsl_upbo");
+	SetVdslTargetSNRM(VdslTargetSNRM, 0);
+	SetVdslTxPowerGainOffset(VdslTxPowerGainOffset, 0);
+	SetVdslRxAutoGainCtrl(VdslRxAutoGainCtrl, 0);
+	SetVdslUpPowerBackOff(VdslUpPowerBackOff, 0);
+	myprintf("SNRM Offset (VDSL): %d\n", VdslTargetSNRM);
+	myprintf("Tx Gain Offset (VDSL): %d\n", VdslTxPowerGainOffset);
+	myprintf("Rx AGC (VDSL): %d\n", VdslRxAutoGainCtrl);
+	myprintf("UPBO (VDSL): %s\n", VdslUpPowerBackOff);
+#endif
+	CommitAdslEntry();
+#endif
 }
 
 void reload_pvc(void)
@@ -380,11 +458,11 @@ void reload_pvc(void)
 	disable_polling();
 	// wait timer function exit
 	wait_polling_stop();			
-	
+
 	config_num = nvram_load_config_num(&iptv_port);
-	internet_pvc = write_ipvc_mode(config_num, iptv_port);		  
+	internet_pvc = write_ipvc_mode(config_num, iptv_port);
 	nvram_load_pvcs(config_num, iptv_port, internet_pvc);
-	nvram_set_adsl_fw_setting(config_num, iptv_port, internet_pvc, 0);
+	nvram_set_adsl_fw_setting(config_num, iptv_port, internet_pvc);
 
 	enable_polling();	
 }
