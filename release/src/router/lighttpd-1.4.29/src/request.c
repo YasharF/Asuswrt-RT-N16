@@ -1159,7 +1159,8 @@ Cdbg(DBE, "\tmethod=[%s]", get_http_method_name(con->request.http_method));
 	/* check if we have read post data */
 	if (con_length_set) {
 		/* don't handle more the SSIZE_MAX bytes in content-length */
-		if (con->request.content_length > SSIZE_MAX) {
+		if (con->request.content_length > SSIZE_MAX) {	
+			Cdbg(DBE,"413: Request-Entity too large");
 			con->http_status = 413;
 			con->keep_alive = 0;
 
@@ -1174,7 +1175,7 @@ Cdbg(DBE, "\tmethod=[%s]", get_http_method_name(con->request.http_method));
 			/* the request body itself is larger then
 			 * our our max_request_size
 			 */
-
+			Cdbg(DBE,"413: Request-Entity too large");
 			con->http_status = 413;
 			con->keep_alive = 0;
 

@@ -185,7 +185,7 @@ char *get_wan6_ifname(int unit)
 #endif
 
 // OR all lan port status
-int get_lanports_status()
+int get_lanports_status(void)
 {
 	return lanport_status();
 }
@@ -199,22 +199,21 @@ int get_wanports_status(int wan_unit)
 	if(get_dualwan_by_unit(wan_unit) == WANS_DUALWAN_IF_DSL)
 #endif
 	{
-		/* Paul modify 2012/10/17, shouldn't check ADSL sync status, check WAN0 state instead. */
-		//if (nvram_match("dsltmp_adslsyncsts","up")) return 1;
-		if (nvram_match("wan0_state_t","2")) return 1;
+		/* Paul modify 2012/10/18, check both ADSL sync status, and WAN0 state. */
+		if (nvram_match("dsltmp_adslsyncsts","up") && nvram_match("wan0_state_t","2")) return 1;
 		return 0;
 	}
 #ifdef RTCONFIG_DUALWAN
 	if(get_dualwan_by_unit(wan_unit) == WANS_DUALWAN_IF_LAN)
 	{
-		return dsl_wanPort_phyStatus();		
+		return rtkswitch_wanPort_phyStatus(); //Paul modify 2012/12/4	
 	}
 #endif
 	// TO CHENI:
 	// HOW TO HANDLE USB?	
 #else // RJ-45
 #ifdef RTCONFIG_RALINK
-	return rtl8367m_wanPort_phyStatus();
+	return rtkswitch_wanPort_phyStatus();
 #else
 	return wanport_status(wan_unit);
 #endif
@@ -290,8 +289,26 @@ get_invoke_later()
 
 #ifdef RTCONFIG_USB
 
+char xhci_string[32];
 char ehci_string[32];
 char ohci_string[32];
+
+char *get_usb_xhci_port(int port)
+{
+        char word[100], *next;
+        int i=0;
+
+        strcpy(xhci_string, "xxxxxxxx");
+
+        foreach(word, nvram_safe_get("xhci_ports"), next) {
+                if(i==port) {
+                        strcpy(xhci_string, word);
+                        break;
+                }
+                i++;
+        }
+        return xhci_string;
+}
 
 char *get_usb_ehci_port(int port)
 {
@@ -327,17 +344,29 @@ char *get_usb_ohci_port(int port)
 	return ohci_string;
 }
 
-int get_usb_port_number(const char *usb_port){
+int get_usb_port_number(const char *usb_port)
+{
 	char word[100], *next;
 	int port_num, i;
 
 	port_num = 0;
 	i = 0;
-	foreach(word, nvram_safe_get("ehci_ports"), next){
+	foreach(word, nvram_safe_get("xhci_ports"), next){
 		++i;
 		if(!strcmp(usb_port, word)){
 			port_num = i;
 			break;
+		}
+	}
+
+	i = 0;
+	if(port_num == 0){
+		foreach(word, nvram_safe_get("ehci_ports"), next){
+			++i;
+			if(!strcmp(usb_port, word)){
+				port_num = i;
+				break;
+			}
 		}
 	}
 
@@ -353,6 +382,38 @@ int get_usb_port_number(const char *usb_port){
 	}
 
 	return port_num;
+}
+
+int get_usb_port_host(const char *usb_port)
+{
+	char word[100], *next;
+	int i;
+
+	i = 0;
+	foreach(word, nvram_safe_get("xhci_ports"), next){
+		++i;
+		if(!strcmp(usb_port, word)){
+			return USB_HOST_XHCI;
+		}
+	}
+
+	i = 0;
+	foreach(word, nvram_safe_get("ehci_ports"), next){
+		++i;
+		if(!strcmp(usb_port, word)){
+			return USB_HOST_EHCI;
+		}
+	}
+
+	i = 0;
+	foreach(word, nvram_safe_get("ohci_ports"), next){
+		++i;
+		if(!strcmp(usb_port, word)){
+			return USB_HOST_OHCI;
+		}
+	}
+
+	return USB_HOST_NONE;
 }
 #endif
 

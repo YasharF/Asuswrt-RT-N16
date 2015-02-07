@@ -9,6 +9,17 @@
 #define OS_VERSION		"Linux/2.6.22.19"
 #define OS_URL			"http://www.asus.com/"
 
+#define HAVE_AVUTIL_H
+#define HAVE_AVCODEC_H
+#define HAVE_AVFORMAT_H
+
+#define HAVE_CLOCK_GETTIME 1
+#define HAVE_CLOCK_GETTIME_SYSCALL 1
+#define HAVE_INOTIFY 1
+#define HAVE_LINUX_SENDFILE_API 1
+#define HAVE_SQLITE3_MALLOC 1
+#define HAVE_SQLITE3_PREPARE_V2 1
+
 /* full path of the file database */
 #define DEFAULT_DB_PATH		"/tmp/minidlna"
 

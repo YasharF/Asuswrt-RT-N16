@@ -115,7 +115,7 @@ function applyRule(){
 			tmp_value = "";	
 		document.form.keyword_rulelist.value = tmp_value;
 
-		updateDateTime(document.form.current_page.value);
+		//updateDateTime(document.form.current_page.value);
 
 		if(document.form.keyword_enable_x[0].checked == true && document.form.keyword_enable_x_orig.value != 1 ||
 				document.form.keyword_enable_x[1].checked == true && document.form.keyword_enable_x_orig.value != 0)
@@ -211,7 +211,7 @@ function done_validating(action){
 			<table width="100%" border="1" align="center" cellpadding="4" cellspacing="0" class="FormTable_table">
 					  <thead>
 					  <tr>
-						<td colspan="4"><#FirewallConfig_KeywordList_groupitemname#></td>
+						<td colspan="4"><#FirewallConfig_KeywordList_groupitemname#>&nbsp;(<#List_limit#>&nbsp;128)</td>
 					  </tr>
 					  </thead>
 

@@ -2309,6 +2309,7 @@ INSERT
        "Write MESSAGE (or stdin) to syslog\n" \
      "\nOptions:" \
      "\n	-s	Log to stderr as well as the system log" \
+     "\n	-c	Log to console as well as the system log" \
      "\n	-t TAG	Log using the specified tag (defaults to user name)" \
      "\n	-p PRIO	Priority (numeric or facility.level pair)" \
 

@@ -11,7 +11,7 @@
 # even the implied warranty of MERCHANTABILITY or FITNESS FOR A
 # PARTICULAR PURPOSE.
 
-
+include ../.config
 SHELL = /bin/sh
 
 srcdir = .
@@ -98,8 +98,11 @@ ez_ipupdate_LDFLAGS =
 # 2007.03.14 Yau add for ASUS DDNS
 ez_ipupdate_OBJECTS += asus_ddns.o
 CFLAGS += -I$(SRCBASE)/include -I$(TOP)/shared -DASUS_DDNS
-LDFLAGS += -L$(TOP)/shared -lshared -L$(TOP)/nvram -lnvram 
+LDFLAGS += -L$(TOP)/shared -lshared -L$(TOP)/nvram${BCMEX} -lnvram 
 #end of Yau add
+ifeq ($(RTCONFIG_BCMARM),y)
+LDFLAGS += -lgcc_s
+endif
 
 COMPILE = $(CC) $(DEFS) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
 CCLD = $(CC)

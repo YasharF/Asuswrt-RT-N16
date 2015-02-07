@@ -27,6 +27,34 @@
 	text-shadow: 1px 1px 0px black;
 	filter: progid:DXImageTransform.Microsoft.DropShadow(OffX=1, OffY=1, Color=#000000);
 }
+.button_gen_scan{
+	font-weight: bolder;
+	text-shadow: 1px 1px 0px black;
+  background: #022;
+  border:0;
+  color: #FFFFFF;
+	height:30px;
+	font-family:Verdana;
+	font-size:12px;
+  padding:0 .70em 0 .70em;  
+ 	width:122px;
+  overflow:visible;
+	cursor:pointer;
+	outline: none; /* for Firefox */
+ 	hlbr:expression(this.onFocus=this.blur()); /* for IE */
+ 	white-space:normal;
+}
+.button_gen_scan:hover{
+	font-weight: bolder;
+	background: #356;
+	height:30px;
+ 	width:122px;
+ 	padding:0 .70em 0 .70em;  
+ 	background-position:0px;
+	cursor:pointer;
+	outline: none; /* for Firefox */
+ 	hlbr:expression(this.onFocus=this.blur()); /* for IE */
+}
 </style>
 <script type="text/JavaScript" src="/state.js"></script>
 <script type="text/javascript" src="/popup.js"></script>
@@ -34,13 +62,15 @@
 <script language="JavaScript" type="text/javascript" src="/jquery.js"></script>
 <script language="JavaScript" type="text/javascript" src="/ajax.js"></script>
 <script>
+var qisFlag = '<% get_parameter("flag"); %>'.toLowerCase();
+if(isMobile() && sw_mode != 2 && qisFlag != "sitesurvey" && qisFlag != "sitesurvey_mb")
+	location.href = "QIS_wizard_m.htm?flag=" + qisFlag;
+
 <% login_state_hook(); %>
 
+var parent_macaddr = '<% nvram_get("et0macaddr"); %>';
 var wireless = [<% wl_auth_list(); %>];	// [[MAC, associated, authorized], ...]
-var arg_wan_nat_x = '<% get_parameter("wan_nat_x"); %>';
-var arg_wan_proto = '<% get_parameter("wan_proto"); %>';
-var arg_wan_route_x = '<% get_parameter("wan_route_x"); %>';
-var arg_prev_page = '<% get_parameter("prev_page"); %>';
+
 var reduced_internet_type = "disable";
 var targeturl = "/index.htm";
 var firmver = '<% nvram_get("firmver"); %>';
@@ -50,6 +80,8 @@ var flag_manual = 0;
 var issubmit = 0;
 var isrescan = 0;
 var getBand = '<% get_parameter("band"); %>';
+var isFirst = ('<% nvram_get("x_Setting"); %>' == '1') ? false : true;;
+var ISMOBILE = false;
 
 // live update
 var $j = jQuery.noConflict();
@@ -61,8 +93,10 @@ var exist_firmver = "<% nvram_get("firmver"); %>";
 var Latest_firmver = "";
 var Latest_firm = "";
 var Latest_buildno = "";
+var Latest_extendno = "";
 var current_firm = "";
 var current_buildno = "";
+var current_extendno = "";
 var liveUpdateFinish = false;
 var new_FW = false;
 var retry = 0;
@@ -87,12 +121,17 @@ function detect_firmware(){
 					Latest_firmver = webs_state_info.split("_");
 					Latest_firm = Latest_firmver[0];
 					Latest_buildno = Latest_firmver[1];
+					Latest_extendno = Latest_firmver[2];
 
-					if(Latest_firm.length > 0 && Latest_buildno.length > 0){	//match model FW
+					if(Latest_firm && Latest_buildno && Latest_extendno){	//match model FW
 						current_firm = parseInt(exist_firmver.replace(/[.]/gi,""));
-						current_buildno = <% nvram_get("buildno"); %>;
+      			current_buildno = parseInt("<% nvram_get("buildno"); %>");
+      			current_extendno = "<% nvram_get("extendno"); %>";
 
-						if((current_buildno < Latest_buildno) || ( current_buildno == Latest_buildno && current_firm < Latest_firm)){
+						if((current_buildno < Latest_buildno) || 
+      					(current_firm < Latest_firm && current_buildno == Latest_buildno) ||
+      					(current_extendno != Latest_extendno && current_buildno == Latest_buildno && current_firm == Latest_firm))
+      			{
 							new_FW = true;
 						}
 					}
@@ -104,40 +143,39 @@ function detect_firmware(){
 }
 
 function detect_update(){
-	document.start_update.submit();
+	if(isFirst)
+		var _action_wait = 10000;
+	else
+		var _action_wait = 5000;
+	setTimeout("document.start_update.submit();", _action_wait);	//delay after restart_time
 }
 
 function set_step(focus_id){
-	/*if(focus_id == "t0")
-		$("t0").className = "lefttabmidfocus";
-	else
-		$("t0").className = "lefttabmid";*/
+	$("t1").className = "lefttabmid";
+	$("t2").className = "lefttabmid";
+	$("t3").className = "lefttabmid";
 
-	if(focus_id == "t1" || focus_id == "t0")
-		$("t1").className = "lefttabmidfocus";
-	else
-		$("t1").className = "lefttabmid";
-
-	if(focus_id == "t2")
-		$("t2").className = "lefttabmidfocus";
-	else
-		$("t2").className = "lefttabmid";
-
-	if(focus_id == "t3")
-		$("t3").className = "lefttabmidfocus";
-	else
-		$("t3").className = "lefttabmid";
+	switch(focus_id){
+		case "t2":
+			$("t2").className = "lefttabmidfocus";
+			break;
+		case "t3":
+			$("t3").className = "lefttabmidfocus";
+			break;
+		default:	
+			$("t1").className = "lefttabmidfocus";
+			break;
+	}
 }
 
 function QIS_load_body(){
 	var showCase;
-	showCase = $("flag").value;
-	get_args();
+	showCase = $("flag").value;	
 	winW_H();
 
-	if(psta_support != -1){
+	if(psta_support){
 		if(document.QKform.sw_mode.value == 3 && '<% nvram_get("wlc_psta"); %>' == 1)
-			document.QKform.sw_mode.value = 2;
+			document.QKform.sw_mode.value = 4;
 	}
 
 	if(navigator.appName.indexOf("Microsoft") >= 0){
@@ -146,93 +184,67 @@ function QIS_load_body(){
 	}
 
 	with(document.redirectForm){
-		if(showCase == "remind"){
-			action = "/qis/QIS_internet_success.htm";
-			submit();
-		}
-		else if(showCase == "auto_way_static"){
-			action = "/qis/QIS_internet_ip.htm";
-			flag.value = showCase;
-			prev_page.value = "/qis/QIS_detect.htm";
-			submit();
-		}
-		else if(showCase == "auto_way_vpn"){
-			action = "/qis/QIS_internet_ip.htm";
-			flag.value = showCase;
-			prev_page.value = "start_apply.htm";
-			submit();
-		}
-		else if(showCase == "auto_way"){
-			action = "/qis/QIS_internet_ip.htm";
-			flag.value = showCase;
-			submit();
-		}
-		else if(showCase == "verify_detect"){
-			action = "/qis/QIS_verify_detect.htm";
-			flag.value = showCase;
-			submit();
-		}
-		else if(showCase == "adv_ap_mode"){
-			document.QKform.sw_mode.value = "3";
-			action = "/qis/QIS_lanip.htm";
-			submit();
-		}
-		else if(showCase == "pppoe"){
-			document.QKform.wan_proto.value = "pppoe";			
-			action = "/qis/QIS_internet_account.htm";
-			submit();
-		}
-		else if(showCase == "pptp"){
-			document.QKform.wan_proto.value = "pptp";			
-			action = "/qis/QIS_internet_account.htm";
-			submit();
-		}
-		else if(showCase == "l2tp"){
-			document.QKform.wan_proto.value = "l2tp";
-			action = "/qis/QIS_internet_account.htm";
-			submit();
-		}
-		else if(showCase == "account"){
-			document.QKform.wan_proto.value = "pptp";
-			action = "/qis/QIS_internet_account.htm";
-			submit();
-		}
-		else if(showCase != ""){
-			if(showCase.split("?").length == 1)
-				action = "/qis/QIS_" + showCase + ".htm";
-			else
-				action = "/qis/QIS_" + showCase.split("?")[0] + ".htm?" + showCase.split("?")[1];
-			submit();
-		}
-		else{
-			action = "/qis/QIS_internet_type.htm";
-			return_btn = 1;
-			submit();
+		switch(showCase){
+			case "remind":
+				action = "/qis/QIS_internet_success.htm";
+				submit();
+				break;
+			case "auto_way_static":
+				action = "/qis/QIS_internet_ip.htm";
+				flag.value = showCase;
+				prev_page.value = "/qis/QIS_detect.htm";
+				submit();
+				break;
+			case "auto_way_vpn":
+				action = "/qis/QIS_internet_ip.htm";
+				flag.value = showCase;
+				prev_page.value = "start_apply.htm";
+				submit();
+				break;
+			case "auto_way":
+				action = "/qis/QIS_internet_ip.htm";
+				flag.value = showCase;
+				submit();
+				break;				
+			case "verify_detect":
+				action = "/qis/QIS_verify_detect.htm";
+				flag.value = showCase;
+				submit();
+				break;				
+			case "adv_ap_mode":
+				document.QKform.sw_mode.value = "3";
+				action = "/qis/QIS_lanip.htm";
+				submit();
+				break;				
+			case "pppoe":
+				document.QKform.wan_proto.value = "pppoe";			
+				action = "/qis/QIS_internet_account.htm";
+				submit();
+				break;				
+			case "pptp":
+				document.QKform.wan_proto.value = "pptp";			
+				action = "/qis/QIS_internet_account.htm";
+				submit();
+				break;				
+			case "l2tp":
+				document.QKform.wan_proto.value = "l2tp";
+				action = "/qis/QIS_internet_account.htm";
+				submit();
+				break;				
+			case "account":
+				document.QKform.wan_proto.value = "pptp";
+				action = "/qis/QIS_internet_account.htm";
+				submit();
+				break;				
+			default:
+				if(showCase.split("?").length == 1)
+					action = "/qis/QIS_" + showCase + ".htm";
+				else
+					action = "/qis/QIS_" + showCase.split("?")[0] + ".htm?" + showCase.split("?")[1];
+				submit();
+				break;					
 		}
 	}
-}
-
-function get_args(){
-	if(arg_wan_proto.length > 0)
-		document.QKform.wan_proto.value = arg_wan_proto;
-	
-	if(arg_wan_nat_x.length > 0)
-		document.QKform.wan_nat_x.value = arg_wan_nat_x;
-	
-	if(arg_wan_route_x.length > 0)
-		document.QKform.wan_route_x.value = arg_wan_route_x;
-	
-	if(arg_prev_page.length > 0)
-		document.QKform.prev_page.value = arg_prev_page;
-}
-
-function getOperationMode(){
-	if(document.QKform.wan_nat_x.value == "1")
-		return "gateway";
-	else if(document.QKform.wan_route_x.value == "IP_Routed")
-		return "router";
-	else
-		return "ap";
 }
 
 function set_internet_type_reducedmode(mode){
@@ -363,7 +375,7 @@ function check_DUT(){
 	<tr>
 		<td height="80">
 		<div class="Bar_container">
-			<span id="proceeding_img_text"></span>
+			<span id="proceeding_img_text" style="display:none;"></span>
 			<div id="proceeding_img"></div>
 		</div>
 		<div id="connHint" style="margin:5px auto; width:85%;"><#APSurvey_msg_waiting_to_connect#> <span style="font-weight:bolder;" id="stassid"></span></div>

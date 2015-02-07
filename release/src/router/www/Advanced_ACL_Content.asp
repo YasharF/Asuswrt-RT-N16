@@ -19,11 +19,58 @@
 <script language="JavaScript" type="text/javascript" src="/detect.js"></script>
 <script type="text/javascript" src="/jquery.js"></script>
 <script type="text/javascript" src="/switcherplugin/jquery.iphone-switch.js"></script>
+<style>
+#pull_arrow{
+ 	float:center;
+ 	cursor:pointer;
+ 	border:2px outset #EFEFEF;
+ 	background-color:#CCC;
+ 	padding:3px 2px 4px 0px;
+	*margin-left:-3px;
+	*margin-top:1px;
+}
+
+.WL_MAC_Block{
+	border:1px outset #999;
+	background-color:#576D73;
+	position:absolute;
+	*margin-top:27px;	
+	margin-left:231px;
+	*margin-left:-133px;
+	width:145px;
+	text-align:left;	
+	height:auto;
+	overflow-y:auto;
+	z-index:200;
+	padding: 1px;
+	display:none;
+}
+.WL_MAC_Block div{
+	background-color:#576D73;
+	height:auto;
+	*height:20px;
+	line-height:20px;
+	text-decoration:none;
+	font-family: Lucida Console;
+	padding-left:2px;
+}
+
+.WL_MAC_Block a{
+	background-color:#EFEFEF;
+	color:#FFF;
+	font-size:12px;
+	font-family:Arial, Helvetica, sans-serif;
+	text-decoration:none;	
+}
+.WL_MAC_Block div:hover, .WL_MAC_Block a:hover{
+	background-color:#3366FF;
+	color:#FFFFFF;
+	cursor:default;
+}	
+</style>
 <script>
 var $j = jQuery.noConflict();
-</script>
 
-<script>
 wan_route_x = '<% nvram_get("wan_route_x"); %>';
 wan_nat_x = '<% nvram_get("wan_nat_x"); %>';
 
@@ -35,13 +82,13 @@ var client_mac = login_mac_str();
 var wl_macnum_x = '<% nvram_get("wl_macnum_x"); %>';
 var smac = client_mac.split(":");
 var simply_client_mac = smac[0] + smac[1] + smac[2] + smac[3] + smac[4] + smac[5];
-
 var wl_maclist_x_array = '<% nvram_get("wl_maclist_x"); %>';
 
 function initial(){
+	$('pull_arrow').title = Untranslated.select_wireless_MAC;
+	$('enable_macfilter').innerHTML = Untranslated.enable_macmode;
 	show_menu();
-
-	if(sw_mode == 2 && '<% nvram_get("wl_unit"); %>' == '<% nvram_get("wlc_band"); %>'){
+	if((sw_mode == 2 || sw_mode == 4) && '<% nvram_get("wl_unit"); %>' == '<% nvram_get("wlc_band"); %>'){
 		for(var i=3; i>=3; i--)
 			$("MainTable1").deleteRow(i);
 		for(var i=2; i>=0; i--)
@@ -52,9 +99,12 @@ function initial(){
 	}
 	else
 		show_wl_maclist_x();
-
-	if(band5g_support == -1)	
+		
+	showWLMACList();		
+	if(!band5g_support)	
 		$("wl_unit_field").style.display = "none";
+		
+	check_macMode();
 }
 
 function show_wl_maclist_x(){
@@ -74,7 +124,6 @@ function show_wl_maclist_x(){
 	
 	$("wl_maclist_x_Block").innerHTML = code;
 }
-
 
 function deleteRow(r){
   var i=r.parentNode.parentNode.rowIndex;
@@ -112,19 +161,19 @@ function addRow(obj, upper){
 	}
 		
 		//Viz check same rule
-		for(i=0; i<rule_num; i++){
-			for(j=0; j<item_num-1; j++){	
-				if(obj.value.toLowerCase() == $('wl_maclist_x_table').rows[i].cells[j].innerHTML.toLowerCase()){
-					alert("<#JS_duplicate#>");
-					return false;
-				}	
-			}		
+	for(i=0; i<rule_num; i++){
+		for(j=0; j<item_num-1; j++){	
+			if(obj.value.toLowerCase() == $('wl_maclist_x_table').rows[i].cells[j].innerHTML.toLowerCase()){
+				alert("<#JS_duplicate#>");
+				return false;
+			}	
 		}		
+	}		
 				
-		wl_maclist_x_array += "&#60"
-		wl_maclist_x_array += obj.value;
-		obj.value = ""
-		show_wl_maclist_x();
+	wl_maclist_x_array += "&#60"
+	wl_maclist_x_array += obj.value;
+	obj.value = ""
+	show_wl_maclist_x();
 }
 
 function applyRule(){
@@ -142,7 +191,12 @@ function applyRule(){
 	}
 	if(tmp_value == "<"+"<#IPConnection_VSList_Norule#>" || tmp_value == "<")
 		tmp_value = "";	
-		
+
+	if(document.form.enable_mac[1].checked)	
+		document.form.wl_macmode.value = "disabled";
+	else
+		document.form.wl_macmode.value = document.form.wl_macmode_show.value;
+	
 	if(prevent_lock(tmp_value)){
 		document.form.wl_maclist_x.value = tmp_value;
 		showLoading();
@@ -159,8 +213,8 @@ function prevent_lock(rule_num){
 		alert("<#FirewallConfig_MFList_accept_hint1#>");
 		return false;
 	}
-	else
-		return true;
+
+	return true;
 }
 
 function change_wl_unit(){
@@ -170,7 +224,6 @@ function change_wl_unit(){
 }
 
 function check_macaddr(obj,flag){ //control hint of input mac address
-
 	if(flag == 1){
 		var childsel=document.createElement("div");
 		childsel.setAttribute("id","check_mac");
@@ -192,28 +245,93 @@ function check_macaddr(obj,flag){ //control hint of input mac address
 		return true;
 	}	
 }
+
+//Viz add 2013.01 pull out WL client mac START
+function pullWLMACList(obj){	
+	if(isMenuopen == 0){		
+		obj.src = "/images/arrow-top.gif"
+		document.getElementById("WL_MAC_List_Block").style.display = "block";
+		document.form.wl_maclist_x_0.focus();		
+		isMenuopen = 1;
+	}
+	else
+		hideClients_Block();
+}
+
+var over_var = 0;
+var isMenuopen = 0;
+
+function hideClients_Block(){
+	document.getElementById("pull_arrow").src = "/images/arrow-down.gif";
+	document.getElementById("WL_MAC_List_Block").style.display="none";
+	isMenuopen = 0;
+}
+
+function showWLMACList(){
+	var code = "";
+	var show_macaddr = "";
+	var wireless_list_array = [<% wl_auth_list(); %>];	// [[MAC, associated, authorized], ...]
+
+	if(wireless_list_array == "[]" || wireless_list_array == null || wireless_list_array == ""){
+			document.getElementById("pull_arrow").style.display = "none";
+	}else{
+		document.getElementById("pull_arrow").style.display = "";
+		for(var i = 0; i < wireless_list_array.length; i++){
+			var client_list_row = wireless_list_array[i];
+			if(client_list_row[0]){
+				show_macaddr = client_list_row[0];
+				code += '<a><div onmouseover="over_var=1;" onmouseout="over_var=0;" onclick="setClientmac(\''+client_list_row[0]+'\');"><strong>'+client_list_row[0]+'</strong> ';
+				code += ' </div></a>';
+			}else{
+				code += '<div onmouseover="over_var=1;" onmouseout="over_var=0;"><strong>No Wireless Client.</strong>';
+			}
+		}
+		code +='<!--[if lte IE 6.5]><iframe class="hackiframe2"></iframe><![endif]-->';	
+		$("WL_MAC_List_Block").innerHTML = code;
+	}		
+}
+
+function setClientmac(macaddr){
+	document.form.wl_maclist_x_0.value = macaddr;
+	hideClients_Block();
+	over_var = 0;
+}
+//Viz add 2013.01 pull out WL client mac END
+
+function check_macMode(){
+	if(document.form.wl_macmode.value == "disabled"){
+		$('mac_filter_mode').style.display = "none";
+		document.form.enable_mac[1].checked = true;
+	}
+	else{
+		$('mac_filter_mode').style.display = "";
+		document.form.enable_mac[0].checked = true;
+	}	
+}
+
+function enable_macMode(){
+	if(document.form.enable_mac[0].checked)
+		$('mac_filter_mode').style.display = "";	
+	else
+		$('mac_filter_mode').style.display = "none";
+}
 </script>
 </head>
 
 <body onload="initial();">
 <div id="TopBanner"></div>
-
 <div id="Loading" class="popup_bg"></div>
-
 <iframe name="hidden_frame" id="hidden_frame" src="" width="0" height="0" frameborder="0"></iframe>
-
 <form method="post" name="form" id="ruleForm" action="/start_apply.htm" target="hidden_frame">
 <table class="content" align="center" cellpadding="0" cellspacing="0">
 	<tr>
 		<td width="17">&nbsp;</td>		
 		<td valign="top" width="202">	
-		<div  id="mainMenu"></div>	
-		<div  id="subMenu"></div>		
-		</td>				
-		
+			<div  id="mainMenu"></div>	
+			<div  id="subMenu"></div>		
+		</td>						
     <td valign="top">
 	<div id="tabMenu" class="submenuBlock"></div>
-
 		<!--===================================Beginning of Main Content===========================================-->
 <input type="hidden" name="current_page" value="Advanced_ACL_Content.asp">
 <input type="hidden" name="next_page" value="Advanced_ACL_Content.asp">
@@ -228,96 +346,94 @@ function check_macaddr(obj,flag){ //control hint of input mac address
 <input type="hidden" name="wl_ssid" value="<% nvram_get("wl_ssid"); %>">
 <input type="hidden" name="wl_maclist_x" value="">		
 <input type="hidden" name="wl_subunit" value="-1">
+<input type="hidden" name="wl_macmode" value="<% nvram_get("wl_macmode"); %>">
 
 <table width="98%" border="0" align="left" cellpadding="0" cellspacing="0">
 	<tr>
 		<td valign="top" >
 		
-<table width="760px" border="0" cellpadding="4" cellspacing="0" class="FormTitle" id="FormTitle">
-<tbody>
-		<tr>
-		  <td bgcolor="#4D595D" valign="top">
-		  <div>&nbsp;</div>
-		  <div class="formfonttitle"><#menu5_1#> - <#menu5_1_4#></div>
-		  <div style="margin-left:5px;margin-top:10px;margin-bottom:10px"><img src="/images/New_ui/export/line_export.png"></div>
-		  <div class="formfontdesc"><#DeviceSecurity11a_display1_sectiondesc#></div>
-		<table id="MainTable1" width="100%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3"  class="FormTable">
-			<thead>
-			  <tr>
-				<td colspan="2"><#t2BC#></td>
-			  </tr>
-			</thead>		
-
-			<tr id="wl_unit_field">
-				<th><#Interface#></th>
-				<td>
-					<select name="wl_unit" class="input_option" onChange="change_wl_unit();">
-						<option class="content_input_fd" value="0" <% nvram_match("wl_unit", "0","selected"); %>>2.4GHz</option>
-						<option class="content_input_fd" value="1" <% nvram_match("wl_unit", "1","selected"); %>>5GHz</option>
-					</select>			
-				</td>
-		  </tr>
-
-			<tr id="repeaterModeHint" style="display:none;">
-				<td colspan="2" style="color:#FFCC00;height:30px;" align="center"><#page_not_support_mode_hint#></td>
-		  </tr>
-
+		<table width="760px" border="0" cellpadding="4" cellspacing="0" class="FormTitle" id="FormTitle">
+		<tbody>
 			<tr>
-				<th width="30%" >
-					<a class="hintstyle" href="javascript:void(0);" onClick="openHint(18,1);"><#FirewallConfig_MFMethod_itemname#></a>
-				</th>
-				<td>
-					<select name="wl_macmode" class="input_option"  onChange="return change_common(this, 'DeviceSecurity11a', 'wl_macmode')">
-						<option class="content_input_fd" value="disabled" <% nvram_match("wl_macmode", "disable","selected"); %>><#CTL_Disabled#></option>
-						<option class="content_input_fd" value="allow" <% nvram_match("wl_macmode", "allow","selected"); %>><#FirewallConfig_MFMethod_item1#></option>
-						<option class="content_input_fd" value="deny" <% nvram_match("wl_macmode", "deny","selected"); %>><#FirewallConfig_MFMethod_item2#></option>
-					</select>
+				<td bgcolor="#4D595D" valign="top">
+					<div>&nbsp;</div>
+					<div class="formfonttitle"><#menu5_1#> - <#menu5_1_4#></div>
+					<div style="margin-left:5px;margin-top:10px;margin-bottom:10px"><img src="/images/New_ui/export/line_export.png"></div>
+					<div class="formfontdesc"><#DeviceSecurity11a_display1_sectiondesc#></div>
+					<table id="MainTable1" width="100%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3"  class="FormTable">
+						<thead>
+						  <tr>
+							<td colspan="2"><#t2BC#></td>
+						  </tr>
+						</thead>		
+
+						<tr id="wl_unit_field">
+							<th><#Interface#></th>
+							<td>
+								<select name="wl_unit" class="input_option" onChange="change_wl_unit();">
+									<option class="content_input_fd" value="0" <% nvram_match("wl_unit", "0","selected"); %>>2.4GHz</option>
+									<option class="content_input_fd" value="1" <% nvram_match("wl_unit", "1","selected"); %>>5GHz</option>
+								</select>			
+							</td>
+					  </tr>
+
+						<tr id="repeaterModeHint" style="display:none;">
+							<td colspan="2" style="color:#FFCC00;height:30px;" align="center"><#page_not_support_mode_hint#></td>
+					  </tr>
+						<tr>
+							<th width="30%" id="enable_macfilter"></th>
+							<td>
+								<input type="radio" name="enable_mac" value="0" onclick="enable_macMode();"><#checkbox_Yes#>
+								<input type="radio" name="enable_mac" value="1" onclick="enable_macMode();"><#checkbox_No#>
+							</td>
+						</tr>
+						<tr id="mac_filter_mode">
+							<th width="30%" >
+								<a class="hintstyle" href="javascript:void(0);" onClick="openHint(18,1);"><#FirewallConfig_MFMethod_itemname#></a>
+							</th>
+							<td>
+								<select name="wl_macmode_show" class="input_option">
+									<option class="content_input_fd" value="allow" <% nvram_match("wl_macmode", "allow","selected"); %>><#FirewallConfig_MFMethod_item1#></option>
+									<option class="content_input_fd" value="deny" <% nvram_match("wl_macmode", "deny","selected"); %>><#FirewallConfig_MFMethod_item2#></option>
+								</select>
+							</td>
+						</tr>
+					</table>
+					<table id="MainTable2" width="100%" border="1" align="center" cellpadding="4" cellspacing="0" class="FormTable_table">
+						<thead>
+							<tr>
+								<td colspan="2"><#FirewallConfig_MFList_groupitemname#>&nbsp;(<#List_limit#>&nbsp;64)</td>
+							</tr>
+						</thead>
+							<tr>
+								<th width="80%"><a class="hintstyle" href="javascript:void(0);" onClick="openHint(5,10);"><#FirewallConfig_MFList_groupitemname#></th> 
+								<th width="20%">Add / Delete</th>
+							</tr>
+							<tr>
+								<td width="80%">
+									<input type="text" maxlength="17" class="input_macaddr_table" name="wl_maclist_x_0" onKeyPress="return is_hwaddr(this,event)" onClick="hideClients_Block();">
+									<img id="pull_arrow" height="14px;" src="/images/arrow-down.gif" style="position:absolute;display:none;" onclick="pullWLMACList(this);" title="" onmouseover="over_var=1;" onmouseout="over_var=0;">
+									<div id="WL_MAC_List_Block" class="WL_MAC_Block"></div>
+								</td>
+								<td width="20%">	
+									<input type="button" class="add_btn" onClick="addRow(document.form.wl_maclist_x_0, 64);" value="">
+								</td>
+							</tr>      		
+					</table>
+						<div id="wl_maclist_x_Block"></div>			
+						<div id="submitBtn" class="apply_gen">
+							<input class="button_gen" onclick="applyRule()" type="button" value="<#CTL_apply#>"/>
+						</div>				
 				</td>
 			</tr>
+		</tbody>
 		</table>
-		
-			<table id="MainTable2" width="100%" border="1" align="center" cellpadding="4" cellspacing="0" class="FormTable_table">
-			  <thead>
-			  <tr>
-				<td colspan="2"><#FirewallConfig_MFList_groupitemname#></td>
-			  </tr>
-			  </thead>
-
-          		<tr>
-	          		<th width="80%"><a class="hintstyle" href="javascript:void(0);" onClick="openHint(5,10);">
-						<#FirewallConfig_MFList_groupitemname#>
-					</th> 
-					<th width="20%">Add / Delete</th>
-          		</tr>
-          		<tr>
-            		<td width="80%">
-              			<input type="text" maxlength="17" class="input_macaddr_table" name="wl_maclist_x_0" onKeyPress="return is_hwaddr(this,event)">
-              		</td>
-              		<td width="20%">	
-              			<input type="button" class="add_btn" onClick="addRow(document.form.wl_maclist_x_0, 32);" value="">
-              		</td>
-          		</tr>      		
-        		</table>
-	
-			<div id="wl_maclist_x_Block"></div>
-		
-			<div id="submitBtn" class="apply_gen">
-				<input class="button_gen" onclick="applyRule()" type="button" value="<#CTL_apply#>"/>
-			</div>		
-		
-	</td>
-</tr>
-</tbody>
-</table>
-</td>
+		</td>
 </form>
-
-
         </tr>
       </table>				
 		<!--===================================Ending of Main Content===========================================-->		
-	</td>
-		
+	</td>	
     <td width="10" align="center" valign="top">&nbsp;</td>
 	</tr>
 </table>

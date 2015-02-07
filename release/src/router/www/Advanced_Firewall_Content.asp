@@ -30,6 +30,9 @@ function initial(){
 	showfilter_lwlist();
 	load_body();
 	check_Timefield_checkbox();
+	if(svc_ready == "0")
+		$('svc_hint_div').style.display = "";	
+	corrected_timezone();	
 }
 
 function applyRule(){
@@ -50,7 +53,7 @@ function applyRule(){
 			tmp_value = "";	
 		
 		document.form.filter_lwlist.value = tmp_value;
-		updateDateTime(document.form.current_page.value);		
+		updateDateTime();		
 
 		showLoading();
 		document.form.submit();
@@ -352,6 +355,26 @@ function check_Timefield_checkbox(){	// To check Date checkbox checked or not an
 		$("enable_time_weekend_tr").style.display = ""; 
 	}
 }
+function updateDateTime(){
+	document.form.filter_lw_date_x.value = setDateCheck(
+		document.form.filter_lw_date_x_Sun,
+		document.form.filter_lw_date_x_Mon,
+		document.form.filter_lw_date_x_Tue,
+		document.form.filter_lw_date_x_Wed,
+		document.form.filter_lw_date_x_Thu,
+		document.form.filter_lw_date_x_Fri,
+		document.form.filter_lw_date_x_Sat);
+	document.form.filter_lw_time_x.value = setTimeRange(
+		document.form.filter_lw_time_x_starthour,
+		document.form.filter_lw_time_x_startmin,
+		document.form.filter_lw_time_x_endhour,
+		document.form.filter_lw_time_x_endmin);
+	document.form.filter_lw_time2_x.value = setTimeRange(
+		document.form.filter_lw_time2_x_starthour,
+		document.form.filter_lw_time2_x_startmin,
+		document.form.filter_lw_time2_x_endhour,
+		document.form.filter_lw_time2_x_endmin);	
+}
 </script>
 </head>
 
@@ -407,6 +430,8 @@ function check_Timefield_checkbox(){	// To check Date checkbox checked or not an
 		  				<div class="formfontdesc"><#FirewallConfig_display1_sectiondesc#></div>
 		  				<div class="formfontdesc"><#FirewallConfig_display3_sectiondesc#></div>
 		  				<div class="formfontdesc" style="color:#FFCC00;"><#FirewallConfig_display4_sectiondesc#></div>	
+		  				<div id="svc_hint_div" style="display:none;"><span onClick="location.href='Advanced_System_Content.asp?af=ntp_server0'" style="color:#FFCC00;text-decoration:underline;cursor:pointer;">* Remind: Did not synchronize your system time with NTP server yet.</span></div>
+		  				<div id="timezone_hint_div" style="display:none;"><span id="timezone_hint" onclick="location.href='Advanced_System_Content.asp?af=time_zone_select'" style="color:#FFCC00;text-decoration:underline;cursor:pointer;"></span></div>
 
 						<table width="100%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3"  class="FormTable">
 						<thead>
@@ -489,7 +514,7 @@ function check_Timefield_checkbox(){	// To check Date checkbox checked or not an
    					<table width="100%" border="1" align="center" cellpadding="4" cellspacing="0" class="FormTable_table">
 	  					<thead>
 	   					<tr>
-	   						<td colspan="6" id="filter_lwlist"><#FirewallConfig_LWFilterList_groupitemdesc#></td>
+	   						<td colspan="6" id="filter_lwlist"><#FirewallConfig_LWFilterList_groupitemdesc#>&nbsp;(<#List_limit#>&nbsp;32)</td>
 	   					</tr>
 	  					</thead>		  
           					<tr>

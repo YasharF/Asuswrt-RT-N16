@@ -55,13 +55,11 @@
 #include <iwlib.h>
 #include <stapriv.h>
 #include <ethutils.h>
-#include <semaphore_mfp.h>
 #include <shared.h>
 #include <sys/mman.h>
 #ifndef O_BINARY
 #define O_BINARY 	0
 #endif
-#include <image.h>
 #ifndef MAP_FAILED
 #define MAP_FAILED (-1)
 #endif
@@ -70,6 +68,7 @@
 //static char * rfctime(const time_t *timep);
 //static char * reltime(unsigned int seconds);
 void reltime(unsigned int seconds, char *buf);
+static int wl_status(int eid, webs_t wp, int argc, char_t **argv, int unit);
 
 #include <fcntl.h>
 #include <signal.h>
@@ -86,7 +85,7 @@ void reltime(unsigned int seconds, char *buf);
 int is_hwnat_loaded()
 {
 	DIR *dir_to_open = NULL;
-        
+
 	dir_to_open = opendir("/sys/module/hw_nat");
 	if (dir_to_open)
 	{
@@ -101,6 +100,7 @@ int
 ej_nat_table(int eid, webs_t wp, int argc, char_t **argv)
 {
 #ifdef REMOVE
+	int needlen = 0, listlen, i;
     	netconf_nat_t *nat_list = 0;
 //	netconf_nat_t **plist, *cur;
 #endif
@@ -369,9 +369,6 @@ ralink_get_range_info(iwrange *	range, char* buffer, int length)
   return (0);
 }
 
-#define RTPRIV_IOCTL_SHOW		SIOCIWFIRSTPRIV + 0x11
-#define RTPRIV_IOCTL_GET_MAC_TABLE	SIOCIWFIRSTPRIV + 0x0F
-
 
 char* GetBW(int BW)
 {
@@ -385,6 +382,11 @@ char* GetBW(int BW)
 
 		case BW_40:
 			return "40M";
+
+#if defined(RTAC52U)
+		case BW_80:
+			return "80M";
+#endif
 
 		default:
 			return "N/A";
@@ -405,6 +407,12 @@ char* GetPhyMode(int Mode)
 
 		case MODE_HTGREENFIELD:
 			return "GREEN";
+
+#if defined(RTAC52U)
+		case MODE_VHT:
+			return "VHT";
+#endif
+
 		default:
 			return "N/A";
 	}
@@ -420,57 +428,67 @@ int MCSMappingRateTable[] =
 	14, 29,   43,  57,  87, 115, 130, 144, 29, 59,   87, 115, 173, 230, 260, 288, // 20MHz, 400ns GI, MCS: 0 ~ 15
 	43, 87,  130, 173, 260, 317, 390, 433,										  // 20MHz, 400ns GI, MCS: 16 ~ 23
 	30, 60,   90, 120, 180, 240, 270, 300, 60, 120, 180, 240, 360, 480, 540, 600, // 40MHz, 400ns GI, MCS: 0 ~ 15
-	90, 180, 270, 360, 540, 720, 810, 900};
+	90, 180, 270, 360, 540, 720, 810, 900,
+	13, 26,   39,  52,  78, 104, 117, 130, 156, /* 11ac: 20Mhz, 800ns GI, MCS: 0~8 */
+	27, 54,   81, 108, 162, 216, 243, 270, 324, 360, /*11ac: 40Mhz, 800ns GI, MCS: 0~9 */
+	59, 117, 176, 234, 351, 468, 527, 585, 702, 780, /*11ac: 80Mhz, 800ns GI, MCS: 0~9 */
+	14, 29,   43,  57,  87, 115, 130, 144, 173, /* 11ac: 20Mhz, 400ns GI, MCS: 0~8 */
+	30, 60,   90, 120, 180, 240, 270, 300, 360, 400, /*11ac: 40Mhz, 400ns GI, MCS: 0~9 */
+	65, 130, 195, 260, 390, 520, 585, 650, 780, 867 /*11ac: 80Mhz, 400ns GI, MCS: 0~9 */
+	};
 
-int
-getRate(MACHTTRANSMIT_SETTING HTSetting)
-{
-	int rate_count = sizeof(MCSMappingRateTable)/sizeof(int);
-	int rate_index = 0;  
 
-    if (HTSetting.field.MODE >= MODE_HTMIX)
-    {
-    	rate_index = 12 + ((unsigned char)HTSetting.field.BW *24) + ((unsigned char)HTSetting.field.ShortGI *48) + ((unsigned char)HTSetting.field.MCS);
-    }
-    else 
-    if (HTSetting.field.MODE == MODE_OFDM)                
-    	rate_index = (unsigned char)(HTSetting.field.MCS) + 4;
-    else if (HTSetting.field.MODE == MODE_CCK)   
-    	rate_index = (unsigned char)(HTSetting.field.MCS);
-
-    if (rate_index < 0)
-        rate_index = 0;
-    
-    if (rate_index > rate_count)
-        rate_index = rate_count;
-
-	return (MCSMappingRateTable[rate_index] * 5)/10;
+#define FN_GETRATE(_fn_, _st_)						\
+_fn_(_st_ HTSetting)							\
+{									\
+	int rate_count = sizeof(MCSMappingRateTable)/sizeof(int);	\
+	int rate_index = 0;						\
+									\
+	if (HTSetting.field.MODE >= MODE_VHT)				\
+	{								\
+		if (HTSetting.field.BW == BW_20) {			\
+			rate_index = 108 +				\
+			((unsigned char)HTSetting.field.ShortGI * 29) +	\
+			((unsigned char)HTSetting.field.MCS);		\
+		}							\
+		else if (HTSetting.field.BW == BW_40) {			\
+			rate_index = 117 +				\
+			((unsigned char)HTSetting.field.ShortGI * 29) +	\
+			((unsigned char)HTSetting.field.MCS);		\
+		}							\
+		else if (HTSetting.field.BW == BW_80) {			\
+			rate_index = 127 +				\
+			((unsigned char)HTSetting.field.ShortGI * 29) +	\
+			((unsigned char)HTSetting.field.MCS);		\
+		}							\
+	}								\
+	else								\
+	if (HTSetting.field.MODE >= MODE_HTMIX)				\
+	{								\
+		rate_index = 12 + ((unsigned char)HTSetting.field.BW *24) + ((unsigned char)HTSetting.field.ShortGI *48) + ((unsigned char)HTSetting.field.MCS);	\
+	}								\
+	else								\
+	if (HTSetting.field.MODE == MODE_OFDM)				\
+		rate_index = (unsigned char)(HTSetting.field.MCS) + 4;	\
+	else if (HTSetting.field.MODE == MODE_CCK)			\
+		rate_index = (unsigned char)(HTSetting.field.MCS);	\
+									\
+	if (rate_index < 0)						\
+		rate_index = 0;						\
+									\
+	if (rate_index >= rate_count)					\
+		rate_index = rate_count-1;				\
+									\
+	return (MCSMappingRateTable[rate_index] * 5)/10;		\
 }
 
-int
-getRate_2g(MACHTTRANSMIT_SETTING_2G HTSetting)
-{
-	int rate_count = sizeof(MCSMappingRateTable)/sizeof(int);
-	int rate_index = 0;  
+int FN_GETRATE(getRate,      MACHTTRANSMIT_SETTING)		//getRate(MACHTTRANSMIT_SETTING)
+int FN_GETRATE(getRate_2g,   MACHTTRANSMIT_SETTING_2G)		//getRate_2g(MACHTTRANSMIT_SETTING_2G)
+#if defined(RTAC52U)
+int FN_GETRATE(getRate_11ac, MACHTTRANSMIT_SETTING_11AC)	//getRate_11ac(MACHTTRANSMIT_SETTING_11AC)
+#endif
 
-    if (HTSetting.field.MODE >= MODE_HTMIX)
-    {
-    	rate_index = 12 + ((unsigned char)HTSetting.field.BW *24) + ((unsigned char)HTSetting.field.ShortGI *48) + ((unsigned char)HTSetting.field.MCS);
-    }
-    else 
-    if (HTSetting.field.MODE == MODE_OFDM)                
-    	rate_index = (unsigned char)(HTSetting.field.MCS) + 4;
-    else if (HTSetting.field.MODE == MODE_CCK)   
-    	rate_index = (unsigned char)(HTSetting.field.MCS);
 
-    if (rate_index < 0)
-        rate_index = 0;
-    
-    if (rate_index > rate_count)
-        rate_index = rate_count;
-
-	return (MCSMappingRateTable[rate_index] * 5)/10;
-}
 
 int
 ej_wl_status(int eid, webs_t wp, int argc, char_t **argv, int unit)
@@ -480,7 +498,7 @@ ej_wl_status(int eid, webs_t wp, int argc, char_t **argv, int unit)
 	char word[256], *next;
 
 	foreach (word, nvram_safe_get("wl_ifnames"), next) {
-		retval += wl_status(eid, wp, argc, argv, ii, word);
+		retval += wl_status(eid, wp, argc, argv, ii);
 		retval += websWrite(wp, "\n");
 
 		ii++;
@@ -495,8 +513,8 @@ ej_wl_status_2g(int eid, webs_t wp, int argc, char_t **argv)
 	return ej_wl_status(eid, wp, argc, argv, 0);
 }
 
-int
-wl_status(int eid, webs_t wp, int argc, char_t **argv, int unit, const char *ifname)
+static int
+wl_status(int eid, webs_t wp, int argc, char_t **argv, int unit)
 {
 	int ret = 0;
 	int channel;
@@ -507,28 +525,41 @@ wl_status(int eid, webs_t wp, int argc, char_t **argv, int unit, const char *ifn
 	struct iwreq wrq2;
 	struct iwreq wrq3;
 	unsigned long phy_mode;
-	char tmp[128], prefix[] = "wlXXXXXXXXXX_";
+	char tmp[128], prefix[] = "wlXXXXXXXXXX_", *ifname;
 	int wl_mode_x;
+	int r;
 
 	snprintf(prefix, sizeof(prefix), "wl%d_", unit);
+	ifname = nvram_safe_get(strcat_r(prefix, "ifname", tmp));
 
 #if 0
 	if (nvram_match(strcat_r(prefix, "radio", tmp), "0"))
 	{
-		ret+=websWrite(wp, "Radio is disabled\n");
+		ret+=websWrite(wp, "%s radio is disabled\n",
+			nvram_match(strcat_r(prefix, "nband", tmp), "1") ? "5 GHz" : "2.4 GHz");
 		return ret;
 	}
 #else
-	if (!get_radio_status(nvram_safe_get(strcat_r(prefix, "ifname", tmp))))
+	if (!get_radio_status(ifname))
 	{
-		ret+=websWrite(wp, "Radio is disabled\n");
+#if defined(RTN14U)
+		ret+=websWrite(wp, "2.4 GHz radio is disabled\n");
+#else
+		ret+=websWrite(wp, "%s radio is disabled\n",
+			nvram_match(strcat_r(prefix, "nband", tmp), "1") ? "5 GHz" : "2.4 GHz");
+#endif
 		return ret;
 	}
 #endif
 
 	if (wl_ioctl(ifname, SIOCGIWAP, &wrq0) < 0)
 	{
-		ret+=websWrite(wp, "Radio is disabled\n");
+#if defined(RTN14U)
+		ret+=websWrite(wp, "2.4 GHz radio is disabled\n");
+#else
+		ret+=websWrite(wp, "%s radio is disabled\n",
+			nvram_match(strcat_r(prefix, "nband", tmp), "1") ? "5 GHz" : "2.4 GHz");
+#endif
 		return ret;
 	}
 
@@ -556,6 +587,27 @@ wl_status(int eid, webs_t wp, int argc, char_t **argv, int unit, const char *ifn
 	if (ralink_get_range_info(&range, buffer, wrq2.u.data.length) < 0)
 		return ret;
 
+#if 1
+	if (unit == 0 && get_model() == MODEL_RTN65U)
+	{
+		FILE *fp;
+		phy_mode = 0;
+		if((fp = fopen("/etc/Wireless/iNIC/iNIC_ap.dat", "r")) != NULL)
+		{
+			while(fgets(tmp, sizeof(tmp), fp) != NULL)
+			{
+				if(strncmp(tmp, "WirelessMode=", 13) == 0)
+				{
+					phy_mode = atoi(tmp + 13);
+					break;
+				}
+			}
+			fclose(fp);
+		}
+	}
+	else
+	{
+#endif
 	bzero(buffer, sizeof(unsigned long));
 	wrq2.u.data.length = sizeof(unsigned long);
 	wrq2.u.data.pointer = (caddr_t) buffer;
@@ -563,8 +615,17 @@ wl_status(int eid, webs_t wp, int argc, char_t **argv, int unit, const char *ifn
 
 	if (wl_ioctl(ifname, RT_PRIV_IOCTL, &wrq2) < 0)
 		return ret;
+
+	if(wrq2.u.mode == (__u32) buffer) //.u.mode is at the same location as u.data.pointer
+	{ //new wifi driver
+		phy_mode = 0;
+		memcpy(&phy_mode, wrq2.u.data.pointer, wrq2.u.data.length);
+	}
 	else
 		phy_mode=wrq2.u.mode;
+#if 1
+	}
+#endif
 
 	freq = iw_freq2float(&(wrq1.u.freq));
 	if (freq < KILO)
@@ -584,6 +645,27 @@ wl_status(int eid, webs_t wp, int argc, char_t **argv, int unit, const char *ifn
 	else
 		ret+=websWrite(wp, "OP Mode		: AP\n");
 
+#ifdef RTAC52U
+	if (get_model() == MODEL_RTAC52U && unit == 1)
+	{
+		char *p = tmp;
+		if(phy_mode & WMODE_A)
+			p += sprintf(p, "/a");
+		if(phy_mode & WMODE_B)
+			p += sprintf(p, "/b");
+		if(phy_mode & WMODE_G)
+			p += sprintf(p, "/g");
+		if(phy_mode & WMODE_GN)
+			p += sprintf(p, "/n");	//N in 2G
+		if(phy_mode & WMODE_AN)
+			p += sprintf(p, "/n");	//N in 5G
+		if(phy_mode & WMODE_AC)
+			p += sprintf(p, "/ac");
+		if(p != tmp)
+			ret+=websWrite(wp, "Phy Mode	: 11%s\n", tmp+1); // skip first '/'
+	}
+	else
+#endif
 	if (phy_mode==PHY_11BG_MIXED)
 		ret+=websWrite(wp, "Phy Mode	: 11b/g\n");
 	else if (phy_mode==PHY_11B)
@@ -615,60 +697,74 @@ wl_status(int eid, webs_t wp, int argc, char_t **argv, int unit, const char *ifn
 	wrq3.u.data.length = sizeof(data);
 	wrq3.u.data.flags = 0;
 
-	if (wl_ioctl(ifname, RTPRIV_IOCTL_GET_MAC_TABLE, &wrq3) < 0)
+	if ((r = wl_ioctl(ifname, RTPRIV_IOCTL_GET_MAC_TABLE, &wrq3)) < 0) {
+		_dprintf("%s: Take MAC table from i/f %s fail! ret %d, errno %d (%s)\n",
+			__func__, r, errno, strerror(errno));
 		return ret;
+	}
 
 	RT_802_11_MAC_TABLE* mp=(RT_802_11_MAC_TABLE*)wrq3.u.data.pointer;
-	RT_802_11_MAC_TABLE_2G *mp_2g=(RT_802_11_MAC_TABLE_2G*)wrq3.u.data.pointer;
+	RT_802_11_MAC_TABLE_2G* mp2=(RT_802_11_MAC_TABLE_2G*)wrq3.u.data.pointer;
 	int i;
 
 	ret+=websWrite(wp, "\nStations List			   \n");
 	ret+=websWrite(wp, "----------------------------------------\n");
 	ret+=websWrite(wp, "%-18s%-4s%-8s%-4s%-4s%-4s%-5s%-5s%-12s\n",
 			   "MAC", "PSM", "PhyMode", "BW", "MCS", "SGI", "STBC", "Rate", "Connect Time");
-
-	int hr, min, sec;
-	if (!strcmp(ifname, WIF_5G))
-	for (i=0;i<mp->Num;i++)
+#if 0
+	int entrySize;
+	entrySize = sizeof(RT_802_11_MAC_ENTRY);			//52 Bytes default size
+	if (get_model() == MODEL_RTN65U)
 	{
-                hr = mp->Entry[i].ConnectedTime/3600;
-                min = (mp->Entry[i].ConnectedTime % 3600)/60;
-                sec = mp->Entry[i].ConnectedTime - hr*3600 - min*60;
-
-		ret+=websWrite(wp, "%02X:%02X:%02X:%02X:%02X:%02X %s %-7s %s %-03d %s %s  %-03dM %02d:%02d:%02d\n",
-				mp->Entry[i].Addr[0], mp->Entry[i].Addr[1],
-				mp->Entry[i].Addr[2], mp->Entry[i].Addr[3],
-				mp->Entry[i].Addr[4], mp->Entry[i].Addr[5],
-				mp->Entry[i].Psm ? "Yes" : "NO ",
-				GetPhyMode(mp->Entry[i].TxRate.field.MODE),
-				GetBW(mp->Entry[i].TxRate.field.BW),
-				mp->Entry[i].TxRate.field.MCS,
-				mp->Entry[i].TxRate.field.ShortGI ? "Yes" : "NO ",
-				mp->Entry[i].TxRate.field.STBC ? "Yes" : "NO ",
-				getRate(mp->Entry[i].TxRate),
-				hr, min, sec
-		);
+		if(strcmp(ifname, WIF_2G) == 0)
+			entrySize = sizeof(RT_802_11_MAC_ENTRY_2G);	//24 Bytes used by iNIC fw binary
+		else
+			entrySize = sizeof(RT_802_11_MAC_ENTRY_RT3883);	//40 Bytes used by RT3883
 	}
-	else
-	for (i=0;i<mp_2g->Num;i++)
-	{
-                hr = mp_2g->Entry[i].ConnectedTime/3600;
-                min = (mp_2g->Entry[i].ConnectedTime % 3600)/60;
-                sec = mp_2g->Entry[i].ConnectedTime - hr*3600 - min*60;
+#endif
 
-		ret+=websWrite(wp, "%02X:%02X:%02X:%02X:%02X:%02X %s %-7s %s %-03d %s %s  %-03dM %02d:%02d:%02d\n",
-				mp_2g->Entry[i].Addr[0], mp_2g->Entry[i].Addr[1],
-				mp_2g->Entry[i].Addr[2], mp_2g->Entry[i].Addr[3],
-				mp_2g->Entry[i].Addr[4], mp_2g->Entry[i].Addr[5],
-				mp_2g->Entry[i].Psm ? "Yes" : "NO ",
-				GetPhyMode(mp_2g->Entry[i].TxRate.field.MODE),
-				GetBW(mp_2g->Entry[i].TxRate.field.BW),
-				mp_2g->Entry[i].TxRate.field.MCS,
-				mp_2g->Entry[i].TxRate.field.ShortGI ? "Yes" : "NO ",
-				mp_2g->Entry[i].TxRate.field.STBC ? "Yes" : "NO ",
-				getRate_2g(mp_2g->Entry[i].TxRate),
-				hr, min, sec
-		);
+#define SHOW_STA_INFO(_p,_i,_st, _gr) {											\
+		int hr, min, sec;											\
+		_st *Entry = ((_st *)(_p)) + _i;									\
+		hr = Entry->ConnectedTime/3600;										\
+		min = (Entry->ConnectedTime % 3600)/60;									\
+		sec = Entry->ConnectedTime - hr*3600 - min*60;								\
+		ret+=websWrite(wp, "%02X:%02X:%02X:%02X:%02X:%02X %s %-7s %s %3d %s %s  %3dM %02d:%02d:%02d\n",		\
+				Entry->Addr[0], Entry->Addr[1],								\
+				Entry->Addr[2], Entry->Addr[3],								\
+				Entry->Addr[4], Entry->Addr[5],								\
+				Entry->Psm ? "Yes" : "NO ",								\
+				GetPhyMode(Entry->TxRate.field.MODE),							\
+				GetBW(Entry->TxRate.field.BW),								\
+				Entry->TxRate.field.MCS,								\
+				Entry->TxRate.field.ShortGI ? "Yes" : "NO ",						\
+				Entry->TxRate.field.STBC ? "Yes" : "NO ",						\
+				_gr(Entry->TxRate),									\
+				hr, min, sec										\
+		);													\
+	}
+
+	if (!strcmp(ifname, WIF_2G)) {
+		for (i=0;i<mp->Num;i++) {
+#if defined(RTN65U)
+			SHOW_STA_INFO(mp->Entry, i, RT_802_11_MAC_ENTRY_RT3352_iNIC, getRate_2g);
+#elif defined(RTAC52U)
+			SHOW_STA_INFO(mp2->Entry, i, RT_802_11_MAC_ENTRY_2G, getRate_2g);
+#else
+			SHOW_STA_INFO(mp2->Entry, i, RT_802_11_MAC_ENTRY_2G, getRate_2g);
+#endif
+		}
+	}
+	else {
+		for (i=0;i<mp->Num;i++) {
+#if defined(RTN65U)
+			SHOW_STA_INFO(mp->Entry, i, RT_802_11_MAC_ENTRY_RT3883, getRate_2g);
+#elif defined(RTAC52U)
+			SHOW_STA_INFO(mp2->Entry, i, RT_802_11_MAC_ENTRY_11AC, getRate_11ac);
+#else
+			SHOW_STA_INFO(mp->Entry, i, RT_802_11_MAC_ENTRY_RT3883, getRate_2g);
+#endif
+		}
 	}
 
 	return ret;
@@ -984,7 +1080,6 @@ ej_wps_info_2g(int eid, webs_t wp, int argc, char_t **argv)
 }
 
 // Wireless Client List		 /* Start --Alicia, 08.09.23 */
-#define RTPRIV_IOCTL_GET_MAC_TABLE	SIOCIWFIRSTPRIV + 0x0F
 
 int ej_wl_auth_list(int eid, webs_t wp, int argc, char_t **argv)
 {
@@ -1067,6 +1162,20 @@ exit:
 	return 0;
 }
 
+static void convertToUpper(char *str)
+{
+	if(str == NULL)
+		return;
+	while(*str)
+	{
+		if(*str >= 'a' && *str <= 'z')
+		{
+			*str &= (unsigned char)~0x20;
+		}
+		str++;
+	}
+}
+
 static int wl_scan(int eid, webs_t wp, int argc, char_t **argv, int unit)
 {
 	int retval = 0, i = 0, apCount = 0;
@@ -1076,6 +1185,7 @@ static int wl_scan(int eid, webs_t wp, int argc, char_t **argv, int unit)
 	struct iwreq wrq;
 	SSA *ssap;
 	char tmp[128], prefix[] = "wlXXXXXXXXXX_";
+	int lock;
 
 	snprintf(prefix, sizeof(prefix), "wl%d_", unit);
 	memset(data, 0x00, 255);
@@ -1084,14 +1194,14 @@ static int wl_scan(int eid, webs_t wp, int argc, char_t **argv, int unit)
 	wrq.u.data.pointer = data; 
 	wrq.u.data.flags = 0; 
 
-	spinlock_lock(SPINLOCK_SiteSurvey);
+	lock = file_lock("nvramcommit");
 	if (wl_ioctl(nvram_safe_get(strcat_r(prefix, "ifname", tmp)), RTPRIV_IOCTL_SET, &wrq) < 0)
 	{
-		spinlock_unlock(0);
+		file_unlock(lock);
 		dbg("Site Survey fails\n");
 		return 0;
 	}
-	spinlock_unlock(SPINLOCK_SiteSurvey);
+	file_unlock(lock);
 	dbg("Please wait");
 	sleep(1);
 	dbg(".");
@@ -1113,10 +1223,77 @@ static int wl_scan(int eid, webs_t wp, int argc, char_t **argv, int unit)
 	}
 	memset(header, 0, sizeof(header));
 	//sprintf(header, "%-3s%-33s%-18s%-8s%-15s%-9s%-8s%-2s\n", "Ch", "SSID", "BSSID", "Enc", "Auth", "Siganl(%)", "W-Mode", "NT");
+#if defined(RTN14U)
+	sprintf(header, "%-4s%-33s%-18s%-9s%-16s%-9s%-8s%-4s%-5s\n", "Ch", "SSID", "BSSID", "Enc", "Auth", "Siganl(%)", "W-Mode"," WPS", " DPID");
+#else
 	sprintf(header, "%-4s%-33s%-18s%-9s%-16s%-9s%-8s\n", "Ch", "SSID", "BSSID", "Enc", "Auth", "Siganl(%)", "W-Mode");
+#endif
 	dbg("\n%s", header);
 	if (wrq.u.data.length > 0)
 	{
+#if 1
+		if (unit == 0 && get_model() == MODEL_RTN65U)
+		{
+			char *encryption;
+			SITE_SURVEY_RT3352_iNIC *pSsap, *ssAP;
+
+			pSsap = ssAP = (SITE_SURVEY_RT3352_iNIC *) (1 /* '\n' */ + wrq.u.data.pointer +  sizeof(SITE_SURVEY_RT3352_iNIC) /* header */);
+			while(((unsigned int)wrq.u.data.pointer + wrq.u.data.length) > (unsigned int) ssAP)
+			{
+				ssAP->channel   [sizeof(ssAP->channel)    -1] = '\0';
+				ssAP->ssid      [32                         ] = '\0';
+				ssAP->bssid     [17                         ] = '\0';
+				ssAP->encryption[sizeof(ssAP->encryption) -1] = '\0';
+				if((encryption = strchr(ssAP->authmode, '/')) != NULL)
+				{
+					memmove(ssAP->encryption, encryption +1, sizeof(ssAP->encryption) -1);
+					memset(encryption, ' ', sizeof(ssAP->authmode) - (encryption - ssAP->authmode));
+					*encryption = '\0';
+				}
+				ssAP->authmode  [sizeof(ssAP->authmode)   -1] = '\0';
+				ssAP->signal    [sizeof(ssAP->signal)     -1] = '\0';
+				ssAP->wmode     [sizeof(ssAP->wmode)      -1] = '\0';
+				ssAP->extch     [sizeof(ssAP->extch)      -1] = '\0';
+				ssAP->nt        [sizeof(ssAP->nt)         -1] = '\0';
+				ssAP->wps       [sizeof(ssAP->wps)        -1] = '\0';
+				ssAP->dpid      [sizeof(ssAP->dpid)       -1] = '\0';
+
+				convertToUpper(ssAP->bssid);
+				ssAP++;
+				apCount++;
+			}
+
+			if (apCount)
+			{
+				retval += websWrite(wp, "[");
+				for (i = 0; i < apCount; i++)
+				{
+					dbg("%-4s%-33s%-18s%-9s%-16s%-9s%-8s\n",
+						pSsap[i].channel,
+						pSsap[i].ssid,
+						pSsap[i].bssid,
+						pSsap[i].encryption,
+						pSsap[i].authmode,
+						pSsap[i].signal,
+						pSsap[i].wmode
+					);
+
+					memset(ssid_str, 0, sizeof(ssid_str));
+					char_to_ascii(ssid_str, trim_r(pSsap[i].ssid));
+
+					if (!i)
+						retval += websWrite(wp, "[\"%s\", \"%s\"]", ssid_str, pSsap[i].bssid);
+					else
+						retval += websWrite(wp, ", [\"%s\", \"%s\"]", ssid_str, pSsap[i].bssid);
+				}
+				retval += websWrite(wp, "]");
+				dbg("\n");
+			}
+			else
+				retval += websWrite(wp, "[]");
+			return retval;
+		}
+#endif
 		ssap=(SSA *)(wrq.u.data.pointer+strlen(header)+1);
 		int len = strlen(wrq.u.data.pointer+strlen(header))-1;
 		char *sp, *op;
@@ -1130,6 +1307,10 @@ static int wl_scan(int eid, webs_t wp, int argc, char_t **argv, int unit)
 			ssap->SiteSurvey[i].authmode[15] = '\0';
 			ssap->SiteSurvey[i].signal[8] = '\0';
 			ssap->SiteSurvey[i].wmode[7] = '\0';
+#if defined(RTN14U)
+			ssap->SiteSurvey[i].wps[3] = '\0';
+			ssap->SiteSurvey[i].dpid[4] = '\0';
+#endif
 			sp+=strlen(header);
 			apCount=++i;
 		}
@@ -1138,7 +1319,12 @@ static int wl_scan(int eid, webs_t wp, int argc, char_t **argv, int unit)
 			retval += websWrite(wp, "[");
 			for (i = 0; i < apCount; i++)
 			{
-				dbg("%-4s%-33s%-18s%-9s%-16s%-9s%-8s\n",
+				dbg(
+#if defined(RTN14U)
+				"%-4s%-33s%-18s%-9s%-16s%-9s%-8s%-4s%-5s\n",
+#else
+				"%-4s%-33s%-18s%-9s%-16s%-9s%-8s\n",
+#endif
 					ssap->SiteSurvey[i].channel,
 					(char*)ssap->SiteSurvey[i].ssid,
 					ssap->SiteSurvey[i].bssid,
@@ -1146,6 +1332,10 @@ static int wl_scan(int eid, webs_t wp, int argc, char_t **argv, int unit)
 					ssap->SiteSurvey[i].authmode,
 					ssap->SiteSurvey[i].signal,
 					ssap->SiteSurvey[i].wmode
+#if defined(RTN14U)
+					, ssap->SiteSurvey[i].wps
+					, ssap->SiteSurvey[i].dpid
+#endif
 				);
 
 				memset(ssid_str, 0, sizeof(ssid_str));
@@ -1185,275 +1375,14 @@ ej_wl_scan_5g(int eid, webs_t wp, int argc, char_t **argv)
 	return wl_scan(eid, wp, argc, argv, 1);
 }
 
-unsigned char A_BAND_REGION_0_CHANNEL_LIST[]={36, 40, 44, 48, 149, 153, 157, 161, 165};
-unsigned char A_BAND_REGION_1_CHANNEL_LIST[]={36, 40, 44, 48};
-#ifdef RTCONFIG_LOCALE2012
-unsigned char A_BAND_REGION_2_CHANNEL_LIST[]={36, 40, 44, 48, 52, 56, 60, 64, 149, 153, 157, 161, 165};
-unsigned char A_BAND_REGION_3_CHANNEL_LIST[]={52, 56, 60, 64, 149, 153, 157, 161, 165};
-#else
-unsigned char A_BAND_REGION_2_CHANNEL_LIST[]={36, 40, 44, 48};
-unsigned char A_BAND_REGION_3_CHANNEL_LIST[]={149, 153, 157, 161};
-#endif
-unsigned char A_BAND_REGION_4_CHANNEL_LIST[]={149, 153, 157, 161, 165};
-unsigned char A_BAND_REGION_5_CHANNEL_LIST[]={149, 153, 157, 161};
-#ifdef RTCONFIG_LOCALE2012
-unsigned char A_BAND_REGION_6_CHANNEL_LIST[]={36, 40, 44, 48, 132, 136, 140, 149, 153, 157, 161, 165};
-#else
-unsigned char A_BAND_REGION_6_CHANNEL_LIST[]={36, 40, 44, 48};
-#endif
-unsigned char A_BAND_REGION_7_CHANNEL_LIST[]={36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 149, 153, 157, 161, 165, 169, 173};
-unsigned char A_BAND_REGION_8_CHANNEL_LIST[]={52, 56, 60, 64};
-#ifdef RTCONFIG_LOCALE2012
-unsigned char A_BAND_REGION_9_CHANNEL_LIST[]={36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, 120, 124, 128, 132};
-#else
-unsigned char A_BAND_REGION_9_CHANNEL_LIST[]={36, 40, 44, 48};
-#endif
-unsigned char A_BAND_REGION_10_CHANNEL_LIST[]={36, 40, 44, 48, 149, 153, 157, 161, 165};
-unsigned char A_BAND_REGION_11_CHANNEL_LIST[]={36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, 120, 149, 153, 157, 161};
-unsigned char A_BAND_REGION_12_CHANNEL_LIST[]={36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140};
-unsigned char A_BAND_REGION_13_CHANNEL_LIST[]={52, 56, 60, 64, 100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 149, 153, 157, 161};
-unsigned char A_BAND_REGION_14_CHANNEL_LIST[]={36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, 136, 140, 149, 153, 157, 161, 165};
-unsigned char A_BAND_REGION_15_CHANNEL_LIST[]={149, 153, 157, 161, 165, 169, 173};
-unsigned char A_BAND_REGION_16_CHANNEL_LIST[]={52, 56, 60, 64, 149, 153, 157, 161, 165};
-unsigned char A_BAND_REGION_17_CHANNEL_LIST[]={36, 40, 44, 48, 149, 153, 157, 161};
-unsigned char A_BAND_REGION_18_CHANNEL_LIST[]={36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, 132, 136, 140};
-unsigned char A_BAND_REGION_19_CHANNEL_LIST[]={56, 60, 64, 100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 149, 153, 157, 161};
-unsigned char A_BAND_REGION_20_CHANNEL_LIST[]={36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, 120, 124, 149, 153, 157, 161};
-unsigned char A_BAND_REGION_21_CHANNEL_LIST[]={36, 40, 44, 48, 52, 56, 60, 64, 100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 149, 153, 157, 161};
-
-unsigned char G_BAND_REGION_0_CHANNEL_LIST[]={1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
-unsigned char G_BAND_REGION_1_CHANNEL_LIST[]={1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13};
-unsigned char G_BAND_REGION_5_CHANNEL_LIST[]={1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14};
-
-#define A_BAND_REGION_0				0
-#define A_BAND_REGION_1				1
-#define A_BAND_REGION_2				2
-#define A_BAND_REGION_3				3
-#define A_BAND_REGION_4				4
-#define A_BAND_REGION_5				5
-#define A_BAND_REGION_6				6
-#define A_BAND_REGION_7				7
-#define A_BAND_REGION_8				8
-#define A_BAND_REGION_9				9
-#define A_BAND_REGION_10			10
-#define A_BAND_REGION_11			11
-#define A_BAND_REGION_12			12
-#define A_BAND_REGION_13			13
-#define A_BAND_REGION_14			14
-#define A_BAND_REGION_15			15
-#define A_BAND_REGION_16			16
-#define A_BAND_REGION_17			17
-#define A_BAND_REGION_18			18
-#define A_BAND_REGION_19			19
-#define A_BAND_REGION_20			20
-#define A_BAND_REGION_21			21
-
-#define G_BAND_REGION_0				0
-#define G_BAND_REGION_1				1
-#define G_BAND_REGION_2				2
-#define G_BAND_REGION_3				3
-#define G_BAND_REGION_4				4
-#define G_BAND_REGION_5				5
-#define G_BAND_REGION_6				6
-
-typedef struct CountryCodeToCountryRegion {
-	unsigned char	IsoName[3];
-	unsigned char	RegDomainNum11A;
-	unsigned char	RegDomainNum11G;
-} COUNTRY_CODE_TO_COUNTRY_REGION;
-
-COUNTRY_CODE_TO_COUNTRY_REGION allCountry[] = {
-	/* {Country Number, ISO Name, Country Name, Support 11A, 11A Country Region, Support 11G, 11G Country Region} */
-	{"DB", A_BAND_REGION_7, G_BAND_REGION_5},
-	{"AL", A_BAND_REGION_0, G_BAND_REGION_1},
-	{"DZ", A_BAND_REGION_0, G_BAND_REGION_1},
-#ifdef RTCONFIG_LOCALE2012
-	{"AR", A_BAND_REGION_0, G_BAND_REGION_1},
-	{"AM", A_BAND_REGION_1, G_BAND_REGION_1},
-#else	
-	{"AR", A_BAND_REGION_3, G_BAND_REGION_1},
-	{"AM", A_BAND_REGION_2, G_BAND_REGION_1},
-#endif
-	{"AU", A_BAND_REGION_0, G_BAND_REGION_1},
-	{"AT", A_BAND_REGION_1, G_BAND_REGION_1},
-#ifdef RTCONFIG_LOCALE2012
-	{"AZ", A_BAND_REGION_1, G_BAND_REGION_1},
-#else
-	{"AZ", A_BAND_REGION_2, G_BAND_REGION_1},
-#endif
-	{"BH", A_BAND_REGION_0, G_BAND_REGION_1},
-	{"BY", A_BAND_REGION_0, G_BAND_REGION_1},
-	{"BE", A_BAND_REGION_1, G_BAND_REGION_1},
-	{"BZ", A_BAND_REGION_4, G_BAND_REGION_1},
-	{"BO", A_BAND_REGION_4, G_BAND_REGION_1},
-#ifdef RTCONFIG_LOCALE2012
-	{"BR", A_BAND_REGION_4, G_BAND_REGION_1},
-#else
-	{"BR", A_BAND_REGION_1, G_BAND_REGION_1},
-#endif
-	{"BN", A_BAND_REGION_4, G_BAND_REGION_1},
-	{"BG", A_BAND_REGION_1, G_BAND_REGION_1},
-	{"CA", A_BAND_REGION_0, G_BAND_REGION_0},
-	{"CL", A_BAND_REGION_0, G_BAND_REGION_1},
-	{"CN", A_BAND_REGION_4, G_BAND_REGION_1},
-	{"CO", A_BAND_REGION_0, G_BAND_REGION_0},
-	{"CR", A_BAND_REGION_0, G_BAND_REGION_1},
-#ifdef RTCONFIG_LOCALE2012
-	{"HR", A_BAND_REGION_1, G_BAND_REGION_1},
-#else
-	{"HR", A_BAND_REGION_2, G_BAND_REGION_1},
-#endif
-	{"CY", A_BAND_REGION_1, G_BAND_REGION_1},
-#ifdef RTCONFIG_LOCALE2012
-	{"CZ", A_BAND_REGION_1, G_BAND_REGION_1},
-#else
-	{"CZ", A_BAND_REGION_2, G_BAND_REGION_1},
-#endif
-	{"DK", A_BAND_REGION_1, G_BAND_REGION_1},
-	{"DO", A_BAND_REGION_0, G_BAND_REGION_0},
-	{"EC", A_BAND_REGION_0, G_BAND_REGION_1},
-#ifdef RTCONFIG_LOCALE2012
-	{"EG", A_BAND_REGION_1, G_BAND_REGION_1},
-#else
-	{"EG", A_BAND_REGION_2, G_BAND_REGION_1},
-#endif
-	{"SV", A_BAND_REGION_0, G_BAND_REGION_1},
-	{"EE", A_BAND_REGION_1, G_BAND_REGION_1},
-	{"FI", A_BAND_REGION_1, G_BAND_REGION_1},
-#ifdef RTCONFIG_LOCALE2012
-	{"FR", A_BAND_REGION_1, G_BAND_REGION_1},
-	{"GE", A_BAND_REGION_1, G_BAND_REGION_1},
-#else
-	{"FR", A_BAND_REGION_2, G_BAND_REGION_1},
-	{"GE", A_BAND_REGION_2, G_BAND_REGION_1},
-#endif
-	{"DE", A_BAND_REGION_1, G_BAND_REGION_1},
-	{"GR", A_BAND_REGION_1, G_BAND_REGION_1},
-	{"GT", A_BAND_REGION_0, G_BAND_REGION_0},
-	{"HN", A_BAND_REGION_0, G_BAND_REGION_1},
-	{"HK", A_BAND_REGION_0, G_BAND_REGION_1},
-	{"HU", A_BAND_REGION_1, G_BAND_REGION_1},
-	{"IS", A_BAND_REGION_1, G_BAND_REGION_1},
-#ifdef RTCONFIG_LOCALE2012
-	{"IN", A_BAND_REGION_2, G_BAND_REGION_1},
-#else
-	{"IN", A_BAND_REGION_0, G_BAND_REGION_1},
-#endif
-	{"ID", A_BAND_REGION_4, G_BAND_REGION_1},
-	{"IR", A_BAND_REGION_4, G_BAND_REGION_1},
-	{"IE", A_BAND_REGION_1, G_BAND_REGION_1},
-	{"IL", A_BAND_REGION_0, G_BAND_REGION_1},
-	{"IT", A_BAND_REGION_1, G_BAND_REGION_1},
-#ifdef RTCONFIG_LOCALE2012
-	{"JP", A_BAND_REGION_1, G_BAND_REGION_1},
-#else
-	{"JP", A_BAND_REGION_9, G_BAND_REGION_1},
-#endif
-	{"JO", A_BAND_REGION_0, G_BAND_REGION_1},
-	{"KZ", A_BAND_REGION_0, G_BAND_REGION_1},
-#ifdef RTCONFIG_LOCALE2012
-	{"KP", A_BAND_REGION_1, G_BAND_REGION_1},
-	{"KR", A_BAND_REGION_1, G_BAND_REGION_1},
-#else
-	{"KP", A_BAND_REGION_5, G_BAND_REGION_1},
-	{"KR", A_BAND_REGION_5, G_BAND_REGION_1},
-#endif
-	{"KW", A_BAND_REGION_0, G_BAND_REGION_1},
-	{"LV", A_BAND_REGION_1, G_BAND_REGION_1},
-	{"LB", A_BAND_REGION_0, G_BAND_REGION_1},
-	{"LI", A_BAND_REGION_1, G_BAND_REGION_1},
-	{"LT", A_BAND_REGION_1, G_BAND_REGION_1},
-	{"LU", A_BAND_REGION_1, G_BAND_REGION_1},
-#ifdef RTCONFIG_LOCALE2012
-	{"MO", A_BAND_REGION_4, G_BAND_REGION_1},
-#else
-	{"MO", A_BAND_REGION_0, G_BAND_REGION_1},
-#endif
-	{"MK", A_BAND_REGION_0, G_BAND_REGION_1},
-	{"MY", A_BAND_REGION_0, G_BAND_REGION_1},
-#ifdef RTCONFIG_LOCALE2012
-	{"MX", A_BAND_REGION_2, G_BAND_REGION_0},
-	{"MC", A_BAND_REGION_1, G_BAND_REGION_1},
-#else
-	{"MX", A_BAND_REGION_0, G_BAND_REGION_0},
-	{"MC", A_BAND_REGION_2, G_BAND_REGION_1},
-#endif
-	{"MA", A_BAND_REGION_0, G_BAND_REGION_1},
-	{"NL", A_BAND_REGION_1, G_BAND_REGION_1},
-	{"NZ", A_BAND_REGION_0, G_BAND_REGION_1},
-#ifdef RTCONFIG_LOCALE2012
-	{"NO", A_BAND_REGION_1, G_BAND_REGION_0},
-#else
-	{"NO", A_BAND_REGION_0, G_BAND_REGION_0},
-#endif
-	{"OM", A_BAND_REGION_0, G_BAND_REGION_1},
-	{"PK", A_BAND_REGION_0, G_BAND_REGION_1},
-	{"PA", A_BAND_REGION_0, G_BAND_REGION_0},
-	{"PE", A_BAND_REGION_4, G_BAND_REGION_1},
-	{"PH", A_BAND_REGION_4, G_BAND_REGION_1},
-	{"PL", A_BAND_REGION_1, G_BAND_REGION_1},
-	{"PT", A_BAND_REGION_1, G_BAND_REGION_1},
-	{"PR", A_BAND_REGION_0, G_BAND_REGION_0},
-	{"QA", A_BAND_REGION_0, G_BAND_REGION_1},
-#ifdef RTCONFIG_LOCALE2012
-	{"RO", A_BAND_REGION_1, G_BAND_REGION_1},
-	{"RU", A_BAND_REGION_6, G_BAND_REGION_1},
-#else
-	{"RO", A_BAND_REGION_0, G_BAND_REGION_1},
-	{"RU", A_BAND_REGION_0, G_BAND_REGION_1},
-#endif
-	{"SA", A_BAND_REGION_0, G_BAND_REGION_1},
-	{"SG", A_BAND_REGION_0, G_BAND_REGION_1},
-	{"SK", A_BAND_REGION_1, G_BAND_REGION_1},
-	{"SI", A_BAND_REGION_1, G_BAND_REGION_1},
-	{"ZA", A_BAND_REGION_1, G_BAND_REGION_1},
-	{"ES", A_BAND_REGION_1, G_BAND_REGION_1},
-	{"SE", A_BAND_REGION_1, G_BAND_REGION_1},
-	{"CH", A_BAND_REGION_1, G_BAND_REGION_1},
-	{"SY", A_BAND_REGION_0, G_BAND_REGION_1},
-	{"TW", A_BAND_REGION_3, G_BAND_REGION_0},
-	{"TH", A_BAND_REGION_0, G_BAND_REGION_1},
-#ifdef RTCONFIG_LOCALE2012
-	{"TT", A_BAND_REGION_1, G_BAND_REGION_1},
-	{"TN", A_BAND_REGION_1, G_BAND_REGION_1},
-	{"TR", A_BAND_REGION_1, G_BAND_REGION_1},
-	{"UA", A_BAND_REGION_9, G_BAND_REGION_1},
-#else
-	{"TT", A_BAND_REGION_2, G_BAND_REGION_1},
-	{"TN", A_BAND_REGION_2, G_BAND_REGION_1},
-	{"TR", A_BAND_REGION_2, G_BAND_REGION_1},
-	{"UA", A_BAND_REGION_0, G_BAND_REGION_1},
-#endif
-	{"AE", A_BAND_REGION_0, G_BAND_REGION_1},
-	{"GB", A_BAND_REGION_1, G_BAND_REGION_1},
-	{"US", A_BAND_REGION_0, G_BAND_REGION_0},
-#ifdef RTCONFIG_LOCALE2012
-	{"UY", A_BAND_REGION_0, G_BAND_REGION_1},
-#else
-	{"UY", A_BAND_REGION_5, G_BAND_REGION_1},
-#endif
-	{"UZ", A_BAND_REGION_1, G_BAND_REGION_0},
-#ifdef RTCONFIG_LOCALE2012
-	{"VE", A_BAND_REGION_4, G_BAND_REGION_1},
-#else
-	{"VE", A_BAND_REGION_5, G_BAND_REGION_1},
-#endif
-	{"VN", A_BAND_REGION_0, G_BAND_REGION_1},
-	{"YE", A_BAND_REGION_0, G_BAND_REGION_1},
-	{"ZW", A_BAND_REGION_0, G_BAND_REGION_1},
-	{"",	0,	0}
-};
-
-#define NUM_OF_COUNTRIES	(sizeof(allCountry)/sizeof(COUNTRY_CODE_TO_COUNTRY_REGION))
 
 static int ej_wl_channel_list(int eid, webs_t wp, int argc, char_t **argv, int unit)
 {
 	int retval = 0;
-	char tmp[256], prefix[] = "wlXXXXXXXXXX_";
-	int index, num, i;
-	unsigned char *pChannelListTemp = NULL;
+	char tmp[128], prefix[] = "wlXXXXXXXXXX_";
 	char *country_code;
-	int band = -1;
+	char chList[256];
+	int band;
 
 	snprintf(prefix, sizeof(prefix), "wl%d_", unit);
 	country_code = nvram_get(strcat_r(prefix, "country_code", tmp));
@@ -1463,155 +1392,18 @@ static int ej_wl_channel_list(int eid, webs_t wp, int argc, char_t **argv, int u
 
 	if (band != 0 && band != 1) return retval;
 
-	for (index = 0; index < NUM_OF_COUNTRIES; index++)
+	//try getting channel list via wifi driver first
+	if(get_channel_list_via_driver(unit, chList, sizeof(chList)) > 0)
 	{
-		if (strncmp((char *) allCountry[index].IsoName, country_code, 2) == 0)
-			break;
+		retval += websWrite(wp, "[%s]", chList);
 	}
-
-	if (index >= NUM_OF_COUNTRIES) return retval;
-
-	if (band == 1)
-	switch (allCountry[index].RegDomainNum11A)
+	else if(get_channel_list_via_country(unit, country_code, chList, sizeof(chList)) > 0)
 	{
-		case A_BAND_REGION_0:
-			num = sizeof(A_BAND_REGION_0_CHANNEL_LIST)/sizeof(unsigned char);
-			pChannelListTemp = A_BAND_REGION_0_CHANNEL_LIST;
-			break;
-		case A_BAND_REGION_1:
-			num = sizeof(A_BAND_REGION_1_CHANNEL_LIST)/sizeof(unsigned char);
-			pChannelListTemp = A_BAND_REGION_1_CHANNEL_LIST;
-			break;
-		case A_BAND_REGION_2:
-			num = sizeof(A_BAND_REGION_2_CHANNEL_LIST)/sizeof(unsigned char);
-			pChannelListTemp = A_BAND_REGION_2_CHANNEL_LIST;
-			break;
-		case A_BAND_REGION_3:
-			num = sizeof(A_BAND_REGION_3_CHANNEL_LIST)/sizeof(unsigned char);
-			pChannelListTemp = A_BAND_REGION_3_CHANNEL_LIST;
-			break;
-		case A_BAND_REGION_4:
-			num = sizeof(A_BAND_REGION_4_CHANNEL_LIST)/sizeof(unsigned char);
-			pChannelListTemp = A_BAND_REGION_4_CHANNEL_LIST;
-			break;
-		case A_BAND_REGION_5:
-			num = sizeof(A_BAND_REGION_5_CHANNEL_LIST)/sizeof(unsigned char);
-			pChannelListTemp = A_BAND_REGION_5_CHANNEL_LIST;
-			break;
-		case A_BAND_REGION_6:
-			num = sizeof(A_BAND_REGION_6_CHANNEL_LIST)/sizeof(unsigned char);
-			pChannelListTemp = A_BAND_REGION_6_CHANNEL_LIST;
-			break;
-		case A_BAND_REGION_7:
-			num = sizeof(A_BAND_REGION_7_CHANNEL_LIST)/sizeof(unsigned char);
-			pChannelListTemp = A_BAND_REGION_7_CHANNEL_LIST;
-			break;
-		case A_BAND_REGION_8:
-			num = sizeof(A_BAND_REGION_8_CHANNEL_LIST)/sizeof(unsigned char);
-			pChannelListTemp = A_BAND_REGION_8_CHANNEL_LIST;
-			break;
-		case A_BAND_REGION_9:
-			num = sizeof(A_BAND_REGION_9_CHANNEL_LIST)/sizeof(unsigned char);
-			pChannelListTemp = A_BAND_REGION_9_CHANNEL_LIST;
-			break;
-		case A_BAND_REGION_10:
-			num = sizeof(A_BAND_REGION_10_CHANNEL_LIST)/sizeof(unsigned char);
-			pChannelListTemp = A_BAND_REGION_10_CHANNEL_LIST;
-			break;
-		case A_BAND_REGION_11:
-			num = sizeof(A_BAND_REGION_11_CHANNEL_LIST)/sizeof(unsigned char);
-			pChannelListTemp = A_BAND_REGION_11_CHANNEL_LIST;
-			break;	
-		case A_BAND_REGION_12:
-			num = sizeof(A_BAND_REGION_12_CHANNEL_LIST)/sizeof(unsigned char);
-			pChannelListTemp = A_BAND_REGION_12_CHANNEL_LIST;
-			break;
-		case A_BAND_REGION_13:
-			num = sizeof(A_BAND_REGION_13_CHANNEL_LIST)/sizeof(unsigned char);
-			pChannelListTemp = A_BAND_REGION_13_CHANNEL_LIST;
-			break;
-		case A_BAND_REGION_14:
-			num = sizeof(A_BAND_REGION_14_CHANNEL_LIST)/sizeof(unsigned char);
-			pChannelListTemp = A_BAND_REGION_14_CHANNEL_LIST;
-			break;
-		case A_BAND_REGION_15:
-			num = sizeof(A_BAND_REGION_15_CHANNEL_LIST)/sizeof(unsigned char);
-			pChannelListTemp = A_BAND_REGION_15_CHANNEL_LIST;
-			break;
-		case A_BAND_REGION_16:
-			num = sizeof(A_BAND_REGION_16_CHANNEL_LIST)/sizeof(unsigned char);
-			pChannelListTemp = A_BAND_REGION_16_CHANNEL_LIST;
-			break;
-		case A_BAND_REGION_17:
-			num = sizeof(A_BAND_REGION_17_CHANNEL_LIST)/sizeof(unsigned char);
-			pChannelListTemp = A_BAND_REGION_17_CHANNEL_LIST;
-			break;
-		case A_BAND_REGION_18:
-			num = sizeof(A_BAND_REGION_18_CHANNEL_LIST)/sizeof(unsigned char);
-			pChannelListTemp = A_BAND_REGION_18_CHANNEL_LIST;
-			break;
-		case A_BAND_REGION_19:
-			num = sizeof(A_BAND_REGION_19_CHANNEL_LIST)/sizeof(unsigned char);
-			pChannelListTemp = A_BAND_REGION_19_CHANNEL_LIST;
-			break;
-		case A_BAND_REGION_20:
-			num = sizeof(A_BAND_REGION_20_CHANNEL_LIST)/sizeof(unsigned char);
-			pChannelListTemp = A_BAND_REGION_20_CHANNEL_LIST;
-			break;
-		case A_BAND_REGION_21:
-			num = sizeof(A_BAND_REGION_21_CHANNEL_LIST)/sizeof(unsigned char);
-			pChannelListTemp = A_BAND_REGION_21_CHANNEL_LIST;
-			break;
-		default:	// Error. should never happen
-			dbg("countryregionA=%d not support", allCountry[index].RegDomainNum11A);
-			break;
+		retval += websWrite(wp, "[%s]", chList);
 	}
-	else if (band == 0)
-	switch (allCountry[index].RegDomainNum11G)
-	{
-		case G_BAND_REGION_0:
-			num = sizeof(G_BAND_REGION_0_CHANNEL_LIST)/sizeof(unsigned char);
-			pChannelListTemp = G_BAND_REGION_0_CHANNEL_LIST;
-			break;
-		case G_BAND_REGION_1:
-			num = sizeof(G_BAND_REGION_1_CHANNEL_LIST)/sizeof(unsigned char);
-			pChannelListTemp = G_BAND_REGION_1_CHANNEL_LIST;
-			break;
-		case G_BAND_REGION_5:
-			num = sizeof(G_BAND_REGION_5_CHANNEL_LIST)/sizeof(unsigned char);
-			pChannelListTemp = G_BAND_REGION_5_CHANNEL_LIST;
-			break;
-		default:	// Error. should never happen
-			dbg("countryregionG=%d not support", allCountry[index].RegDomainNum11G);
-			break;
-	}
-
-	if (pChannelListTemp != NULL)
-	{
-		memset(tmp, 0x0, sizeof(tmp));
-
-		for (i = 0; i < num; i++)
-		{
-#if 0
-			if (!strlen(tmp))
-				sprintf(tmp, "%d", pChannelListTemp[i]);
-			else
-				sprintf(tmp, "%s %d", tmp, pChannelListTemp[i]);
-#else
-			if (i == 0)
-				sprintf(tmp, "[\"%d\",", pChannelListTemp[i]);
-			else if (i == (num - 1))
-				sprintf(tmp,  "%s \"%d\"]", tmp, pChannelListTemp[i]);
-			else
-				sprintf(tmp,  "%s \"%d\",", tmp, pChannelListTemp[i]);
-#endif
-		}
-
-		retval += websWrite(wp, "%s", tmp);
-	}
-
 	return retval;
 }
+
 
 int
 ej_wl_channel_list_2g(int eid, webs_t wp, int argc, char_t **argv)

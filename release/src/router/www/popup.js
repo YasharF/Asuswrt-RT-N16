@@ -49,6 +49,11 @@ function LoadingProgress(seconds){
 		if(seconds != 0){
 			$("proceeding_img").style.width = Math.round(y) + "%";
 			$("proceeding_img_text").innerHTML = Math.round(y) + "%";
+	
+			if($("loading_block1")){
+				$("proceeding_img_text").style.width = document.getElementById("loading_block1").clientWidth;
+				$("proceeding_img_text").style.marginLeft = "175px";
+			}	
 			--seconds;
 			setTimeout("LoadingProgress("+seconds+");", 1000);
 		}
@@ -152,10 +157,10 @@ function showLoadingBar(seconds){
 	
 		winPadding = (winWidth-1050)/2;	
 		winWidth = 1105;
-		blockmarginLeft= (winWidth*0.35)+winPadding;
+		blockmarginLeft= (winWidth*0.3)+winPadding;
 	}
 	else if(winWidth <=1050){
-		blockmarginLeft= (winWidth)*0.35+document.body.scrollLeft;	
+		blockmarginLeft= (winWidth)*0.3+document.body.scrollLeft;	
 
 	}
 	
@@ -165,6 +170,7 @@ function showLoadingBar(seconds){
 	blockmarginTop= winHeight*0.3			
 	
 	$("loadingBarBlock").style.marginTop = blockmarginTop+"px";
+	// marked by Jerry 2012.11.14 using CSS to decide the margin
 	$("loadingBarBlock").style.marginLeft = blockmarginLeft+"px";
 
 	

@@ -32,7 +32,6 @@
 #include <sys/mount.h>
 #include <sys/vfs.h>
 #include <rc.h>
-#include <semaphore_mfp.h>
 #include <shared.h>
 #include <arpa/inet.h>
 #include <time.h>
@@ -149,12 +148,12 @@ start_wps_method(void)
 
 	dbG("wps env buffer: %s\n", buf);
 
-	nvram_unset("wps_sta_devname");
-	nvram_unset("wps_sta_mac");
-	nvram_unset("wps_pinfail");
-	nvram_unset("wps_pinfail_mac");
-	nvram_unset("wps_pinfail_name");
-	nvram_unset("wps_pinfail_state");
+//	nvram_unset("wps_sta_devname");
+//	nvram_unset("wps_sta_mac");
+//	nvram_unset("wps_pinfail");
+//	nvram_unset("wps_pinfail_mac");
+//	nvram_unset("wps_pinfail_name");
+//	nvram_unset("wps_pinfail_state");
 
 	set_wps_env(buf);
 

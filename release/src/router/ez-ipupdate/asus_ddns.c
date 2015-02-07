@@ -60,7 +60,8 @@ enum {
 #	define PRINT(fmt,args...)	fprintf (stderr, fmt, ## args);
 #	define DBG(fmt,args...) 	fprintf (stderr, fmt, ## args);
 #else
-#	define PRINT(fmt,args...) 	syslog (LOG_NOTICE, fmt, ## args);
+#	define PRINT(fmt,args...)	show_message(fmt,args...);
+//#	define PRINT(fmt,args...) 	syslog (LOG_NOTICE, fmt, ## args);
 #	define DBG(fmt,args...)
 #endif
 
@@ -229,9 +230,9 @@ int asus_reg_domain (void)
 
 	if (do_connect((int *) &client_sockfd, server, port) != 0) {
 		PRINT ("error connecting to %s:%s\n", server, port);
-		syslog (LOG_NOTICE,"error connecting to %s:%s\n", server, port);
-		nvram_set ("ddns_return_code", "Time-out");
-		nvram_set ("ddns_return_code_chk", "Time-out");
+		show_message("error connecting to %s:%s\n", server, port);
+		nvram_set ("ddns_return_code", "connect_fail");
+		nvram_set ("ddns_return_code_chk", "connect_fail");
 		return (REGISTERES_ERROR);
 	}
 
@@ -257,7 +258,7 @@ int asus_reg_domain (void)
 	}
 	close(client_sockfd);
 	buf[btot] = '\0';
-	PRINT("Asus Reg domain:: return: %s\n", buf);
+	//show_message("Asus Reg domain:: return: %s\n", buf);
 	if(btot) { // TODO: according to server response, parsing code have to rewrite
 		if (sscanf(buf, " HTTP/1.%*c %3d", &ret) != 1) {
 			ret = -1;
@@ -342,7 +343,6 @@ int asus_reg_domain (void)
 		// reuse the auth buffer
 		*auth = '\0';
 		sscanf(buf, " HTTP/1.%*c %*3d %255[^\r\n]", auth);
-		PRINT ("unknown return code: %d\n", ret);
 		if (ret >= 500)	{
 			retval = REGISTERES_SHUTDOWN;
 			nvram_set ("ddns_return_code","unknown_error");
@@ -352,10 +352,11 @@ int asus_reg_domain (void)
 			nvram_set ("ddns_return_code","Time-out");
 			nvram_set ("ddns_return_code_chk","Time-out");
 		}
+		retval = UPDATERES_SHUTDOWN;
 		break;
 	}
 
-	syslog (LOG_NOTICE, "ddns_return_code (%s) ddns_suggest_name (%s) ddns_old_name (%s)", nvram_safe_get ("ddns_return_code"), nvram_safe_get ("ddns_suggest_name"), nvram_safe_get ("ddns_old_name"));
+	show_message("retval= %d, ddns_return_code (%s) ddns_suggest_name (%s) ddns_old_name (%s)", retval, nvram_safe_get ("ddns_return_code"), nvram_safe_get ("ddns_suggest_name"), nvram_safe_get ("ddns_old_name"));
 	return (retval);
 }
 
@@ -365,6 +366,7 @@ int asus_update_entry(void)
 	char buf[BUFFER_SIZE + 1];
 	char *p, *bp = buf;
 	char ret_buf[64];
+	char sug_name[MAX_DOMAIN_LEN], old_name[MAX_DOMAIN_LEN];
 	int bytes;
 	int btot;
 	int ret;
@@ -373,7 +375,7 @@ int asus_update_entry(void)
 	buf[BUFFER_SIZE] = '\0';
 
 	if (do_connect((int *) &client_sockfd, server, port) != 0) {
-		PRINT("error connecting to %s:%s\n", server, port);
+		show_message("error connecting to %s:%s\n", server, port);
 		nvram_set ("ddns_return_code", "connect_fail");
 		nvram_set ("ddns_return_code_chk", "connect_fail");
 		return (UPDATERES_ERROR);
@@ -393,19 +395,29 @@ int asus_update_entry(void)
 	bp = buf;
 	bytes = 0;
 	btot = 0;
-	while ((bytes = read_input(bp, BUFFER_SIZE - btot)) > 0) {
-		bp += bytes;
-		btot += bytes;
-	}
-	close(client_sockfd);
-	buf[btot] = '\0';
 
-	PRINT("Asus update entry:: return: %s\n", buf);
-	if (sscanf(buf, " HTTP/1.%*c %3d", &ret) != 1) {
-		ret = -1;
-	}
+        while ((bytes = read_input(bp, BUFFER_SIZE - btot)) > 0) {
+                bp += bytes;
+                btot += bytes;
+        }
+        close(client_sockfd);
+        buf[btot] = '\0';
+        show_message("Asus update entry:: return: %s\n", buf);
+        if(btot) { // TODO: according to server response, parsing code have to rewrite
+                if (sscanf(buf, " HTTP/1.%*c %3d", &ret) != 1) {
+                        ret = -1;
+                }
 
-	snprintf (ret_buf, sizeof (ret_buf), "%s,%d", "update", ret);
+                // looking for 2-th '|'
+                p = strchr (buf, '|');
+                if (p != NULL)
+                        p = strchr (p+1, '|');
+                if (p == NULL)  {
+                        p = "";
+                }
+                snprintf (ret_buf, sizeof (ret_buf), "%s,%d", "", ret);
+        }
+
 	nvram_set ("ddns_return_code", ret_buf);
 	nvram_set ("ddns_return_code_chk", ret_buf);
 	switch (ret) {
@@ -417,6 +429,30 @@ int asus_update_entry(void)
 	case 200:
 		PRINT("Update IP successful\n");
 		break;
+
+        case 203:
+                PRINT ("Update failed. (203)\n");
+                memset (sug_name, 0, sizeof (sug_name));
+                sscanf (p, "|%[^|\r\n]c", sug_name);
+                nvram_set ("ddns_suggest_name", sug_name);
+
+                retval = REGISTERES_ERROR;
+                break;
+
+        case 230:
+                PRINT ("Update new domain success.\n");
+                memset (old_name, 0, sizeof (old_name));
+                sscanf (p, "|%[^|\r\n]c", old_name);
+                nvram_set ("ddns_old_name", old_name);
+                break;
+
+        case 233:
+                PRINT ("Update failed. (233)\n");
+                memset (old_name, 0, sizeof (old_name));
+                sscanf (p, "|%[^|\r\n]c", old_name);
+                nvram_set ("ddns_old_name", old_name);
+                retval = REGISTERES_ERROR;
+                break;
 
 	case 220:
 		PRINT("Update same domain success.\n");
@@ -451,16 +487,16 @@ int asus_update_entry(void)
 		// reuse the auth buffer
 		*auth = '\0';
 		sscanf(buf, " HTTP/1.%*c %*3d %255[^\r\n]", auth);
-		PRINT("unknown return code: %d\n", ret);
 		if (ret >= 500)	{
 			retval = UPDATERES_SHUTDOWN;
 		} else {
 			retval = UPDATERES_ERROR;
 		}
+		retval = UPDATERES_SHUTDOWN;
 		break;
 	}
 
-	syslog (LOG_NOTICE, "ddns_return_code (%s)", nvram_safe_get ("ddns_return_code"));
+	show_message("retval= %d, ddns_return_code (%s)", retval, nvram_safe_get ("ddns_return_code"));
 	return (retval);
 }
 

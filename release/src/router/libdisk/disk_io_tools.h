@@ -27,9 +27,9 @@ typedef unsigned long long u64;
 #if defined(WL500)
 #define POOL_MOUNT_ROOT "/tmp/harddisk"
 #define BASE_LAYER 2
-#elif defined(RTN56U)
-#define POOL_MOUNT_ROOT "/media"	// for n13u
-#define BASE_LAYER 1
+//#elif defined(RTN56U)
+//#define POOL_MOUNT_ROOT "/media"	// for n13u
+//#define BASE_LAYER 1
 #else
 #define POOL_MOUNT_ROOT "/tmp/mnt"
 #define BASE_LAYER 2

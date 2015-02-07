@@ -21,9 +21,9 @@
 	border:1px outset #999;
 	background-color:#576D73;
 	position:absolute;
-	margin-top:105px;
-	*margin-top:96px;	
-	margin-left:8px;
+	*margin-top:27px;
+	margin-left:2px;
+	*margin-left:-223px;
 	width:215px;
 	text-align:left;	
 	height:auto;
@@ -65,10 +65,10 @@ var wireless = [<% wl_auth_list(); %>];	// [[MAC, associated, authorized], ...]
 var sr_rulelist_array = '<% nvram_get("sr_rulelist"); %>';
 
 function initial(){
+	$('pull_arrow').title = Untranslated.select_IP;
 	show_menu();
 	showsr_rulelist();
 	showLANIPList();
-	
 }
 
 function applyRule(){
@@ -88,9 +88,6 @@ function applyRule(){
 		tmp_value = "";	
 
 	document.form.sr_rulelist.value = tmp_value;
-
-	if(wl6_support != -1)
-		document.form.action_wait.value = parseInt(document.form.action_wait.value)+10;			// extend waiting time for BRCM new driver
 
 	showLoading();
 	document.form.submit();
@@ -403,7 +400,7 @@ function Ctrl_LANIPList(obj){
 			<table width="100%" border="1" align="center" cellpadding="4" cellspacing="0" class="FormTable_table">
 			<thead>
 			  	<tr>
-					<td colspan="6" id="GWStatic"><#RouterConfig_GWStatic_groupitemdesc#></td>
+					<td colspan="6" id="GWStatic"><#RouterConfig_GWStatic_groupitemdesc#>&nbsp;(<#List_limit#>&nbsp;32)</td>
 			  	</tr>
 			</thead>			
 				<tr>
@@ -413,15 +410,14 @@ function Ctrl_LANIPList(obj){
 					<th><a href="javascript:void(0);" onClick="openHint(6,4);"><div class="table_text"><#RouterConfig_GWStaticMT_itemname#></div></a></th>
 					<th><a href="javascript:void(0);" onClick="openHint(6,5);"><div class="table_text"><#wan_interface#></div></a></th>
 					<th>Add / Delete</th>					
-			  </tr>
+			    </tr>
 			  
 			  <tr>
-			  	<!-- client info -->
-					<div id="ClientList_Block_PC" class="ClientList_Block_PC"></div>
-					
+			  	<!-- client info -->		
 					<td width="34%">
 						<input type="text" class="input_20_table" maxlength="15" name="sr_ipaddr_x_0" style="margin-left:-22px;width:215px;" onKeyPress="return is_ipaddr(this, event)" onClick="hideClients_Block();" onblur="if(!over_var){hideClients_Block();}">
-						<img id="pull_arrow" height="14px;" src="/images/arrow-down.gif" style="position:absolute;" onclick="pullLANIPList(this);" title="Select the device name of DHCP clients." onmouseover="over_var=1;" onmouseout="over_var=0;">						
+						<img id="pull_arrow" height="14px;" src="/images/arrow-down.gif" style="position:absolute;" onclick="pullLANIPList(this);" title="" onmouseover="over_var=1;" onmouseout="over_var=0;">						
+						<div id="ClientList_Block_PC" class="ClientList_Block_PC"></div>
 					</td>
 					<td width="18%"><input type="text" maxlength="15" class="input_15_table" name="sr_netmask_x_0" onKeyPress="return is_ipaddr(this, event)" ></td>
 					<td width="18%"><input type="text" maxlength="15" class="input_15_table" name="sr_gateway_x_0" onKeyPress="return is_ipaddr(this, event)" ></td>

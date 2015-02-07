@@ -22,9 +22,9 @@
 	border:1px outset #999;
 	background-color:#576D73;
 	position:absolute;
-	margin-top:106px;
-	*margin-top:96px;	
-	margin-left:127px;
+	*margin-top:27px;	
+	margin-left:121px;
+	*margin-left:-353px;
 	width:345px;
 	text-align:left;	
 	height:auto;
@@ -69,7 +69,12 @@ var wireless = [<% wl_auth_list(); %>];	// [[MAC, associated, authorized], ...]
 var http_clientlist_array = '<% nvram_get("http_clientlist"); %>';
 var accounts = [<% get_all_accounts(); %>];
 
+var theUrl = "router.asus.com";
+if(sw_mode == 3 || (sw_mode == 4))
+	theUrl = location.hostName;
+
 function initial(){
+	$('pull_arrow').title = Untranslated.select_client;
 	show_menu();
 	show_http_clientlist();
 	corrected_timezone();
@@ -81,7 +86,7 @@ function initial(){
 	load_dst_h_Options();
 	document.form.http_passwd2.value = "";
 	chkPass("<% nvram_get("http_passwd"); %>", 'http_passwd');
-	if(HTTPS_support == -1){
+	if(!HTTPS_support){
 		$("https_tr").style.display = "none";
 		$("https_lanport").style.display = "none";
 		$("http_client_tr").style.display = "none";
@@ -94,7 +99,7 @@ function initial(){
 		hide_https_wanport(document.form.http_enable.value);
 	}	
 
-	if(WebDav_support != -1){
+	if(WebDav_support){
 		document.getElementById('http_username_span').style.display = "none";
 		document.form.http_username.disabled = false;
 	}else{
@@ -103,20 +108,13 @@ function initial(){
 		document.getElementById('http_username').style.display = "none";
 	}
 	
-	if(wifi_hw_sw_support != -1){
+	if(wifi_tog_btn_support || wifi_hw_sw_support || sw_mode == 2 || sw_mode == 4){		// wifi_tog_btn && wifi_hw_sw && hide WPS button behavior under repeater mode
 			document.form.btn_ez_radiotoggle[0].disabled = true;
 			document.form.btn_ez_radiotoggle[1].disabled = true;
 			document.getElementById('btn_ez_radiotoggle_tr').style.display = "none";
 	}else{
 			document.getElementById('btn_ez_radiotoggle_tr').style.display = "";
-			//document.form.btn_ez_radiotoggle[0].disabled = true;
-			//document.form.btn_ez_radiotoggle[1].disabled = true;
-			//document.getElementById('btn_ez_radiotoggle_tr').style.display = "none";			
-	}
-	
-	if(sw_mode == 2){  // hide WPS button behavior under repeater mode
-		$('btn_ez_radiotoggle_tr').style.display = "none";	
-	}
+	}	
 	
 	if(sw_mode != 1){
 		$('misc_http_x_tr').style.display ="none";
@@ -128,7 +126,7 @@ function initial(){
 	else
 		hideport(document.form.misc_http_x[0].checked);
 	
-	if(HTTPS_support == -1 || '<% nvram_get("http_enable"); %>' == 0)
+	if(!HTTPS_support || '<% nvram_get("http_enable"); %>' == 0)
 		$("https_port").style.display = "none";
 	else if('<% nvram_get("http_enable"); %>' == 1)
 		$("http_port").style.display = "none";
@@ -190,6 +188,24 @@ function applyRule(){
 				document.form.misc_httpport_x.disabled = true;
 		}
 
+		if(document.form.https_lanport.value != '<% nvram_get("https_lanport"); %>' 
+				|| document.form.http_enable.value != '<% nvram_get("http_enable"); %>'
+				|| document.form.misc_httpport_x.value != '<% nvram_get("misc_httpport_x"); %>'
+				|| document.form.misc_httpsport_x.value != '<% nvram_get("misc_httpsport_x"); %>'
+			){
+			if(document.form.http_enable.value == "0"){
+				if(isFromWAN)
+					document.form.flag.value = "http://" + location.hostname + ":" + document.form.misc_httpport_x.value;
+				else
+					document.form.flag.value = "http://" + location.hostname;
+			}
+			else{
+				if(isFromWAN)
+					document.form.flag.value = "https://" + location.hostname + ":" + document.form.misc_httpsport_x.value;
+				else
+					document.form.flag.value = "https://" + location.hostname + ":" + document.form.https_lanport.value;
+			}
+		}
 		showLoading();
 		document.form.submit();
 	}
@@ -281,13 +297,6 @@ function validForm(){
 		return false;
 	}
 
-	if(document.form.http_passwd2.value.length > 16){
-		showtext($("alert_msg2"),"*<#LANHostConfig_x_Password_itemdesc#>");
-		document.form.http_passwd2.focus();
-		document.form.http_passwd2.select();
-		return false;
-	}
-
 	if(!validate_ipaddr_final(document.form.log_ipaddr, 'log_ipaddr')
 			|| !validate_string(document.form.ntp_server0)
 			)
@@ -307,15 +316,30 @@ function validForm(){
 	if (document.form.misc_http_x[0].checked) {
 		if (!validate_range(document.form.misc_httpport_x, 1024, 65535))
 			return false;
-
-		if (HTTPS_support != -1 &&
-		    !validate_range(document.form.misc_httpsport_x, 1024, 65535))
+	
+		if (HTTPS_support && !validate_range(document.form.misc_httpsport_x, 1024, 65535))
 			return false;
 	}
 	else{
 		document.form.misc_httpport_x.value = '<% nvram_get("misc_httpport_x"); %>';
 		document.form.misc_httpsport_x.value = '<% nvram_get("misc_httpsport_x"); %>';
 	}	
+
+	if(isPortConflict(document.form.misc_httpport_x.value)){
+		alert(isPortConflict(document.form.misc_httpport_x.value));
+		document.form.misc_httpport_x.focus();
+		return false;
+	}
+	else if(isPortConflict(document.form.misc_httpsport_x.value) && HTTPS_support){
+		alert(isPortConflict(document.form.misc_httpsport_x.value));
+		document.form.misc_httpsport_x.focus();
+		return false;
+	}
+	else if(isPortConflict(document.form.https_lanport.value) && HTTPS_support){
+		alert(isPortConflict(document.form.https_lanport.value));
+		document.form.https_lanport.focus();
+		return false;
+	}
 
 	return true;
 }
@@ -351,7 +375,7 @@ function show_dst_chk(){
 	// match "[std name][offset][dst name]"
 	if(document.form.time_zone_select.value.match(tzdst)){
 		document.getElementById("chkbox_time_zone_dst").style.display="";	
-		document.getElementById("adj_dst").innerHTML = Untranslated.Adj_dst;
+		document.getElementById("adj_dst").innerHTML = "<#System_Change_TimeZone_manual#>";
 		if(!document.getElementById("time_zone_dst_chk").checked){
 				document.form.time_zone_dst.value=0;
 				document.getElementById("dst_start").style.display="none";
@@ -620,7 +644,17 @@ function add_tz_option(selectObj, str, value, selected){
 }
 
 function hide_https_lanport(_value){
-	$("https_lanport").style.display = (_value == "0") ? "none" : "";
+	if(sw_mode == '1' || sw_mode == '2'){
+		var https_lanport_num = "<% nvram_get("https_lanport"); %>";
+		$("https_lanport").style.display = (_value == "0") ? "none" : "";
+		document.form.https_lanport.value = "<% nvram_get("https_lanport"); %>";
+		$("https_access_page").innerHTML = "<#https_access_url#> ";
+		$("https_access_page").innerHTML += "<a href=\"https://"+theUrl+":"+https_lanport_num+"\" target=\"_blank\" style=\"color:#FC0;text-decoration: underline; font-family:Lucida Console;\">http<span>s</span>://"+theUrl+"<span>:"+https_lanport_num+"</span></a>";
+		$("https_access_page").style.display = (_value == "0") ? "none" : "";
+	}
+	else{
+		$("https_access_page").style.display = 'none';
+	}
 }
 
 function hide_https_wanport(_value){
@@ -767,6 +801,26 @@ function pullLANIPList(obj){
 function hideport(flag){
 	$("accessfromwan_port").style.display = (flag == 1) ? "" : "none";
 }
+
+
+//Viz add 2012.12 show url for https [start]
+function change_url(num, flag){
+	if(flag == 'https_lan'){
+		var https_lanport_num_new = num;
+		$("https_access_page").innerHTML = "<#https_access_url#> ";
+		$("https_access_page").innerHTML += "<a href=\"https://"+theUrl+":"+https_lanport_num_new+"\" target=\"_blank\" style=\"color:#FC0;text-decoration: underline; font-family:Lucida Console;\">http<span>s</span>://"+theUrl+"<span>:"+https_lanport_num_new+"</span></a>";
+	}else{
+		
+	}		
+}
+//Viz add 2012.12 show url for https [end]
+
+
+/* password item show or not */
+function pass_checked(obj){
+	switchType(obj, document.form.show_pass_1.checked, true);
+}
+
 </script>
 </head>
 
@@ -782,6 +836,7 @@ function hideport(flag){
 <input type="hidden" name="next_page" value="Advanced_System_Content.asp">
 <input type="hidden" name="next_host" value="">
 <input type="hidden" name="modified" value="0">
+<input type="hidden" name="flag" value="">
 <input type="hidden" name="action_mode" value="apply">
 <input type="hidden" name="action_wait" value="5">
 <input type="hidden" name="action_script" value="restart_time">
@@ -837,19 +892,20 @@ function hideport(flag){
         <tr>
           <th width="40%"><a class="hintstyle" href="javascript:void(0);" onClick="openHint(11,4)"><#PASS_new#></a></th>
           <td>
-            <input type="password" autocapitalization="off" name="http_passwd2" onKeyPress="return is_string(this, event);" onkeyup="chkPass(this.value, 'http_passwd');" class="input_15_table" maxlength="17" />
+            <input type="password" autocapitalization="off" name="http_passwd2" onKeyPress="return is_string(this, event);" onkeyup="chkPass(this.value, 'http_passwd');" onpaste="return false;" class="input_15_table" maxlength="16" />
             &nbsp;&nbsp;
-            <div id="scorebarBorder" style="margin-left:140px; margin-top:-25px; display:none;" title="Strength of password">
-            		<div id="score">Very Weak</div>
+            <div id="scorebarBorder" style="margin-left:140px; margin-top:-25px; display:none;" title="<#LANHostConfig_x_Password_itemSecur#>">
+            		<div id="score"></div>
             		<div id="scorebar">&nbsp;</div>
             </div>
+            <div style="margin-top:1px;"><input type="checkbox" name="show_pass_1" onclick="pass_checked(document.form.http_passwd2);pass_checked(document.form.v_password2);"><#QIS_show_pass#></div>
           </td>
         </tr>
 
         <tr>
           <th><a class="hintstyle" href="javascript:void(0);" onClick="openHint(11,4)"><#PASS_retype#></a></th>
           <td>
-            <input type="password" autocapitalization="off" name="v_password2" onKeyPress="return is_string(this, event);" class="input_15_table" maxlength="17" /><br/><span id="alert_msg2"></span>
+            <input type="password" autocapitalization="off" name="v_password2" onKeyPress="return is_string(this, event);" onpaste="return false;" class="input_15_table" maxlength="16" /><br/><span id="alert_msg2"></span>
           </td>
         </tr>
       </table>
@@ -925,14 +981,15 @@ function hideport(flag){
 							<option value="0" <% nvram_match("http_enable", "0", "selected"); %>>HTTP</option>
 							<option value="1" <% nvram_match("http_enable", "1", "selected"); %>>HTTPS</option>
 							<option value="2" <% nvram_match("http_enable", "2", "selected"); %>>BOTH</option>
-				  	</select>
+				  	</select>				  	
 					</td>
 		  	</tr>
 
 		  	<tr id="https_lanport">
 					<th>HTTPS Lan port</th>
           <td>
-						<input type="text" maxlength="5" class="input_6_table" name="https_lanport" value="<% nvram_get("https_lanport"); %>">
+						<input type="text" maxlength="5" class="input_6_table" name="https_lanport" value="<% nvram_get("https_lanport"); %>" onKeyPress="return is_number(this,event);" onBlur="change_url(this.value, 'https_lan');">
+						<span id="https_access_page"></span>
 					</td>
 		  	</tr>
 		  	
@@ -964,7 +1021,7 @@ function hideport(flag){
 			<table width="100%" border="1" align="center" cellpadding="4" cellspacing="0" class="FormTable_table" id="http_client_table">
 				<thead>
 					<tr>
-						<td colspan="4">Specified IP</td>
+						<td colspan="4">Specified IP&nbsp;(<#List_limit#>&nbsp;4)</td>
 					</tr>
 				</thead>
 			
@@ -975,11 +1032,10 @@ function hideport(flag){
 
 				<tr>
 					<!-- client info -->
-					<div id="ClientList_Block_PC" class="ClientList_Block_PC"></div>					
-					
 					<td width="80%">
 				 		<input type="text" class="input_32_table" maxlength="15" name="http_client_ip_x_0"  onKeyPress="" onClick="hideClients_Block();" onblur="if(!over_var){hideClients_Block();}">
-            <img id="pull_arrow" height="14px;" src="/images/arrow-down.gif" style="position:absolute;" onclick="pullLANIPList(this);" title="Select the device name of LAN clients." onmouseover="over_var=1;" onmouseout="over_var=0;">				 		
+						<img id="pull_arrow" height="14px;" src="/images/arrow-down.gif" style="position:absolute;*margin-left:-3px;*margin-top:1px;" onclick="pullLANIPList(this);" title="" onmouseover="over_var=1;" onmouseout="over_var=0;">				 		
+						<div id="ClientList_Block_PC" class="ClientList_Block_PC"></div>	
 				 	</td>
 				 	<td width="20%">	
 				  		<input class="add_btn" type="button" onClick="addRow(document.form.http_client_ip_x_0, 4);" value="">

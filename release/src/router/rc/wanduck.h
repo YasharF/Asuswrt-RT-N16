@@ -50,8 +50,13 @@
 #define PING_RESULT_FILE "/tmp/ping_success"
 #define RX_THRESHOLD 40
 
+/* Paul modify 2013/4/2, DSL takes some time to sync up */
+#ifdef RTCONFIG_DSL
+	#define MAX_WAIT_TIME 120
+#else
+	#define MAX_WAIT_TIME 60
+#endif
 
-#define MAX_WAIT_TIME 60
 #define MAX_DISCONN_COUNT MAX_WAIT_TIME/SCAN_INTERVAL
 
 int max_wait_time = MAX_WAIT_TIME;
@@ -77,6 +82,7 @@ int max_disconn_count = MAX_DISCONN_COUNT;
 #define C2D			3
 #define D2C			4
 #define PHY_RECONN	5
+#define SET_ETH_MODEM	6
 
 #define CASE_NONE          0
 #define CASE_DISWAN        1
@@ -151,7 +157,6 @@ typedef struct REQCLIENT{
 #pragma pack() // End.
 
 // var
-#define DUT_DOMAIN_NAME "www.asusnetwork.net"
 char router_name[PATHLEN];
 int sw_mode, isFirstUse;
 #ifdef RTCONFIG_DUALWAN

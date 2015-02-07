@@ -23,10 +23,14 @@
 wan_route_x = '<% nvram_get("wan_route_x"); %>';
 wan_nat_x = '<% nvram_get("wan_nat_x"); %>';
 wan_proto = '<% nvram_get("wan_proto"); %>';
-
 var radio_2 = '<% nvram_get("wl0_radio"); %>';
 var radio_5 = '<% nvram_get("wl1_radio"); %>';
 <% radio_status(); %>
+
+if('<% nvram_get("wl_unit"); %>' == 1)
+	var macmode = '<% nvram_get("wl1_macmode"); %>';
+else
+	var macmode = '<% nvram_get("wl0_macmode"); %>';
 
 var wireless = [<% wl_auth_list(); %>];	// [[MAC, associated, authorized], ...]
 var modify_mode = '<% get_parameter("flag"); %>';
@@ -42,7 +46,7 @@ function initial(){
 	insertExtChannelOption();		
 	wl_auth_mode_change(1);
 
-	if(downsize_support != -1)
+	if(downsize_4m_support)
 		$("guest_image").parentNode.style.display = "none";
 
 	mbss_display_ctrl();
@@ -67,7 +71,7 @@ function initial(){
 	else
 		document.form.wl_gmode_check.checked = false;
 
-	if(band5g_support == -1 || no5gmssid_support != -1){
+	if(!band5g_support || no5gmssid_support){
 		$("guest_table5").style.display = "none";
 	}
 
@@ -85,6 +89,18 @@ function initial(){
 		$('2g_radio_hint').style.fontFamily = "MS UI Gothic,MS P Gothic";
 		$('5g_radio_hint').style.fontFamily = "MS UI Gothic,MS P Gothic";
 	}	
+	
+	if("<% get_parameter("af"); %>" == "wl_NOnly_note"){
+		var childsel=document.createElement("div");
+		childsel.setAttribute("id","wl_NOnly_note");
+		childsel.style.color="#FFCC00";
+		$('gn_desc').parentNode.appendChild(childsel);
+		$("wl_NOnly_note").innerHTML="* Please change the guest network authentication to WPA2 Personal AES.";	
+	}
+
+	if(macmode != "disabled"){
+		$("mac_filter_guest").style.display = "";
+	}
 }
 
 function change_wl_expire_radio(){
@@ -115,39 +131,43 @@ function translate_auth(flag){
 		return "unknown Auth";
 }
 
-function gen_gntable_tr(unit, gn_array){	
+function gen_gntable_tr(unit, gn_array, slicesb){	
 	var GN_band = "";
 	var htmlcode = "";
 	if(unit == 0) GN_band = 2;
 	if(unit == 1) GN_band = 5;
 	
-	htmlcode += '<table align="left" style="margin:auto;margin-left:20px;border-collapse:collapse;">';
-	htmlcode += '<tr><th align="left" style="width:200px;">';
+	htmlcode += '<table align="left" style="margin-left:-10px;border-collapse:collapse;width:720px;';
+	if(slicesb > 0)
+		htmlcode += 'margin-top:20px;';	
+	htmlcode += '"><tr><th align="left" width="160px">';
 	htmlcode += '<table id="GNW_'+GN_band+'G" class="gninfo_th_table" align="left" style="margin:auto;border-collapse:collapse;">';
-	htmlcode += '<tr><th align="left" style="height:28px;"><#QIS_finish_wireless_item1#></th></tr>';
-	htmlcode += '<tr><th align="left" style="height:28px;"><#WLANConfig11b_AuthenticationMethod_itemname#></th></tr>';
-	htmlcode += '<tr><th align="left" style="height:28px;"><#Network_key#></th></tr>';
-	htmlcode += '<tr><th align="left" style="height:28px;"><#mssid_time_remaining#></th></tr>';
+	htmlcode += '<tr><th align="left" style="height:40px;"><#QIS_finish_wireless_item1#></th></tr>';
+	htmlcode += '<tr><th align="left" style="height:40px;"><#WLANConfig11b_AuthenticationMethod_itemname#></th></tr>';
+	htmlcode += '<tr><th align="left" style="height:40px;"><#Network_key#></th></tr>';
+	htmlcode += '<tr><th align="left" style="height:40px;"><#mssid_time_remaining#></th></tr>';
 	if(sw_mode != "3"){
 			htmlcode += '<tr><th align="left" style="width:20%;height:28px;"><#Access_Intranet#></th></tr>';
 	}
-	htmlcode += '<tr><th align="left" style="height:28px;"></th></tr>';		
+	htmlcode += '<tr><th align="left" style="height:40px;"></th></tr>';		
 	htmlcode += '</table></th>';
 	
 	for(var i=0; i<gn_array.length; i++){			
-			var subunit = i+1;
-			htmlcode += '<td style="padding-right:50px"><table id="GNW_'+GN_band+'G'+i+'" class="gninfo_table" align="center" style="margin:auto;border-collapse:collapse;">';			
+			var subunit = i+1+slicesb*4;
+			htmlcode += '<td><table id="GNW_'+GN_band+'G'+i+'" class="gninfo_table" align="center" style="margin:auto;border-collapse:collapse;">';			
 			if(gn_array[i][0] == "1"){
 					htmlcode += '<tr><td align="center" class="gninfo_table_top"></td></tr>';
 					if(gn_array[i][1].length < 21)
 							htmlcode += '<tr><td align="center" onclick="change_guest_unit('+ unit +','+ subunit +');">'+ gn_array[i][1] +'</td></tr>';
 					else
-							htmlcode += '<tr><td align="center" onclick="change_guest_unit('+ unit +','+ subunit +');"><span onmouseover="return overlib(\''+ gn_array[i][1] +'\', HAUTO);" onmouseout="nd();">'+ gn_array[i][1].substring(0,17) +'...</span></td></tr>';
+							htmlcode += '<tr><td align="center" onclick="change_guest_unit('+ unit +','+ subunit +');">'+ gn_array[i][1].substring(0,17) +'...</td></tr>';
 					
 					htmlcode += '<tr><td align="center" onclick="change_guest_unit('+ unit +','+ subunit +');">'+ translate_auth(gn_array[i][2]) +'</td></tr>';
 					
-					if(gn_array[i][2].indexOf("psk") >= 0)
+					if(gn_array[i][2].indexOf("psk") >= 0 && gn_array[i][4].length < 21)
 							htmlcode += '<tr><td align="center" onclick="change_guest_unit('+ unit +','+ subunit +');">'+ gn_array[i][4] +'</td></tr>';
+					else if(gn_array[i][2].indexOf("psk") >= 0)
+							htmlcode += '<tr><td align="center" onclick="change_guest_unit('+ unit +','+ subunit +');">'+ gn_array[i][4].substring(0,17) +'...</td></tr>';
 					else if(gn_array[i][2] == "open" && gn_array[i][5] == "0")
 							htmlcode += '<tr><td align="center" onclick="change_guest_unit('+ unit +','+ subunit +');">None</td></tr>';
 					else{
@@ -185,10 +205,13 @@ function gen_gntable_tr(unit, gn_array){
 			}
 			htmlcode += '</table></td>';		
 	}	
-		
+
+	if(slicesb > 0){
+		for(var td=0; td<(4-gn_array.length); td++)
+			htmlcode += '<td style="width:135px"></td>';
+	}			
+
 	htmlcode += '</tr></table>';
-
-
 	return htmlcode;
 }
 
@@ -198,22 +221,64 @@ function _change_wl_unit_status(__unit){
 	change_wl_unit_status(__unit);
 }
 
+function goToACLFilter(){
+	if(sw_mode == 2 || sw_mode == 4) return false;
+	
+	document.titleForm.wl_unit.disabled = false;
+	document.titleForm.wl_unit.value = document.form.wl_unit.value;
+	if(document.titleForm.current_page.value == "")
+		document.titleForm.current_page.value = "Advanced_ACL_Content.asp?af=wl_maclist_x_0";
+	if(document.titleForm.next_page.value == "")
+		document.titleForm.next_page.value = "Advanced_ACL_Content.asp?af=wl_maclist_x_0";
+	document.titleForm.action_mode.value = "change_wl_unit";
+	document.titleForm.action = "apply.cgi";
+	document.titleForm.target = "";
+	document.titleForm.submit();
+}
+
 function gen_gntable(){
 	var htmlcode = ""; 
 	var htmlcode5 = ""; 
-		
+	var gn_array_2g_tmp = gn_array_2g;
+	var gn_array_5g_tmp = gn_array_5g;
+	var band2sb = 0;
+	var band5sb = 0;
+
 	htmlcode += '<table style="margin-left:20px;margin-top:25px;" width="95%" align="center" cellpadding="4" cellspacing="0" class="gninfo_head_table" id="gninfo_table_2g">';
 	htmlcode += '<tr id="2g_title"><td align="left" style="color:#5AD;font-size:16px; border-bottom:1px dashed #AAA;"><span>2.4GHz</span>';
 	htmlcode += '<span id="2g_radio_hint" style="font-size: 14px;display:none;color:#FC0;margin-left:17px;">* <#GuestNetwork_Radio_Status#>	<a style="font-family:Lucida Console;color:#FC0;text-decoration:underline;cursor:pointer;" onclick="_change_wl_unit_status(0);"><#btn_go#></a></span></td></tr>';
-	htmlcode += gen_gntable_tr(0, gn_array_2g);
+	
+	
+	while(gn_array_2g_tmp.length > 4){
+		htmlcode += '<tr><td>';
+		htmlcode += gen_gntable_tr(0, gn_array_2g_tmp.slice(0, 4), band2sb);
+		band2sb++;
+		gn_array_2g_tmp = gn_array_2g_tmp.slice(4);
+		htmlcode += '</td></tr>';
+	}
+	
+	htmlcode += '<tr><td>';
+	htmlcode += gen_gntable_tr(0, gn_array_2g_tmp, band2sb);
+	htmlcode += '</td></tr>';
 	htmlcode += '</table>';
 	$("guest_table2").innerHTML = htmlcode;
 	
 	htmlcode5 += '<table style="margin-left:20px;margin-top:25px;" width="95%" align="center" cellpadding="4" cellspacing="0" class="gninfo_head_table" id="gninfo_table_5g">';
 	htmlcode5 += '<tr id="5g_title"><td align="left" style="color:#5AD; font-size:16px; border-bottom:1px dashed #AAA;"><span>5GHz</span>';
 	htmlcode5 += '<span id="5g_radio_hint" style="font-size: 14px;display:none;color:#FC0;margin-left:17px;">* <#GuestNetwork_Radio_Status#>	<a style="font-family:Lucida Console;color:#FC0;text-decoration:underline;cursor:pointer;" onclick="_change_wl_unit_status(1);"><#btn_go#></a></span></td></tr>';
-	htmlcode5 += gen_gntable_tr(1, gn_array_5g);
-	htmlcode5 += '</table>';		
+
+	while(gn_array_5g_tmp.length > 4){
+		htmlcode5 += '<tr><td >';
+		htmlcode5 += gen_gntable_tr(1, gn_array_5g_tmp.slice(0, 4), band5sb);
+		band5sb++;
+		gn_array_5g_tmp = gn_array_5g_tmp.slice(4);
+		htmlcode5 += '</td></tr>';
+	}
+	
+	htmlcode5 += '<tr><td>';
+	htmlcode5 += gen_gntable_tr(1, gn_array_5g_tmp, band5sb);
+	htmlcode5 += '</td></tr>';
+	htmlcode5 += '</table>';	
 	$("guest_table5").innerHTML = htmlcode5;
 }
 
@@ -245,12 +310,13 @@ function applyRule(){
 		else
 			document.form.wl_expire.value = 0;
 
-		if(wl6_support != -1)
-			document.form.action_wait.value = parseInt(document.form.action_wait.value)+10;			// extend waiting time for BRCM new driver
+		if(document.form.wl_macmode_option.value == "disabled"){
+			document.form.wl_macmode.value = "disabled";
+		}
+		else{
+			document.form.wl_macmode.value = macmode;
+		}
 
-		if(Rawifi_support != -1)
-			document.form.action_wait.value = parseInt(document.form.action_wait.value)+5;			// extend waiting time for RaLink
-		
 		document.form.submit();
 	}
 }
@@ -311,16 +377,17 @@ function disableAdvFn(){
 function guest_divctrl(flag){	
 	if(flag == 1){
 		$("guest_table2").style.display = "none";
-		if(band5g_support != -1)
+		if(band5g_support)
 			$("guest_table5").style.display = "none";
 		$("gnset_table").style.display = "";
 		if(sw_mode == "3")
 				inputCtrl(document.form.wl_lanaccess, 0);
 		$("applyButton").style.display = "";
+		automode_hint();
 	}
 	else{
 		$("guest_table2").style.display = "";
-		if(band5g_support == -1 || no5gmssid_support != -1)
+		if(!band5g_support || no5gmssid_support)
 				$("guest_table5").style.display = "none";
 		else
 				$("guest_table5").style.display = "";
@@ -340,7 +407,7 @@ function mbss_display_ctrl(){
 	else{
 		$("gnset_table").style.display = "none";
 		$("guest_table2").style.display = "none";
-		if(band5g_support != -1)
+		if(band5g_support)
 			$("guest_table5").style.display = "none";
 		$("applyButton").style.display = "none";
 		$("applyButton").innerHTML = "Not support!";
@@ -355,8 +422,6 @@ function close_guest_unit(_unit, _subunit){
 	NewInput.name = "wl"+ _unit + "." + _subunit +"_bss_enabled";
 	NewInput.value = "0";
 	document.unitform.appendChild(NewInput);
-	if(Rawifi_support != -1)
-			document.unitform.action_wait.value = parseInt(document.unitform.action_wait.value)+5;			// extend waiting time for RaLink
 	document.unitform.submit();
 }
 
@@ -367,8 +432,6 @@ function change_guest_unit(_unit, _subunit){
 	document.form.next_page.value = "Guest_network.asp?flag=1";
 	FormActions("apply.cgi", "change_wl_unit", "", "");
 	document.form.target = "";
-	if(Rawifi_support != -1)
-			document.form.action_wait.value = parseInt(document.form.action_wait.value)+5;			// extend waiting time for RaLink	
 	document.form.submit();
 }
 
@@ -380,8 +443,6 @@ function create_guest_unit(_unit, _subunit){
 	document.unitform.appendChild(NewInput);
 	document.unitform.wl_unit.value = _unit;
 	document.unitform.wl_subunit.value = _subunit;
-	if(Rawifi_support != -1)
-			document.unitform.action_wait.value = parseInt(document.unitform.action_wait.value)+5;			// extend waiting time for RaLink	
 	document.unitform.submit();
 }
 
@@ -440,7 +501,7 @@ function genBWTable(_unit){
 <input type="hidden" name="wl_subunit" value="<% nvram_get("wl_subunit"); %>">
 <input type="hidden" name="action_mode" value="apply">
 <input type="hidden" name="action_script" value="restart_wireless">
-<input type="hidden" name="action_wait" value="8">
+<input type="hidden" name="action_wait" value="15">
 </form>
 <form method="post" name="form" action="/start_apply2.htm" target="hidden_frame">
 <input type="hidden" name="productid" value="<% nvram_get("productid"); %>">
@@ -452,7 +513,7 @@ function genBWTable(_unit){
 <input type="hidden" name="modified" value="0">
 <input type="hidden" name="action_mode" value="apply">
 <input type="hidden" name="action_script" value="restart_wireless">
-<input type="hidden" name="action_wait" value="8">
+<input type="hidden" name="action_wait" value="15">
 <input type="hidden" name="preferred_lang" id="preferred_lang" value="<% nvram_get("preferred_lang"); %>">
 <input type="hidden" name="wl_country_code" value="<% nvram_get("wl0_country_code"); %>" disabled>
 <input type="hidden" name="firmver" value="<% nvram_get("firmver"); %>">
@@ -469,6 +530,7 @@ function genBWTable(_unit){
 <input type="hidden" name="wl_key_type" value='<% nvram_get("wl_key_type"); %>'> <!--Lock Add 2009.03.10 for ralink platform-->
 <input type="hidden" name="wl_channel_orig" value='<% nvram_get("wl_channel"); %>'>
 <input type="hidden" name="wl_expire" value='<% nvram_get("wl_expire"); %>'>
+<input type="hidden" name="wl_macmode" value='<% nvram_get("wl_macmode"); %>'>
 
 <input type="hidden" name="wl_gmode_protection" value="<% nvram_get("wl_gmode_protection"); %>" disabled>
 <input type="hidden" name="wl_wpa_mode" value="<% nvram_get("wl_wpa_mode"); %>" disabled>
@@ -485,7 +547,7 @@ function genBWTable(_unit){
 	  <div id="subMenu"></div>
 	</td>
 	
-	<td height="380" valign="top">
+	<td valign="top">
 	  <div id="tabMenu" class="submenuBlock" style="*margin-top:-155px;"></div>
 
 <!--===================================Beginning of Main Content===========================================-->
@@ -508,7 +570,7 @@ function genBWTable(_unit){
 							<img id="guest_image" src="/images/New_ui/network_config.png">
 						</td>
 						<td>
-							<div class="formfontdesc" style="font-style: italic;font-size: 14px;"><#GuestNetwork_desc#></div>
+							<div id="gn_desc" class="formfontdesc" style="font-style: italic;font-size: 14px;"><#GuestNetwork_desc#></div>
 							
 						</td>
 					</tr>
@@ -516,8 +578,8 @@ function genBWTable(_unit){
 			</div>
 			
 			<!-- info table -->
-			<div id="guest_table2"></div>
-			<div id="guest_table5" style="margin-top:200px;"></div>
+			<div id="guest_table2"></div>			
+			<div id="guest_table5"></div>
 
 			<!-- setting table -->
 			<table width="80%" border="1" align="center" style="margin-top:10px;margin-bottom:20px;" cellpadding="4" cellspacing="0" id="gnset_table" class="FormTable">
@@ -572,7 +634,7 @@ function genBWTable(_unit){
 							<option value="2" <% nvram_match("wl_nmode_x", "2","selected"); %>>Legacy</option>
 						</select>
 						<input type="checkbox" name="wl_gmode_check" id="wl_gmode_check" value="" onClick="return change_common(this, 'WLANConfig11b', 'wl_gmode_check', '1')"> b/g Protection</input>
-						<span id="wl_nmode_x_hint" style="display:none"><#WLANConfig11n_automode_limition_hint#></span>
+						<!--span id="wl_nmode_x_hint" style="display:none"><#WLANConfig11n_automode_limition_hint#></span-->
 					</td>
 			  </tr>
 
@@ -617,6 +679,8 @@ function genBWTable(_unit){
 								<option value="psk2"    <% nvram_match("wl_auth_mode_x", "psk2",   "selected"); %>>WPA2-Personal</option>
 								<option value="pskpsk2" <% nvram_match("wl_auth_mode_x", "pskpsk2","selected"); %>>WPA-Auto-Personal</option>
 				  		</select>
+				  		<br>
+				  		<span id="wl_nmode_x_hint" style="display:none;"><#WLANConfig11n_automode_limition_hint#></span>
 					</td>
 		  	</tr>
 			  	
@@ -707,6 +771,18 @@ function genBWTable(_unit){
 			  		</select>
 					</td>
 			 	</tr>
+
+				<tr id="mac_filter_guest" style="display:none">
+					<th>Enable MAC Filter</th>
+					<td>
+						<select name="wl_macmode_option" class="input_option">
+							<option class="content_input_fd" value="" <% nvram_match("wl_macmode", "","selected"); %>><#checkbox_Yes#></option>
+							<option class="content_input_fd" value="disabled" <% nvram_match("wl_macmode", "disabled","selected"); %>><#checkbox_No#></option>
+						</select>
+						&nbsp;
+						<span style="cursor:pointer" onclick="goToACLFilter();"><#FirewallConfig_MFList_groupitemname#></span>
+					</td>
+				</tr>
 			</table>
 
 			<div class="apply_gen" id="applyButton">

@@ -2,11 +2,24 @@ include ../common.mak
 
 CFLAGS = -Os -Wall $(EXTRACFLAGS)
 CFLAGS += -I$(SRCBASE) -I$(SRCBASE)/include -I. -I$(TOP)/shared -I$(TOP)/zlib
-CFLAGS += -DASUS_NVRAM -DASUS_DDNS -DTRANSLATE_ON_FLY -DFLASH_EMULATOR -DLinux -DWSC 
+CFLAGS += -DASUS_DDNS -DTRANSLATE_ON_FLY -DFLASH_EMULATOR -DLinux -DWSC 
+
 
 ifeq ($(RTCONFIG_RALINK),y)
 CFLAGS += -DRalink_WPS
 CFLAGS += -I$(TOP)/shared/sysdeps/ralink -I$(TOP)/wireless_tools
+endif
+
+ifeq ($(RTN14U),y)
+CFLAGS += -DRTN14U
+endif
+
+ifeq ($(RTAC52U),y)
+CFLAGS += -DRTAC52U
+endif
+
+ifeq ($(RTN65U),y)
+CFLAGS += -DRTN65U
 endif
 
 ifeq ($(RTCONFIG_HTTPS),y)
@@ -40,7 +53,12 @@ OBJS += web-dsl.o
 OBJS += web-dsl-upg.o
 endif
 
-LIBS = -L$(TOP)/nvram -lnvram -L$(TOP)/shared -lshared
+LIBS = -L$(TOP)/nvram${BCMEX} -lnvram -L$(TOP)/shared -lshared
+
+ifeq ($(RTCONFIG_BCMARM),y)
+CFLAGS += -I$(SRCBASE)/shared/bcmwifi/include
+LIBS += -lgcc_s
+endif
 
 ifeq ($(RTCONFIG_USB),y)
 LIBS += -L$(TOP)/libdisk -ldisk
@@ -55,6 +73,7 @@ ifeq ($(RTCONFIG_OPENVPN),y)
 LIBS += -L$(TOP)/openssl -lssl -lcrypto
 endif
 
+export CFLAGS
 vpath %.c sysdeps
 
 all: httpd #test_apps
@@ -70,7 +89,7 @@ httpd: $(OBJS)
 	$(CPTMP)
 
 
-install:
+install: all
 	@echo " [httpd] Installing to $(INSTALLDIR)"
 	@install -D httpd $(INSTALLDIR)/usr/sbin/httpd
 	@$(STRIP) $(INSTALLDIR)/usr/sbin/httpd

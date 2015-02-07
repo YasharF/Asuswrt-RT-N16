@@ -112,14 +112,20 @@
 }
 .gninfo_head_table td{
 	font-size: 14px;
-	color: #AAA;
+	color: #FFF;
 	line-height:28px;
 }
 .gninfo_th_table th{
 	font-size: 14px;
-	color: #AAA;
-	line-height:28px;
+	color: #BBB;
+	padding-left: 10px;
+	text-shadow: 1px 1px 0px #000;
+	/*line-height:28px;*/
 }
+
+.gninfo_th_table{
+}
+
 .gninfo_table th{
 	font-size: 14px;
 	color: #AAA;
@@ -127,7 +133,7 @@
 }
 .gninfo_table td{
 	font-size: 12px;
-	line-height:28px;
+	line-height:40px;
 }
 .gninfo_table tbody:hover{
 	background-color: #444f53;

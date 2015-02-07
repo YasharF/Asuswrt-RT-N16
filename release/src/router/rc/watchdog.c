@@ -16,7 +16,7 @@
  *
  * Copyright 2004, ASUSTeK Inc.
  * All Rights Reserved.
- * 
+ *
  * THIS SOFTWARE IS OFFERED "AS IS", AND ASUS GRANTS NO WARRANTIES OF ANY
  * KIND, EXPRESS OR IMPLIED, BY STATUTE, COMMUNICATION OR OTHERWISE. BROADCOM
  * SPECIFICALLY DISCLAIMS ANY IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS
@@ -24,7 +24,7 @@
  *
  */
 #include <rc.h>
- 
+
 #include <stdio.h>
 #include <signal.h>
 #include <time.h>
@@ -42,18 +42,20 @@
 #include <bcmnvram.h>
 #include <fcntl.h>
 #include <sys/stat.h>
+#ifndef RTCONFIG_BCMARM
 #include <math.h>
+#endif
 #include <string.h>
 #include <sys/wait.h>
 #include <sys/ioctl.h>
 #include <sys/reboot.h>
-#define BCM47XX_SOFTWARE_RESET  0x40		/* GPIO 6 */
+#define BCM47XX_SOFTWARE_RESET	0x40		/* GPIO 6 */
 #define RESET_WAIT		2		/* seconds */
 #define RESET_WAIT_COUNT	RESET_WAIT * 10 /* 10 times a second */
 
 #define TEST_PERIOD		100		/* second */
 #define NORMAL_PERIOD		1		/* second */
-#define URGENT_PERIOD		100 * 1000	/* microsecond */	
+#define URGENT_PERIOD		100 * 1000	/* microsecond */
 #define RUSHURGENT_PERIOD	50 * 1000	/* microsecond */
 
 #ifdef BTN_SETUP
@@ -71,30 +73,29 @@ static int media_timer = 0;
 static int mem_timer = -1;
 static int u2ec_timer = 0;
 #endif
-struct itimerval itv;
-int watchdog_period = 0;
-int watchdog_count = 0;
+static struct itimerval itv;
+static int watchdog_period = 0;
 static int btn_pressed = 0;
 static int btn_count = 0;
-long sync_interval = 1;	// every 10 seconds a unit
-int sync_flag = 0;
-long timestamp_g = 0;
-int stacheck_interval = -1;
 #ifdef BTN_SETUP
-int btn_pressed_setup = 0;
-int btn_pressed_flag = 0;
-int btn_count_setup = 0;
-int btn_count_timeout = 0;
-int wsc_timeout = 0;
-int btn_count_setup_second = 0;
-int btn_pressed_toggle_radio = 0;
+static int btn_pressed_setup = 0;
+static int btn_count_setup = 0;
+static int wsc_timeout = 0;
+static int btn_count_setup_second = 0;
+static int btn_pressed_toggle_radio = 0;
 #endif
 
 #ifdef RTCONFIG_WIRELESS_SWITCH
 // for WLAN sw init, only for slide switch
 static int wlan_sw_init = 0;
 #endif
-
+#ifdef RTCONFIG_LED_BTN
+static int LED_status_old = -1;
+static int LED_status = -1;
+static int LED_status_changed = 0;
+static int LED_status_first = 1;
+static int LED_status_on = -1;
+#endif
 
 extern int g_wsc_configured;
 extern int g_isEnrollee;
@@ -110,7 +111,7 @@ sys_exit()
 static void
 alarmtimer(unsigned long sec, unsigned long usec)
 {
-	itv.it_value.tv_sec  = sec;
+	itv.it_value.tv_sec = sec;
 	itv.it_value.tv_usec = usec;
 	itv.it_interval = itv.it_value;
 	setitimer(ITIMER_REAL, &itv, NULL);
@@ -127,25 +128,103 @@ void led_control_normal(void)
 	// in case LED_WPS != LED_POWER
 	led_control(LED_POWER, LED_ON);
 }
- 
+
+void erase_nvram(void)
+{
+        switch (get_model()) {
+                case MODEL_RTAC56U:
+                case MODEL_RTAC68U:
+                        eval("mtd-erase2", "nvram");
+                        break;
+                default:
+                        eval("mtd-erase","-d","nvram");
+        }
+}
+
+int init_toggle(void)
+{
+        switch (get_model()) {
+                case MODEL_RTAC56U:
+                case MODEL_RTAC68U:
+                        nvram_set("btn_ez_radiotoggle", "1");
+                        return BTN_WIFI_TOG;
+                default:
+                        return BTN_WPS;
+        }
+}
+
 void btn_check(void)
 {
+	if (nvram_match("asus_mfg", "1"))
+	{
+		//TRACE_PT("asus mfg btn check!!!\n");
+#ifndef RTCONFIG_N56U_SR2
+		if (button_pressed(BTN_RESET))
+		{
+			TRACE_PT("button RESET pressed\n");
+			nvram_set("btn_rst", "1");
+		}
+#endif
+		if (button_pressed(BTN_WPS))
+		{
+			TRACE_PT("button WPS pressed\n");
+			nvram_set("btn_ez", "1");
+		}
+#ifdef RTCONFIG_WIRELESS_SWITCH
+		if (button_pressed(BTN_WIFI_SW))
+		{
+			TRACE_PT("button WIFI_SW pressed\n");
+			nvram_set("btn_wifi_sw", "1");
+		}
+#endif
+#if defined(RTCONFIG_WIFI_TOG_BTN)
+		if (button_pressed(BTN_WIFI_TOG))
+		{
+			TRACE_PT("button WIFI_TOG pressed\n");
+			nvram_set("btn_wifi_toggle", "1");
+		}
+#endif
+#ifdef RTCONFIG_TURBO
+		if (button_pressed(BTN_TURBO))
+		{
+			TRACE_PT("button TURBO pressed\n");
+			nvram_set("btn_turbo", "1");
+		}
+#endif
+#ifdef RTCONFIG_LED_BTN /* currently for RT-AC68U only */
+                if (button_pressed(BTN_LED))
+                {
+                        TRACE_PT("button LED pressed\n");
+                        nvram_set("btn_led", "1");
+                }
+                else
+                {
+			//TRACE_PT("button LED released\n");
+                        nvram_set("btn_led", "0");
+                }
+#endif
+		return;
+	}
+
 #ifdef BTN_SETUP
 	if (btn_pressed_setup == BTNSETUP_NONE)
 	{
 #endif
-
+#ifndef RTCONFIG_N56U_SR2
 	if (button_pressed(BTN_RESET))
+#else
+	if (0)
+#endif
 	{
 		TRACE_PT("button RESET pressed\n");
 
 	/*--------------- Add BTN_RST MFG test ------------------------*/
-		if (nvram_match("asus_mfg", "1"))
-		{
-			nvram_set("btn_rst", "1");
-		}
-		else
-		{
+#ifdef RTCONFIG_DSL /* Paul add 2013/4/2 */
+			if((btn_count % 2)==0)
+				led_control(0, 1);
+			else
+				led_control(0, 0);
+#endif
 			if (!btn_pressed)
 			{
 				btn_pressed = 1;
@@ -157,44 +236,43 @@ void btn_check(void)
 				if (++btn_count > RESET_WAIT_COUNT)
 				{
 					fprintf(stderr, "You can release RESET button now!\n");
-
 					btn_pressed = 2;
 				}
 				if (btn_pressed == 2)
 				{
-#ifdef RTCONFIG_DSL
-					eval("adslate", "sysdefault");
-#endif
+#ifdef RTCONFIG_DSL /* Paul add 2013/4/2 */
+					led_control(0, 0);
+					alarmtimer(0, 0);
+					if (notify_rc_after_wait("resetdefault")) {
+						/* Send resetdefault rc_service failed. */
+						alarmtimer(NORMAL_PERIOD, 0);
+					}
+#else
 				/* 0123456789 */
 				/* 0011100111 */
 					if ((btn_count % 10) < 2 || ((btn_count % 10) > 4 && (btn_count % 10) < 7))
 						led_control(LED_POWER, LED_OFF);
 					else
 						led_control(LED_POWER, LED_ON);
+#endif
 				}
 			}
-		} // end BTN_RST MFG test
 	}
 #ifdef RTCONFIG_WIRELESS_SWITCH
 	else if (button_pressed(BTN_WIFI_SW))
 	{
-		//TRACE_PT("button BTN_WIFI_SW pressed\n");	
-		if (nvram_match("asus_mfg", "1"))
-		{
-			nvram_set("btn_wifi_sw", "1");
-		}
-		else
-		{	
+		//TRACE_PT("button BTN_WIFI_SW pressed\n");
 			if(wlan_sw_init == 0)
 			{
-				wlan_sw_init = 1;							
-				
+				wlan_sw_init = 1;
+/*
 				eval("iwpriv", "ra0", "set", "RadioOn=1");
 				eval("iwpriv", "rai0", "set", "RadioOn=1");
-				TRACE_PT("Radio On\n");	
+				TRACE_PT("Radio On\n");
 				nvram_set("wl0_radio", "1");
 				nvram_set("wl1_radio", "1");
-				nvram_commit(); 			
+				nvram_commit();
+*/
 			}
 			else
 			{
@@ -204,27 +282,32 @@ void btn_check(void)
 					// IT MUST BE SAME AS BELOW CODE
 					led_control(LED_POWER, LED_OFF);
 					alarmtimer(0, 0);
-					eval("mtd-erase","-d","nvram");
-					/* FIXME: all stop-wan, umount logic will not be called
-					 * prevous sys_exit (kill(1, SIGTERM) was ok
-					 * since nvram isn't valid stop_wan should just kill possible daemons,
-					 * nothing else, maybe with flag */
-					sync();
-					reboot(RB_AUTOBOOT);					
+					if(notify_rc_after_wait("resetdefault")) {
+						/* Send resetdefault rc_service failed. */
+						alarmtimer(NORMAL_PERIOD, 0);
+					}
 				}
-			
-				if(nvram_match("wl0_radio", "0") || nvram_match("wl1_radio", "0")){
-					eval("iwpriv", "ra0", "set", "RadioOn=1");
-					eval("iwpriv", "rai0", "set", "RadioOn=1");
-					TRACE_PT("Radio On\n"); 
-					nvram_set("wl0_radio", "1");
-					nvram_set("wl1_radio", "1");
-					nvram_commit(); 
+
+				if(nvram_match("wl0_HW_switch", "0") || nvram_match("wl1_HW_switch", "0")){
+					//Ever apply the Wireless-Professional Web GU.
+					//Not affect the status of WiFi interface, so do nothing
 				}
-			}	
-		}
+				else{	//trun on WiFi by HW slash, make sure both WiFi interface enable.
+					if(nvram_match("wl0_radio", "0") || nvram_match("wl1_radio", "0")){
+						eval("iwpriv", "ra0", "set", "RadioOn=1");
+						eval("iwpriv", "rai0", "set", "RadioOn=1");
+						TRACE_PT("Radio On\n");
+						nvram_set("wl0_radio", "1");
+						nvram_set("wl1_radio", "1");
+
+						nvram_set("wl0_HW_switch", "0");
+						nvram_set("wl1_HW_switch", "0");
+						nvram_commit();
+					}
+				}
+			}
 	}
-#endif	
+#endif
 	else
 	{
 		if (btn_pressed == 1)
@@ -238,13 +321,10 @@ void btn_check(void)
 		{
 			led_control(LED_POWER, LED_OFF);
 			alarmtimer(0, 0);
-			eval("mtd-erase","-d","nvram");
-			/* FIXME: all stop-wan, umount logic will not be called
-			 * prevous sys_exit (kill(1, SIGTERM) was ok
-			 * since nvram isn't valid stop_wan should just kill possible daemons,
-			 * nothing else, maybe with flag */
-			sync();
-			reboot(RB_AUTOBOOT);
+			if (notify_rc_after_wait("resetdefault")) {
+				/* Send resetdefault rc_service failed. */
+				alarmtimer(NORMAL_PERIOD, 0);
+			}
 		}
 #ifdef RTCONFIG_WIRELESS_SWITCH
 		else
@@ -255,10 +335,14 @@ void btn_check(void)
 				wlan_sw_init = 1;
 				eval("iwpriv", "ra0", "set", "RadioOn=0");
 				eval("iwpriv", "rai0", "set", "RadioOn=0");
-				TRACE_PT("Radio Off\n");	
+				TRACE_PT("Radio Off\n");
 				nvram_set("wl0_radio", "0");
 				nvram_set("wl1_radio", "0");
-				nvram_commit(); 	
+
+				nvram_set("wl0_HW_switch", "1");
+				nvram_set("wl1_HW_switch", "1");
+
+				nvram_commit();
 			}
 			else
 			{
@@ -268,8 +352,17 @@ void btn_check(void)
 					TRACE_PT("Radio Off\n");
 					nvram_set("wl0_radio", "0");
 					nvram_set("wl1_radio", "0");
+
+					nvram_set("wl0_timesched", "0");
+					nvram_set("wl1_timesched", "0");
 				}
-			}		
+
+				//indicate use switch HW slash manually.
+				if(nvram_match("wl0_HW_switch", "0") || nvram_match("wl1_HW_switch", "0")){
+					nvram_set("wl0_HW_switch", "1");
+					nvram_set("wl1_HW_switch", "1");
+				}
+			}
 		}
 #endif
 	}
@@ -278,11 +371,19 @@ void btn_check(void)
 	}
 
 	if (btn_pressed != 0) return;
-
-	// Added WPS button radio toggle option
-	if (button_pressed(BTN_WPS) && nvram_match("btn_ez_radiotoggle", "1") 
+#ifdef CONFIG_BCMWL5
+	// wait until wl is ready
+	if (!nvram_get_int("wlready")) return;
+#endif
+	// independent wifi-toggle btn or Added WPS button radio toggle option
+#if defined(RTCONFIG_WIFI_TOG_BTN)
+	if (button_pressed(BTN_WIFI_TOG))
+#else
+	if (button_pressed(BTN_WPS) && nvram_match("btn_ez_radiotoggle", "1")
 		&& (nvram_get_int("sw_mode") != SW_MODE_REPEATER)) // repeater mode not support HW radio
+#endif
 	{
+		TRACE_PT("button WIFI_TOG pressed\n");
 		if (btn_pressed_toggle_radio == 0){
 			eval("radio","switch");
 			btn_pressed_toggle_radio = 1;
@@ -292,21 +393,81 @@ void btn_check(void)
 	else{
 		btn_pressed_toggle_radio = 0;
 	}
+#ifdef RTCONFIG_TURBO
+        if (button_pressed(BTN_TURBO))
+        {
+                TRACE_PT("button BTN_TURBO pressed\n");
+        }
+#endif
+#ifdef RTCONFIG_LED_BTN // currently for RT-AC68U only
+        LED_status_old = LED_status;
+        LED_status = button_pressed(BTN_LED);
+
+        LED_status_changed = 0;
+        if (LED_status != LED_status_old)
+        {
+                if (LED_status_first)
+                {
+                        LED_status_first = 0;
+                        LED_status_on = LED_status;
+                }
+                else
+                        LED_status_changed = 1;
+        }
+
+        if (LED_status_changed)
+        {
+                TRACE_PT("button BTN_LED pressed\n");
+#if 0
+                        eval("ejusb", "1");
+                        eval("ejusb", "2");
+#else
+#ifdef RTCONFIG_LED_BTN_MODE
+                        if (nvram_get_int("btn_led_mode"))
+                                reboot(RB_AUTOBOOT);
+#endif
+                        if (LED_status == LED_status_on)
+                                nvram_set_int("AllLED", 1);
+                        else
+                                nvram_set_int("AllLED", 0);
+
+                        if (LED_status == LED_status_on)
+                        {
+				led_control(LED_POWER, LED_ON);
+
+                                eval("et", "robowr", "0", "0x18", "0x01ff");
+                                eval("et", "robowr", "0", "0x1a", "0x01ff");
+
+                                eval("wl", "ledbh", "10", "7");
+                                eval("wl", "-i", "eth2", "ledbh", "10", "7");
+
+                                if (nvram_match("wl1_radio", "1"))
+                                {
+                                        nvram_set("led_5g", "1");
+                                        led_control(LED_5G, LED_ON);
+                                }
+#ifdef RTCONFIG_TURBO
+                                if (nvram_match("wl0_radio", "1") || nvram_match("wl1_radio", "1"))
+                                        led_control(LED_TURBO, LED_ON);
+#endif
+                                kill_pidfile_s("/var/run/usbled.pid", SIGTSTP); // inform usbled to reset status
+                        }
+                        else
+                                setAllLedOff();
+#endif
+        }
+#endif
 
 	if (btn_pressed_setup < BTNSETUP_START)
 	{
-		if (!no_need_to_start_wps() && nvram_match("btn_ez_radiotoggle", "0") &&
+		if (!no_need_to_start_wps() && !wps_band_radio_off(0) &&
+#ifndef RTCONFIG_WIFI_TOG_BTN
+		nvram_match("btn_ez_radiotoggle", "0") &&
+#endif
 			!nvram_match("wps_ign_btn", "1") && button_pressed(BTN_WPS))
 		{
 			TRACE_PT("button WPS pressed\n");
 
-			/* Add BTN_EZ MFG test */
-			if (nvram_match("asus_mfg", "1"))
-			{
-				nvram_set("btn_ez", "1");
-			}
-			else
-			{
 				if (btn_pressed_setup == BTNSETUP_NONE)
 				{
 					btn_pressed_setup = BTNSETUP_DETECT;
@@ -329,8 +490,7 @@ void btn_check(void)
 						wsc_timeout = WPS_TIMEOUT_COUNT;
 					}
 				}
-			} // end BTN_EZ MFG test
-		} 
+		}
 		else if (btn_pressed_setup == BTNSETUP_DETECT)
 		{
 			btn_pressed_setup = BTNSETUP_NONE;
@@ -342,7 +502,7 @@ void btn_check(void)
 	else 
 	{
 		if (!nvram_match("wps_ign_btn", "1")) {
-			if (!no_need_to_start_wps() && button_pressed(BTN_WPS))
+			if (!no_need_to_start_wps() && !wps_band_radio_off(0) && button_pressed(BTN_WPS))
 			{
 				/* Whenever it is pushed steady, again... */
 				if (++btn_count_setup_second > SETUP_WAIT_COUNT)
@@ -410,7 +570,7 @@ static int in_sched(int now_mins, int now_dow, int sched_begin, int sched_end, i
 		// under Sunday's sched time and cross-night
 		if(((now_dow & sched_dow) != 0) && (now_mins >= sched_begin2) && (sched_begin2 >= sched_end2))
 			return 1;
-		
+
 		 // under Saturday's sched time
 		now_dow >>= 6; // Saturday
 		if(((now_dow & sched_dow) != 0) && (now_mins <= sched_end2) && (sched_begin2 >= sched_end2))
@@ -449,9 +609,9 @@ static int in_sched(int now_mins, int now_dow, int sched_begin, int sched_end, i
 		// under yesterday's sched time
 		now_dow <<= 1; // yesterday
 		if(((now_dow & sched_dow) != 0) && (now_mins <= sched_end) && (sched_begin >= sched_end))
-			return 1; 
+			return 1;
 	}
-	
+
 	// wday: 6
 	if((now_dow & 0x01) != 0){
 		// under Saturday's sched time
@@ -461,13 +621,13 @@ static int in_sched(int now_mins, int now_dow, int sched_begin, int sched_end, i
 		// under Saturday's sched time and cross-night
 		if(((now_dow & sched_dow) != 0) && (now_mins >= sched_begin2) && (sched_begin2 >= sched_end2))
 			return 1;
-		
+
 		// under Friday's sched time
 		now_dow <<= 1; // Friday
 		if(((now_dow & sched_dow) != 0) && (now_mins <= sched_end) && (sched_begin >= sched_end)) 
-			return 1; 
+			return 1;
 	}
-	
+
 	return 0;
 }
 
@@ -503,7 +663,7 @@ int timecheck_item(char *activeDate, char *activeTime, char *activeTime2)
 	for(i=0;i<=6;i++){
 		sched_dow += (activeDate[i]-'0') << (6-i);
 	}
-	
+
 	active = in_sched(current, now_dow, activeTimeStart, activeTimeEnd, activeTimeStart2, activeTimeEnd2, sched_dow);
 
 	//cprintf("[watchdoe] active: %d\n", active);
@@ -525,7 +685,7 @@ void timecheck(void)
 {
 	int activeNow;
 	char *svcDate, *svcTime, *svcTime2;
-	char prefix[]="wlXXXXXX_", tmp[100];
+	char prefix[]="wlXXXXXX_", tmp[100], tmp2[100];
 	char word[256], *next;
 	int unit, item;
 	char *lan_ifname;
@@ -554,8 +714,9 @@ void timecheck(void)
 	foreach (word, nvram_safe_get("wl_ifnames"), next) {
 		snprintf(prefix, sizeof(prefix), "wl%d_", unit);
 
-		//dbG("[watchdog] timecheck unit=%s radio=%s\n", prefix, nvram_safe_get(strcat_r(prefix, "radio", tmp))); // radio toggle test
-		if (nvram_match(strcat_r(prefix, "radio", tmp), "0")){
+		//dbG("[watchdog] timecheck unit=%s radio=%s, timesched=%s\n", prefix, nvram_safe_get(strcat_r(prefix, "radio", tmp)), nvram_safe_get(strcat_r(prefix, "timesched", tmp2))); // radio toggle test
+		if (nvram_match(strcat_r(prefix, "radio", tmp), "0") || 
+			nvram_match(strcat_r(prefix, "timesched", tmp2), "0")){
 			item++;
 			unit++;
 			continue;
@@ -590,7 +751,7 @@ void timecheck(void)
 			snprintf(nv, sizeof(nv) - 1, "%s_expire_tmp", word);
 #endif
 			expire = atoi(nvram_safe_get(nv));
-			
+
 			if (expire)
 			{
 				if (expire <= 30)
@@ -651,6 +812,9 @@ cpu_usage_monitor()
 }
 #endif
 
+#ifdef RTCONFIG_RALINK
+int need_restart_wsc = 0;
+#endif
 static void catch_sig(int sig)
 {
 	if (sig == SIGUSR1)
@@ -690,11 +854,12 @@ static void catch_sig(int sig)
 	else if (sig == SIGTTIN)
 	{
 		wsc_user_commit();
+		need_restart_wsc = 1;
 	}
+#if 0
 	else if (sig == SIGHUP)
 	{
-		int model = get_model();
-		switch (model) {
+		switch (get_model()) {
 		case MODEL_RTN56U:
 #ifdef RTCONFIG_DSL
 		case MODEL_DSLN55U:
@@ -704,9 +869,89 @@ static void catch_sig(int sig)
 		}
 	}
 #endif
+#endif
 }
 
-#if defined(RTCONFIG_BRCM_USBAP) || defined(RTAC66U)
+#ifdef RTCONFIG_WLAN_LED
+unsigned long get_2g_count()
+{
+	FILE *f;
+	char buf[256];
+	char *ifname, *p;
+	unsigned long counter1, counter2;
+
+	if((f = fopen("/proc/net/dev", "r"))==NULL) return -1;
+
+	fgets(buf, sizeof(buf), f);
+	fgets(buf, sizeof(buf), f);
+
+	counter1=counter2=0;
+
+	while (fgets(buf, sizeof(buf), f)) {
+		if((p=strchr(buf, ':'))==NULL) continue;
+		*p = 0;
+		if((ifname = strrchr(buf, ' '))==NULL) ifname = buf;
+		else ++ifname;
+
+		if(strcmp(ifname, "eth1")) continue;
+
+		if(sscanf(p+1, "%lu%*u%*u%*u%*u%*u%*u%*u%*u%lu", &counter1, &counter2)!=2) continue;
+
+	}
+	fclose(f);
+
+	return counter1;
+}
+
+void fake_wl_led_2g(void)
+{
+	static unsigned int blink_2g_check = 0;
+	static unsigned int blink_2g = 0;
+	static unsigned int data_2g = 0;
+	unsigned long count_2g;
+	int i;
+	static int j;
+	static int status = -1;
+	static int status_old;
+
+	// check data per 10 count
+	if((blink_2g_check%10)==0) {
+		count_2g = get_2g_count();
+		if(count_2g && data_2g!=count_2g) {
+			blink_2g = 1;
+			data_2g = count_2g;
+		}
+		else blink_2g = 0;
+		led_control(LED_2G, LED_ON);
+	}
+
+	if(blink_2g) {
+		j = rand_seed_by_time() % 3;
+		for(i=0;i<10;i++) {
+			usleep(33*1000);
+
+			status_old = status;
+			if (((i%2)==0) && (i > (3 + 2*j)))
+				status = 0;
+			else
+				status = 1;
+
+			if (status != status_old)
+			{
+				if (status)
+					led_control(LED_2G, LED_ON);
+				else
+					led_control(LED_2G, LED_OFF);
+			}
+		}
+		led_control(LED_2G, LED_ON);
+	}
+
+	blink_2g_check++;
+}
+#endif	/* RTCONFIG_WLAN_LED */
+
+#if defined(RTCONFIG_BRCM_USBAP) || defined(RTAC66U) || defined(BCM4352)
 unsigned long get_5g_count()
 {
 	FILE *f;
@@ -729,7 +974,7 @@ unsigned long get_5g_count()
 
 		if(strcmp(ifname, "eth2")) continue;
 
-		if(sscanf(p+1, "%lu%*u%*u%*u%*u%*u%*u%*u%*u%lu", &counter1, &counter2)!=2) continue; 
+		if(sscanf(p+1, "%lu%*u%*u%*u%*u%*u%*u%*u%*u%lu", &counter1, &counter2)!=2) continue;
 
 	}
 	fclose(f);
@@ -740,9 +985,9 @@ unsigned long get_5g_count()
 void fake_wl_led_5g(void)
 {
 	static unsigned int blink_5g_check = 0;
-	static unsigned int blink_5g = 0;	
+	static unsigned int blink_5g = 0;
 	static unsigned int data_5g = 0;
-	unsigned long count_5g;	
+	unsigned long count_5g;
 	int i;
 	static int j;
 	static int status = -1;
@@ -760,11 +1005,11 @@ void fake_wl_led_5g(void)
 	}
 
 	if(blink_5g) {
-#ifdef RTAC66U
+#if defined(RTAC66U) || defined(BCM4352)
 		j = rand_seed_by_time() % 3;
 #endif
 		for(i=0;i<10;i++) {
-#ifdef RTAC66U
+#if defined(RTAC66U) || defined(BCM4352)
 			usleep(33*1000);
 
 			status_old = status;
@@ -792,15 +1037,20 @@ void fake_wl_led_5g(void)
 		}
 		led_control(LED_5G, LED_ON);
 	}
- 
+
 	blink_5g_check++;
 }
 #endif
 
 void led_check(void)
 {
-#if defined(RTCONFIG_BRCM_USBAP) || defined(RTAC66U)
-#ifdef RTAC66U
+#ifdef RTCONFIG_WLAN_LED
+	if (nvram_contains_word("rc_support", "led_2g"))
+		fake_wl_led_2g();
+#endif
+
+#if defined(RTCONFIG_BRCM_USBAP) || defined(RTAC66U) || defined(BCM4352)
+#if defined(RTAC66U) || defined(BCM4352)
 	if (nvram_match("led_5g", "1"))
 #endif
 	fake_wl_led_5g();
@@ -812,7 +1062,102 @@ void led_check(void)
 //	WAN_STATE_CONNECTED means internet connected
 //	else means internet disconnted
 
+/* Paul add 2012/10/25 */
+#ifdef RTCONFIG_DSL
+#ifndef RTCONFIG_DUALWAN
+if (nvram_match("dsltmp_adslsyncsts","up") && nvram_match("wan0_state_t","2"))
+	led_DSLWAN();
+#endif
+#endif
 }
+
+/* Paul add 2012/10/25 */
+#ifdef RTCONFIG_DSL
+#ifndef RTCONFIG_DUALWAN
+unsigned long get_dslwan_count()
+{
+	FILE *f;
+	char buf[256];
+	char *ifname, *p;
+	unsigned long counter1, counter2;
+
+	if((f = fopen("/proc/net/dev", "r"))==NULL) return -1;
+
+	fgets(buf, sizeof(buf), f);
+	fgets(buf, sizeof(buf), f);
+
+	counter1=counter2=0;
+
+	while (fgets(buf, sizeof(buf), f)) {
+		if((p=strchr(buf, ':'))==NULL) continue;
+		*p = 0;
+		if((ifname = strrchr(buf, ' '))==NULL) ifname = buf;
+		else ++ifname;
+
+		if (nvram_match("dsl0_proto","pppoe") || nvram_match("dsl0_proto","pppoa"))
+		{
+			if(strcmp(ifname, "ppp0")) continue;
+		}
+		else //Mer, IPoA
+		{
+			if(strcmp(ifname, "eth2.1.1")) continue;
+		}
+
+		if(sscanf(p+1, "%lu%*u%*u%*u%*u%*u%*u%*u%*u%lu", &counter1, &counter2)!=2) continue;
+	}
+	fclose(f);
+
+	return counter1;
+}
+
+void led_DSLWAN(void)
+{
+	static unsigned int blink_dslwan_check = 0;
+	static unsigned int blink_dslwan = 0;
+	static unsigned int data_dslwan = 0;
+	unsigned long count_dslwan;
+	int i;
+	static int j;
+	static int status = -1;
+	static int status_old;
+
+	// check data per 10 count
+	if((blink_dslwan_check%10)==0) {
+		count_dslwan = get_dslwan_count();
+		if(count_dslwan && data_dslwan!=count_dslwan) {
+			blink_dslwan = 1;
+			data_dslwan = count_dslwan;
+}
+		else blink_dslwan = 0;
+		led_control(LED_WAN, LED_ON);
+	}
+
+	if(blink_dslwan) {
+		j = rand_seed_by_time() % 3;
+		for(i=0;i<10;i++) {
+			usleep(33*1000);
+
+			status_old = status;
+			if (((i%2)==0) && (i > (3 + 2*j)))
+				status = 0;
+			else
+				status = 1;
+
+			if (status != status_old)
+			{
+				if (status)
+					led_control(LED_WAN, LED_ON);
+				else
+					led_control(LED_WAN, LED_OFF);
+			}
+		}
+		led_control(LED_WAN, LED_ON);
+	}
+
+	blink_dslwan_check++;
+}
+#endif
+#endif
 
 #ifdef RTCONFIG_SWMODE_SWITCH
 // copied from 2.x code
@@ -834,7 +1179,7 @@ void swmode_check()
 	else if(button_pressed(BTN_SWMODE_SW_AP))
 		sw_mode=SW_MODE_AP;
 	else sw_mode=SW_MODE_ROUTER;
-	
+
 	if(sw_mode!=pre_sw_mode) {
 		if(nvram_get_int("sw_mode")!=sw_mode) {
 			flag_sw_mode=1;
@@ -843,13 +1188,16 @@ void swmode_check()
 		}
 		else flag_sw_mode=0;
 	}
-	else if(flag_sw_mode==1 && nvram_invmatch("asus_mfg", "1")) {	
+	else if(flag_sw_mode==1 && nvram_invmatch("asus_mfg", "1")) {
 		if(tmp_sw_mode==sw_mode) {
 			if(++count_stable>4) // stable for more than 5 second
 			{
 				fprintf(stderr, "Reboot to switch sw mode ..\n");
-				flag_sw_mode=0;			
+				flag_sw_mode=0;
 				sync();
+				/* sw mode changed: restore defaults */
+				nvram_set("nvramver", "0");
+				nvram_commit();
 				reboot(RB_AUTOBOOT);
 			}
 		}
@@ -860,24 +1208,28 @@ void swmode_check()
 
 void ddns_check(void)
 {
-	if( nvram_match("ddns_enable_x", "1") &&
+	if(nvram_match("ddns_enable_x", "1") &&
 	   (nvram_match("wan0_state_t", "2") && nvram_match("wan0_auxstate_t", "0")) )
 	{
 		if (pids("ez-ipupdate")) //ez-ipupdate is running!
 			return;
 
+		if( nvram_match("ddns_updated", "1") ) //already updated success
+			return;
+
 		if( nvram_match("ddns_server_x", "WWW.ASUS.COM") ){
-			if((strcmp(nvram_safe_get("ddns_return_code_chk"),"Time-out") != 0) &&
-		     	   (strcmp(nvram_safe_get("ddns_return_code_chk"),"connect_fail") != 0) ) {
+			if( !(  !strcmp(nvram_safe_get("ddns_return_code_chk"),"Time-out") ||
+				!strcmp(nvram_safe_get("ddns_return_code_chk"),"connect_fail") ||
+				strstr(nvram_safe_get("ddns_return_code_chk"), "-1") ) )
 				return;
-			}
 		}
 		else{ //non asusddns service
-			 if( nvram_match("ddns_updated", "1") )
+			if( !strcmp(nvram_safe_get("ddns_return_code_chk"),"auth_fail") )
 				return;
 		}
-		logmessage("watchdog", "start ddns.");
+		nvram_set("ddns_update_by_wdog", "1");
 		unlink("/tmp/ddns.cache");
+		logmessage("watchdog", "start ddns.");
 		notify_rc("start_ddns");
 	}
 	return;
@@ -891,15 +1243,34 @@ void ddns_check(void)
  *
  *      1. time-dependent service
  */
+
 void watchdog(int sig)
 {
 	/* handle button */
-	btn_check();
-	if(nvram_match("asus_mfg", "0"))
+  	 btn_check();
+	if(nvram_match("asus_mfg", "0")
+#ifdef RTCONFIG_LED_BTN
+                && nvram_get_int("AllLED")
+#endif
+        )
 		led_check();
 
+#ifdef RTCONFIG_RALINK
+	if(need_restart_wsc)
+	{
+		char word[256], *next;
+		foreach (word, nvram_safe_get("wl_ifnames"), next) {
+			eval("iwpriv", word, "set", "WscConfMode=0");
+		}
+		stop_wpsfix();
+
+		need_restart_wsc = 0;
+		start_wsc_pin_enrollee();
+		start_wpsfix();
+	}
+#endif
 #ifdef RTCONFIG_SWMODE_SWITCH
- 	swmode_check();
+	swmode_check();
 #endif
 
 	/* if timer is set to less than 1 sec, then bypass the following */
@@ -953,8 +1324,8 @@ watchdog_main(int argc, char *argv[])
 	signal(SIGALRM, watchdog);
 #ifdef RTCONFIG_RALINK
 	signal(SIGTTIN, catch_sig);
-	int model = get_model();
-	switch (model) {
+#if 0
+	switch (get_model()) {
 	case MODEL_RTN56U:
 #ifdef RTCONFIG_DSL
 	case MODEL_DSLN55U:
@@ -963,13 +1334,13 @@ watchdog_main(int argc, char *argv[])
 	break;
 	}
 #endif
+#endif
 
 #ifdef RTCONFIG_DSL //Paul add 2012/6/27
 	nvram_set("btn_rst", "0");
 	nvram_set("btn_ez", "0");
 	nvram_set("btn_wifi_sw", "0");
 #endif
-
 	nvram_unset("wps_ign_btn");
 
 	if (!pids("ots"))
@@ -985,7 +1356,7 @@ watchdog_main(int argc, char *argv[])
 
 	/* Most of time it goes to sleep */
 	while (1)
-	{	
+	{
 		pause();
 	}
 

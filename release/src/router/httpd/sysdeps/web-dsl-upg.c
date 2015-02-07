@@ -55,13 +55,11 @@
 #include <iwlib.h>
 #include <stapriv.h>
 #include <ethutils.h>
-#include <semaphore_mfp.h>
 #include <shared.h>
 #include <sys/mman.h>
 #ifndef O_BINARY
 #define O_BINARY 	0
 #endif
-#include <image.h>
 #ifndef MAP_FAILED
 #define MAP_FAILED (-1)
 #endif
@@ -584,7 +582,7 @@ int truncate_trx(void)
 #define ADSL_FW_IP_PREFIX "194.255.255."
 
 
-void do_upgrade_adsldrv()
+void do_upgrade_adsldrv(void)
 {
 	int ret;
 	char UpdateFwBuf[256];

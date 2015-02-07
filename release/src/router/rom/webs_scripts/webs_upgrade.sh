@@ -8,53 +8,35 @@ nvram set webs_state_upgrade=0 # INITIALIZING
 nvram set webs_state_error=0
 
 model=`nvram get productid`
-firmware_file=`nvram get productid`_`nvram get webs_state_info`.zip
+firmware_file=`nvram get productid`_`nvram get webs_state_info`_un.zip
 
-force_free_ram(){
-	wlconf eth1 down
-	wlconf eth2 down
-	rmmod wl_high
-	rmmod wl
-	echo 3 > /proc/sys/vm/drop_caches
-	sleep 3
-	echo "----------- end of force_free_ram --------------"
-}
-
-# get firmware information
+# get firmware zip file
+forsq=`nvram get apps_sq`
 echo 3 > /proc/sys/vm/drop_caches
-wget $wget_options http://dlcdnet.asus.com/pub/ASUS/wireless/ASUSWRT/$firmware_file -O /tmp/linux.zip
-echo 3 > /proc/sys/vm/drop_caches
-s1=`ls -l /tmp/linux.zip | awk '{print $5}'`
-s2=`free | grep Mem | awk '{print $4*1024}'`
+if [ "$forsq" == "1" ]; then
+	echo "---- upgrade sq ----" >> /tmp/webs_upgrade.log
+	wget $wget_options http://dlcdnet.asus.com/pub/ASUS/LiveUpdate/Release/Wireless_SQ/$firmware_file -O /tmp/linux.zip
+else
+	wget $wget_options http://dlcdnet.asus.com/pub/ASUS/wireless/ASUSWRT/$firmware_file -O /tmp/linux.zip
+fi	
 
-if [ "$?" != "0" ]; then
+if [ "$?" != "0" ]; then	#download failure
 	nvram set webs_state_error=1
 else
 	nvram set webs_state_upgrade=2
-	sleep 10
-	echo 3 > /proc/sys/vm/drop_caches
-if expr $s1 \> $s2 ; then
-	# Free memory Not enough
-	rc rc_service stop_upgrade
-	force_free_ram
-	mkdir /tmp/mytmpfs
-	mount -t tmpfs -o size=20M,nr_inodes=10k,mode=700 tmpfs /tmp/mytmpfs
-	unzip -o /tmp/linux.zip -d /tmp/mytmpfs/
-	echo 3 > /proc/sys/vm/drop_caches
-	rm /tmp/linux.zip
-	mv /tmp/mytmpfs/*.trx /tmp/linux.trx
-	sleep 3
-	umount /tmp/mytmpfs
-	echo 3 > /proc/sys/vm/drop_caches
-else
-	# Free memory enough
-	unzip -o /tmp/linux.zip -d /tmp
-	rm -f /tmp/linux.zip
-fi		
-	rc rc_service start_upgrade
+	mv /tmp/linux.zip /tmp/linux.trx
+	echo "---- mv trx OK ----" >> /tmp/webs_upgrade.log
+	nvram set firmware_check=0
+	firmware_check /tmp/linux.trx
+	sleep 1
+	firmware_check_ret=`nvram get firmware_check`
+	if [ "$firmware_check_ret" == "1" ]; then
+		echo "---- fw check OK ----" >> /tmp/webs_upgrade.log
+		rc rc_service start_upgrade
+	else
+		echo "---- fw check error ----" >> /tmp/webs_upgrade.log
+		nvram set webs_state_error=3	# wrong fw
+	fi
 fi
 
 nvram set webs_state_upgrade=1
-
-
-

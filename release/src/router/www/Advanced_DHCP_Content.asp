@@ -22,10 +22,11 @@
 	border:1px outset #999;
 	background-color:#576D73;
 	position:absolute;
-	margin-top:103px;
-	*margin-top:96px;	
-	margin-left:15px;
+	*margin-top:27px;	
+	margin-left:10px;
+	*margin-left:-263px;
 	width:255px;
+	*width:270px;
 	text-align:left;	
 	height:auto;
 	overflow-y:auto;
@@ -85,6 +86,7 @@ var dhcp_staticlists = '<% nvram_get("dhcp_staticlist"); %>';
 var staticclist_row = dhcp_staticlists.split('&#60');
 
 function initial(){
+	$('pull_arrow').title = Untranslated.select_MAC;
 	show_menu();
 	load_body();
 	//Viz 2011.10{ for LAN ip in DHCP pool or Static list
@@ -146,7 +148,9 @@ function addRow_Group(upper){
 		document.form.dhcp_staticip_x_0.focus();
 		document.form.dhcp_staticip_x_0.select();
 		return false;
-	}else if(check_macaddr(document.form.dhcp_staticmac_x_0, check_hwaddr_flag(document.form.dhcp_staticmac_x_0)) == true  && valid_IP_form(document.form.dhcp_staticip_x_0,0) == true){
+	}else if(check_macaddr(document.form.dhcp_staticmac_x_0, check_hwaddr_flag(document.form.dhcp_staticmac_x_0)) == true &&
+		 valid_IP_form(document.form.dhcp_staticip_x_0,0) == true &&
+		 validate_dhcp_range(document.form.dhcp_staticip_x_0) == true){
 		
 		//Viz check same rule  //match(ip or mac) is not accepted
 		if(item_num >=2){	
@@ -241,10 +245,6 @@ function applyRule(){
 			tmp_value = "";	
 
 		document.form.dhcp_staticlist.value = tmp_value;
-
-		if(wl6_support != -1)
-			document.form.action_wait.value = parseInt(document.form.action_wait.value)+10;			// extend waiting time for BRCM new driver
-
 		showLoading();
 		document.form.submit();
 	}
@@ -276,8 +276,8 @@ function validate_dhcp_range(ip_obj){
 	return 1;
 }
 
-function validForm(){
-	var re = new RegExp('^[a-zA-Z0-9][a-zA-Z0-9\-\_\.]*[a-zA-Z0-9\-\_]$','gi');
+function validForm(){	
+	var re = new RegExp('^[a-zA-Z0-9][a-zA-Z0-9\.\-]*[a-zA-Z0-9]$','gi');
   if(!re.test(document.form.lan_domain.value) && document.form.lan_domain.value != ""){
       alert("<#JS_validchar#>");                
       document.form.lan_domain.focus();
@@ -613,23 +613,23 @@ function check_vpn(){		//true: (DHCP ip pool & static ip ) conflict with VPN cli
 			<table width="100%" border="1" align="center" cellpadding="4" cellspacing="0" class="FormTable" style="margin-top:8px;" >
 		  	<thead>
 		  		<tr>
-						<td colspan="2"><#LANHostConfig_ManualDHCPEnable_itemname#></td>
+					<td colspan="3"><#LANHostConfig_ManualDHCPEnable_itemname#></td>
 		  		</tr>
 		  	</thead>
 
 		  	<tr>
      			<th><a class="hintstyle" href="javascript:void(0);" onClick="openHint(5,9);"><#LANHostConfig_ManualDHCPEnable_itemname#></a></th>
-					<td colspan="2" style="text-align:left;">
-          	<input type="radio" value="1" name="dhcp_static_x"  onclick="return change_common_radio(this, 'LANHostConfig', 'dhcp_static_x', '1')" <% nvram_match("dhcp_static_x", "1", "checked"); %> /><#checkbox_Yes#>
-      		  <input type="radio" value="0" name="dhcp_static_x"  onclick="return change_common_radio(this, 'LANHostConfig', 'dhcp_static_x', '0')" <% nvram_match("dhcp_static_x", "0", "checked"); %> /><#checkbox_No#>
-      		</td>
+				<td colspan="2" style="text-align:left;">
+					<input type="radio" value="1" name="dhcp_static_x"  onclick="return change_common_radio(this, 'LANHostConfig', 'dhcp_static_x', '1')" <% nvram_match("dhcp_static_x", "1", "checked"); %> /><#checkbox_Yes#>
+					<input type="radio" value="0" name="dhcp_static_x"  onclick="return change_common_radio(this, 'LANHostConfig', 'dhcp_static_x', '0')" <% nvram_match("dhcp_static_x", "0", "checked"); %> /><#checkbox_No#>
+				</td>
 			  </tr>
 			</table>
 
 			<table width="100%" border="1" align="center" cellpadding="4" cellspacing="0" class="FormTable_table" style="margin-top:8px;">
 			  	<thead>
 			  		<tr>
-						<td colspan="3" id="GWStatic"><#LANHostConfig_ManualDHCPList_groupitemdesc#></td><!--Viz hold on this : &nbsp;&nbsp;(<#List_limit#> 32)-->
+						<td colspan="3" id="GWStatic"><#LANHostConfig_ManualDHCPList_groupitemdesc#>&nbsp;(<#List_limit#>&nbsp;64)</td>
 			  		</tr>
 			  	</thead>
 
@@ -639,19 +639,18 @@ function check_vpn(){		//true: (DHCP ip pool & static ip ) conflict with VPN cli
         		<th>Add / Delete</th>
 			  	</tr>			  
 			  	<tr>
-			  			<!-- client info -->
-							<div id="ClientList_Block_PC" class="ClientList_Block_PC"></div>
-			  		
+			  			<!-- client info -->	  		
             			<td width="40%">
-                		<input type="text" class="input_20_table" maxlength="17" name="dhcp_staticmac_x_0" style="margin-left:-12px;width:255px;" onKeyPress="return is_hwaddr(this,event)" onClick="hideClients_Block();">
-                		<img id="pull_arrow" height="14px;" src="/images/arrow-down.gif" style="position:absolute;" onclick="pullLANIPList(this);" title="Select the device name of DHCP clients." onmouseover="over_var=1;" onmouseout="over_var=0;">
-                			</td>
+							<input type="text" class="input_20_table" maxlength="17" name="dhcp_staticmac_x_0" style="margin-left:-12px;width:255px;" onKeyPress="return is_hwaddr(this,event)" onClick="hideClients_Block();">
+							<img id="pull_arrow" height="14px;" src="/images/arrow-down.gif" style="position:absolute;*margin-left:-3px;*margin-top:1px;" onclick="pullLANIPList(this);" title="" onmouseover="over_var=1;" onmouseout="over_var=0;">
+							<div id="ClientList_Block_PC" class="ClientList_Block_PC"></div>	
+						</td>
             			<td width="40%">
             				<input type="text" class="input_15_table" maxlength="15" name="dhcp_staticip_x_0" onkeypress="return is_ipaddr(this,event)">
             			</td>
             			<td width="20%">
 										<div> 
-											<input type="button" class="add_btn" onClick="addRow_Group(32);" value="">
+											<input type="button" class="add_btn" onClick="addRow_Group(64);" value="">
 										</div>
             			</td>
 			  	</tr>	 			  

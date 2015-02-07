@@ -375,6 +375,18 @@
 	border-width:0;
 	color:#FFFFFF;
 }
+.input_18_table{
+	margin-left:2px;
+	padding-left:0.4em;
+	height:23px;
+	width:160px;
+	line-height:23px \9;	/*IE*/
+	font-size:12px;
+	font-family: Lucida Console;
+	background-image:url(/images/New_ui/inputbg.png);
+	border-width:0;
+	color:#FFFFFF;
+}
 .input_15_table{
 	margin-left:2px;
 	padding-left:0.4em;
@@ -724,8 +736,9 @@ textarea{
 	border:2px outset #999;
 	background-color:#576D73;
 	position:absolute;
-	margin-top:-11px;
-	margin-left:322px;
+	margin-top:24px;
+	margin-left:2px;
+	*margin-left:-145px;
 	text-align:left;
 	width:200px;
 	height:auto;
@@ -761,7 +774,7 @@ textarea{
 	position:absolute;
 	margin-top:25px;
 	margin-left:1px;
-	*margin-left:-136px;
+	*margin-left:-132px;
 	text-align:left;
 	width:250px;
 	height:400px;
@@ -805,6 +818,13 @@ textarea{
 	height:125px;/*must have for any big value*/
 }
 
+.pull_arrow{
+ 	float:left;
+ 	cursor:pointer;
+ 	border:2px outset #EFEFEF;
+ 	background-color:#CCC;
+ 	padding:3px 2px 4px 0px;
+}
 #pull_arrow{
  	float:left;
  	cursor:pointer;
@@ -1204,7 +1224,7 @@ div.tabclick {
 .tabclick_NW span {
 		font-weight: bolder;
 	  background: transparent url(images/New_ui/tabclickspan.png) no-repeat;
-		font-family: Verdana;	 
+		font-family: Arial, Helvetica, sans-serif;	 
     display: block;
     padding: 5px 4px 5px 12px;
     line-height: 20px;	
@@ -1301,18 +1321,18 @@ font-size:12px;
 
 .flowfontbt{
 font:Arial, Helvetica, sans-serif;
-background-image:url(images/New_ui/networkmap/flowbt_normal.png);
+background-image:url(images/New_ui/flowbt_normal.png);
 color:#FFFFFF;
 font-size:12px;
 }
 .flowfontbt:link{
 font:Arial, Helvetica, sans-serif;
-background-image:url(images/New_ui/networkmap/flowbt_normal.png);
+background-image:url(images/New_ui/flowbt_normal.png);
 color:#FFFFFF;
 font-size:12px;
 }
 .flowfontbt:hover{
-background-image:url(images/New_ui/networkmap/flowbt_over.png);
+background-image:url(images/New_ui/flowbt_over.png);
 }
 
 .fromdropdownbt{
@@ -1474,6 +1494,33 @@ padding-top:1px;
 	width:30px;
 	cursor: pointer;
 }
+
+/*Viz add 2013.03 for adsl sync status      start*/
+.linestatusup{
+	background-image:url(/images/New_ui/DSLstatus.png);
+	background-repeat:no-repeat;	
+	background-position:2px 0px;
+	height:29px;
+	width:29px;
+	cursor: pointer;
+}
+.linestatuselse{
+	background-image:url(/images/New_ui/DSL_Act.gif);
+	background-repeat:no-repeat;	
+	background-position:3px 2px;
+	height:29px;
+	width:29px;
+	cursor: pointer;
+}
+.linestatusdown{
+	background-image:url(/images/New_ui/DSLstatus.png);
+	background-repeat:no-repeat;	
+	background-position:2px -50px;
+	height:29px;
+	width:29px;
+	cursor: pointer;
+}
+/*Viz add 2013.03 for adsl sync status      end*/
 .printstatuson{
 	background-image:url(images/New_ui/printstatus.png);
 	background-repeat:no-repeat;	
@@ -1506,24 +1553,44 @@ padding-top:1px;
 	width:30px;
 	cursor: pointer;
 }
+.notificationon{
+	display:inline;
+	background-image:url(images/New_ui/notification.png);
+	background-repeat:no-repeat;	
+	background-position:2px 2px;
+	height:30px;
+	width:30px;
+	cursor: pointer;
+}
+.notificationoff{
+	display:none;
+	background-image:url(images/New_ui/notification.png);
+	background-repeat:no-repeat;	
+	background-position:2px -48px;
+	height:30px;
+	width:30px;
+	cursor: pointer;
+}
 
 .StatusClickHint_mouseover{
 	cursor: pointer;
 	font-weight: bold;
 	background-color: #3366FF;
 	color: #FFFFFF;	
+	margin-bottom: 10px;
 }
 .StatusClickHint{
 	text-decoration: underline;
 	cursor:pointer;
 	font-weight:bold;
+	margin-bottom: 10px;
 }
 .StatusHint{
 	font-weight:bold;
 }
 #overDiv{
-	filter:alpha(opacity=90);
-	opacity:.85;
+	filter:alpha(opacity=95);
+	opacity:.95;
 	z-index: 500;
 }
 #overDiv_table1{
@@ -1616,7 +1683,8 @@ padding-top:1px;
 	font-size: 13px;
 	font-weight: bold;
 	height:24px;
-	overflow:hidden;	
+	overflow:hidden;
+	width:144px;	
 	}
  
 .navigation li dt:hover{
@@ -1631,12 +1699,13 @@ padding-top:1px;
  
 /* 設置子選單dd */
 .navigation li dd { 
-	margin:0;
+	/*margin:0;*/
+	margin-left:3px;
 	/*padding:0;*/
 	color: #fff; 
 	background-color:#333;
 	border-bottom:solid 1px #666;
-	width:140px;
+	width:145px;
 	}
  
 .navigation li dd.last {
@@ -1682,4 +1751,267 @@ padding-top:1px;
 	height:339px;
 	overflow:auto;
 	width:455px;
+}
+
+/* 控制user account and folder "add", "delete", "modify的圖形偏移"*/
+.createAccountBtn{
+	background-image:url(images/New_ui/advancesetting/UserAdd_ALL.png);
+	background-repeat:no-repeat;	
+	background-position:0px -62px;
+	height:30px;
+	width:31px;
+}
+.createAccountBtn_hover{
+	background-image:url(images/New_ui/advancesetting/UserAdd_ALL.png);
+	background-repeat:no-repeat;	
+	background-position:0px -31px;
+	height:30px;
+	width:31px;
+	cursor: pointer;
+}
+.createAccountBtn_add{
+	background-image:url(images/New_ui/advancesetting/UserAdd_ALL.png);
+	background-repeat:no-repeat;	
+	background-position:0px 0px;
+	height:30px;
+	width:31px;
+	cursor: pointer;
+}
+
+.deleteAccountBtn{
+	background-image:url(images/New_ui/advancesetting/UserDel_ALL.png);
+	background-repeat:no-repeat;	
+	background-position:0px -62px;
+	height:30px;
+	width:31px;
+}
+.deleteAccountBtn_hover{
+	background-image:url(images/New_ui/advancesetting/UserDel_ALL.png);
+	background-repeat:no-repeat;	
+	background-position:0px -31px;
+	height:30px;
+	width:31px;
+	cursor: pointer;
+}
+.deleteAccountBtn_add{
+	background-image:url(images/New_ui/advancesetting/UserDel_ALL.png);
+	background-repeat:no-repeat;	
+	background-position:0px 0px;
+	height:30px;
+	width:31px;
+	cursor: pointer;
+}
+
+.modifyAccountBtn{
+	background-image:url(images/New_ui/advancesetting/UserMod_ALL.png);
+	background-repeat:no-repeat;	
+	background-position:0px -62px;
+	height:30px;
+	width:31px;
+}
+.modifyAccountBtn_hover{
+	background-image:url(images/New_ui/advancesetting/UserMod_ALL.png);
+	background-repeat:no-repeat;	
+	background-position:0px -31px;
+	height:30px;
+	width:31px;
+	cursor: pointer;
+}
+.modifyAccountBtn_add{
+	background-image:url(images/New_ui/advancesetting/UserMod_ALL.png);
+	background-repeat:no-repeat;	
+	background-position:0px 0px;
+	height:30px;
+	width:31px;
+	cursor: pointer;
+}
+
+.createFolderBtn{
+	background-image:url(images/New_ui/advancesetting/FolderAdd_ALL.png);
+	background-repeat:no-repeat;	
+	background-position:0px -62px;
+	height:30px;
+	width:31px;
+}
+.createFolderBtn_hover{
+	background-image:url(images/New_ui/advancesetting/FolderAdd_ALL.png);
+	background-repeat:no-repeat;	
+	background-position:0px -31px;
+	height:30px;
+	width:31px;
+	cursor: pointer;
+}
+
+.createFolderBtn_add{
+	background-image:url(images/New_ui/advancesetting/FolderAdd_ALL.png);
+	background-repeat:no-repeat;	
+	background-position:0px 0px;
+	height:30px;
+	width:31px;
+	cursor: pointer;
+}
+.createFolderBtn_add:hover{
+	background-image:url(images/New_ui/advancesetting/FolderAdd_ALL.png);
+	background-repeat:no-repeat;	
+	background-position:0px -31px;
+	height:30px;
+	width:31px;
+	cursor: pointer;
+}
+
+.deleteFolderBtn{
+	background-image:url(images/New_ui/advancesetting/FolderDel_ALL.png);
+	background-repeat:no-repeat;	
+	background-position:0px -62px;
+	height:30px;
+	width:31px;
+}
+.deleteFolderBtn_hover{
+	background-image:url(images/New_ui/advancesetting/FolderDel_ALL.png);
+	background-repeat:no-repeat;	
+	background-position:0px -31px;
+	height:30px;
+	width:31px;
+	cursor: pointer;
+}
+.deleteFolderBtn_add{
+	background-image:url(images/New_ui/advancesetting/FolderDel_ALL.png);
+	background-repeat:no-repeat;	
+	background-position:0px 0px;
+	height:30px;
+	width:31px;
+	cursor: pointer;
+}
+.deleteFolderBtn_add:hover{
+	background-image:url(images/New_ui/advancesetting/FolderDel_ALL.png);
+	background-repeat:no-repeat;	
+	background-position:0px -31px;
+	height:30px;
+	width:31px;
+	cursor: pointer;
+}
+
+.modifyFolderBtn{
+	background-image:url(images/New_ui/advancesetting/FolderMod_ALL.png);
+	background-repeat:no-repeat;	
+	background-position:0px -62px;
+	height:30px;
+	width:31px;
+}
+.modifyFolderBtn_hover{
+	background-image:url(images/New_ui/advancesetting/FolderMod_ALL.png);
+	background-repeat:no-repeat;	
+	background-position:0px -31px;
+	height:30px;
+	width:31px;
+	cursor: pointer;
+}
+.modifyFolderBtn_add{
+	background-image:url(images/New_ui/advancesetting/FolderMod_ALL.png);
+	background-repeat:no-repeat;	
+	background-position:0px 0px;
+	height:30px;
+	width:31px;
+	cursor: pointer;
+}
+.modifyFolderBtn_add:hover{
+	background-image:url(images/New_ui/advancesetting/FolderMod_ALL.png);
+	background-repeat:no-repeat;	
+	background-position:0px -31px;
+	height:30px;
+	width:31px;
+	cursor: pointer;
+}
+
+.userIcon{
+	background-image:url(images/New_ui/advancesetting/user_icon_ALL.png);
+	background-repeat:no-repeat;	
+	background-position:0px -62px;
+	padding-left:30px;
+	height:30px;
+	width:31px;
+	font-family:Verdana, Arial, Helvetica, sans-serif;
+	font-size:12px;
+	line-height:25px;
+}
+
+.userIcon:hover{
+	background-image:url(images/New_ui/advancesetting/user_icon_ALL.png);
+	background-repeat:no-repeat;	
+	background-position:0px -31px;
+	padding-left:30px;
+	height:30px;
+	width:31px;
+	cursor: pointer;
+	font-family:Verdana, Arial, Helvetica, sans-serif;
+	font-size:12px;
+	line-height:25px;
+}
+.userIcon_click{	
+	background-image:url(images/New_ui/advancesetting/user_icon_ALL.png);
+	background-repeat:no-repeat;	
+	background-position:0px 0px;
+	padding-left:30px;
+	height:30px;
+	width:31px;
+	font-family:Verdana, Arial, Helvetica, sans-serif;
+	font-size:12px;
+	line-height:25px;
+}
+
+.single_wan_connected{
+	background-image:url(/images/New_ui/networkmap/line_dualwan.png);
+	background-repeat:no-repeat;
+	margin-left:-364px;
+	height:40px;
+	width:20px;
+}
+.single_wan_disconnected{
+	background-image:url(/images/New_ui/networkmap/line_dualwan_disconnected.png);
+	background-repeat:no-repeat;
+	margin-left:-364px;
+	height:40px;
+	width:20px;
+}
+.primary_wan_connected{
+	background-image:url(/images/New_ui/networkmap/line_dualwan.png);
+	background-repeat:no-repeat;
+	margin-left:3px;
+	height:40px;
+	width:20px;
+}
+.primary_wan_disconnected{
+	background-image:url(/images/New_ui/networkmap/line_dualwan_disconnected.png);
+	background-repeat:no-repeat;
+	margin-left:3px;
+	height:40px;
+	width:20px;
+}
+.primary_wan_standby{
+	background-image:url(/images/New_ui/networkmap/line_dualwan_dot.png);
+	background-repeat:no-repeat;
+	margin-left:3px;
+	height:40px;
+	width:20px;
+}
+.secondary_wan_connected{
+	background-image:url(/images/New_ui/networkmap/line_dualwan.png);
+	background-repeat:no-repeat;
+	margin-left:37px;
+	height:40px;
+	width:20px;
+}
+.secondary_wan_disconnected{
+	background-image:url(/images/New_ui/networkmap/line_dualwan_disconnected.png);
+	background-repeat:no-repeat;
+	margin-left:37px;
+	height:40px;
+	width:20px;
+}
+.secondary_wan_standby{
+	background-image:url(/images/New_ui/networkmap/line_dualwan_dot.png);
+	background-repeat:no-repeat;
+	margin-left:37px;
+	height:40px;
+	width:20px;
 }

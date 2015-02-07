@@ -51,9 +51,9 @@ var usb_path2_index = '<% nvram_get("usb_path2"); %>';
 <% wanlink(); %>
 <% get_printer_info(); %>
 
-var all_disks;
+var all_disks = "";
 var all_disk_interface;
-if(usb_support != -1){
+if(usb_support){
 	all_disks = foreign_disks().concat(blank_disks());
 	all_disk_interface = foreign_disk_interface_names().concat(blank_disk_interface_names());
 }
@@ -67,14 +67,35 @@ var networkmap_fullscan = '<% nvram_match("networkmap_fullscan", "0", "done"); %
 var client_list_array = '<% get_client_detail_info(); %>';
 var $j = jQuery.noConflict();	
 
+var _apps_pool_error = '<% apps_fsck_ret(); %>';
+if(_apps_pool_error != '')
+	var apps_pool_error = eval(_apps_pool_error);
+else
+	var apps_pool_error = [[""]];
+
+var usb_path1_pool_error = '<% nvram_get("usb_path1_pool_error"); %>';
+var usb_path2_pool_error = '<% nvram_get("usb_path2_pool_error"); %>';
+
+if(all_disks != "")
+        var pool_name = pool_devices();
+
+var wan0_primary = '<% nvram_get("wan0_primary"); %>';
+var wan1_primary = '<% nvram_get("wan1_primary"); %>';
+var wans_dualwan_orig = '<% nvram_get("wans_dualwan"); %>';
+var wans_mode = '<%nvram_get("wans_mode");%>';	
+
 function initial(){
 	show_menu();
-
 	var isIE6 = navigator.userAgent.search("MSIE 6") > -1;
 	if(isIE6)
-		alert("We've detected that you're using IE6. Please Try Google Chrome, IE7 or higher for best browsing experience.");
-
-	if(psta_support != -1 && sw_mode == 2)
+		alert("<#ALERT_TO_CHANGE_BROWSER#>");
+	
+	if(dualWAN_support && sw_mode == 1){
+		wans_flag = (wans_dualwan_orig.search("none") == -1) ? 1:0;
+		check_dualwan(wans_flag);	
+	}
+	
+	if(sw_mode == 4)
 		show_middle_status('<% nvram_get("wlc_auth_mode"); %>', "", 0);		
 	else
 		show_middle_status(document.form.wl_auth_mode_x.value, document.form.wl_wpa_mode.value, parseInt(document.form.wl_wep_x.value));
@@ -82,7 +103,7 @@ function initial(){
 	set_default_choice();
 	show_client_status();		
 
-	if(parent.usb_support == -1){
+	if(!parent.usb_support){
 		$("line3_td").height = '21px';
 		$("line3_img").src = '/images/New_ui/networkmap/line_one.png';
 		$("clients_tr").colSpan = "3";
@@ -109,18 +130,10 @@ function initial(){
 		$("NM_connect_status").style.fontSize = "20px";
 	}
 	else{
-		var ddnsName = decodeURIComponent('<% nvram_char_to_ascii("", "ddns_hostname_x"); %>');
 		$("index_status").innerHTML = '<span style="word-break:break-all;">' + wanlink_ipaddr() + '</span>'
-		if('<% nvram_get("ddns_enable_x"); %>' == '0')
-			$("ddnsHostName").innerHTML = '<a style="color:#FFF;text-decoration:underline;" href="/Advanced_ASUSDDNS_Content.asp?af=ddns_enable_x"><#btn_go#></a>';
-		else if(ddnsName == '')
-			$("ddnsHostName").innerHTML = '<a style="color:#FFF;text-decoration:underline;" href="/Advanced_ASUSDDNS_Content.asp?af=DDNSName">Sign up</a>';
-		else if(ddnsName == isMD5DDNSName())
-			$("ddnsHostName").innerHTML = '<a style="color:#FFF;text-decoration:underline;" href="/Advanced_ASUSDDNS_Content.asp?af=DDNSName">Sign up</a>';
-		else{
-			$("ddnsHostName").innerHTML = '<span style="word-break:break-all;">'+ ddnsName +'</span>';
-		}
 
+		setTimeout("show_ddns_status();", 2000);
+		
 		if(wanlink_ipaddr() == '0.0.0.0' || wanlink_ipaddr() == '')
 			$("wanIP_div").style.display = "none";
 	}
@@ -130,7 +143,39 @@ function initial(){
 		customize_NM_table(NM_table_img);
 		$("bgimg").options[NM_table_img[4]].selected = 1;
 	}
+	update_wan_status();
 }
+
+function show_ddns_status(){
+	var ddns_enable = '<% nvram_get("ddns_enable_x"); %>';
+	var ddns_server_x = '<% nvram_get("ddns_server_x");%>';
+	var ddnsName = decodeURIComponent('<% nvram_char_to_ascii("", "ddns_hostname_x"); %>');
+
+	$("ddns_fail_hint").className = "notificationoff";
+        if( ddns_enable == '0')
+                $("ddnsHostName").innerHTML = '<a style="color:#FFF;text-decoration:underline;" href="/Advanced_ASUSDDNS_Content.asp?af=ddns_enable_x"><#btn_go#></a>';
+        else if(ddnsName == '')
+                $("ddnsHostName").innerHTML = '<a style="color:#FFF;text-decoration:underline;" href="/Advanced_ASUSDDNS_Content.asp?af=DDNSName">Sign up</a>';
+        else if(ddnsName == isMD5DDNSName())
+                $("ddnsHostName").innerHTML = '<a style="color:#FFF;text-decoration:underline;" href="/Advanced_ASUSDDNS_Content.asp?af=DDNSName">Sign up</a>';
+        else{
+                $("ddnsHostName").innerHTML = '<span>'+ ddnsName +'</span>';
+                if( ddns_enable == '1' ) {
+			if(!((link_status == "2" && link_auxstatus == "0") || (link_status == "2" && link_auxstatus == "2")) ) //link down
+				$("ddns_fail_hint").className = "notificationon";
+			if( ddns_server_x == 'WWW.ASUS.COM' ) { //ASUS DDNS
+			    if( (ddns_return_code.indexOf('200')==-1) && (ddns_return_code.indexOf('220')==-1) && (ddns_return_code.indexOf('230')==-1))
+				$("ddns_fail_hint").className = "notificationon";
+			}
+			else { //Other ddns service
+			    if(ddns_updated != '1' || ddns_return_code=='unknown_error' || ddns_return_code=="auth_fail")
+                        	$("ddns_fail_hint").className = "notificationon";
+			}
+                }
+	}
+	setTimeout("show_ddns_status();", 2000);
+}
+
 
 var isMD5DDNSName = function(){
 	var macAddr = '<% nvram_get("et0macaddr"); %>'.toUpperCase().replace(/:/g, "");
@@ -139,16 +184,17 @@ var isMD5DDNSName = function(){
 
 function detectUSBStatusIndex(){
 	$j.ajax({
-    		url: '/update_diskinfo.asp',
-    		dataType: 'script',
-    		error: function(xhr){
-    			detectUSBStatusIndex();
-    		},
-    		success: function(){
-			return 0;
-			clickEvent($("iconRouter"));
-			$("statusframe").src = "/device-map/router.asp";
-			show_device();
+    	url: '/update_diskinfo.asp',
+    	dataType: 'script',
+    	error: function(xhr){
+    		detectUSBStatusIndex();
+    	},
+    	success: function(){
+    		if((tmp_mount_0 == 0 && tmp_mount_0 != foreign_disk_total_mounted_number()[0]) 
+						|| (tmp_mount_1 == 0 && tmp_mount_1 != foreign_disk_total_mounted_number()[1])){
+						location.href = "/index.asp";
+				return 0;
+				}		
   		}
 	});
 }
@@ -162,8 +208,7 @@ function setCookie(color){
 	document.cookie = "NM_table_img=" + color;
 }
 
-function getCookie(c_name)
-{
+function getCookie(c_name){
 	if (document.cookie.length>0){ 
 		c_start=document.cookie.indexOf(c_name + "=");
 		if (c_start!=-1){ 
@@ -274,9 +319,10 @@ function show_client_status(){
 }
 
 function show_device(){
-	if(usb_support == -1){
+	if(!usb_support){
 		usb_path1_index = "";
 		usb_path2_index = "";
+		return true;
 	}
 	else
 		all_disks = foreign_disks().concat(blank_disks());
@@ -285,7 +331,9 @@ function show_device(){
 		case "storage":
 			for(var i = 0; i < all_disks.length; ++i){
 				if(foreign_disk_interface_names()[i] == "1"){
-					disk_html(0, i);	
+					disk_html(0, i);
+					check_status(apps_pool_error, i);
+					check_status2(usb_path1_pool_error, i);
 					break;
 				}
 			}
@@ -310,6 +358,8 @@ function show_device(){
 			for(var i = 0; i < all_disks.length; ++i){
 				if(foreign_disk_interface_names()[i] == "2"){
 					disk_html(1, i);
+					check_status(apps_pool_error, i);
+					check_status2(usb_path2_pool_error, i);
 					break;
 				}
 			}
@@ -346,13 +396,17 @@ function disk_html(device_order, all_disk_order){
 	else
 		disk_model_name = blank_disks()[all_disk_order-foreign_disks().length];
 	
-	icon_html_code += '<a href="device-map/disk.asp" target="statusframe">\n';
+	icon_html_code += '<a target="statusframe">\n';
 
-	if(device_order == 0)
-		icon_html_code += '<div id="iconUSBdisk_'+all_disk_order+'" style="margin-top:20px;" class="iconUSBdisk" onclick="setSelectedDiskOrder(this.id);clickEvent(this);"></div>\n';		
-	else
+	if(device_order == 0){
+		icon_html_code += '<div id="iconUSBdisk_'+all_disk_order+'" style="margin-top:20px;" class="iconUSBdisk" onclick="setSelectedDiskOrder(this.id);clickEvent(this);"></div>\n';
+		icon_html_code += '<div id="ring_USBdisk_'+all_disk_order+'" class="iconUSBdisk" style="display:none;z-index:1;"></div>\n';
+	}
+	else{
 		icon_html_code += '<div id="iconUSBdisk_'+all_disk_order+'" class="iconUSBdisk" onclick="setSelectedDiskOrder(this.id);clickEvent(this);"></div>\n';
-
+		icon_html_code += '<div id="ring_USBdisk_'+all_disk_order+'" class="iconUSBdisk" style="display:none;z-index:1;"></div>\n';
+	}
+	
 	icon_html_code += '</a>\n';
 	
 	dec_html_code += '<div class="formfonttitle_nwm" style="text-shadow: 1px 1px 0px black;text-align:center;margin-top:10px;">'+disk_model_name+'</div>\n';
@@ -393,7 +447,7 @@ function printer_html(device_seat, printer_order){
 		printer_status = '<#CTL_Disabled#>';
 	
 	icon_html_code += '<a href="device-map/printer.asp" target="statusframe">\n';
-	icon_html_code += '    <div id="iconPrinter'+printer_order+'" class="iconPrinter" onclick="clickEvent(this);"></div>\n';
+	icon_html_code += '<div id="iconPrinter'+printer_order+'" class="iconPrinter" onclick="clickEvent(this);"></div>\n';
 	icon_html_code += '</a>\n';
 	
 	dec_html_code += '<div class="formfonttitle_nwm" style="text-shadow: 1px 1px 0px black;text-align:center;margin-top:10px;"><span id="printerName'+device_seat+'">'+ printer_name +'</span></div>\n';
@@ -454,10 +508,11 @@ function clickEvent(obj){
 	var icon;
 	var stitle;
 	var seat;
-
 	clicked_device_order = -1;
-
 	if(obj.id.indexOf("Internet") > 0){
+		if(!dualWAN_support){
+			check_wan_unit();
+		}	
 		icon = "iconInternet";
 		stitle = "<#statusTitle_Internet#>";
 		$("statusframe").src = "/device-map/internet.asp";
@@ -472,8 +527,7 @@ function clickEvent(obj){
 	}
 	else if(obj.id.indexOf("USBdisk") > 0){
 		icon = "iconUSBdisk";
-		stitle = "<#statusTitle_USB_Disk#>";
-		$("statusframe").src = "/device-map/disk.asp";
+		stitle = "<#statusTitle_USB_Disk#>";		
 	}
 	else if(obj.id.indexOf("Modem") > 0){
 		seat = obj.id.indexOf("Modem")+5;
@@ -495,11 +549,36 @@ function clickEvent(obj){
 		alert("mouse over on wrong place!");
 
 	if(lastClicked){
-		lastClicked.style.backgroundPosition = '0% 0%';
+		if(lastClicked.id.indexOf("USBdisk") > 0)
+			lastClicked.style.backgroundPosition = '0% -3px';
+		else
+			lastClicked.style.backgroundPosition = '0% 0%';
 	}
 
-	obj.style.backgroundPosition = '0% 101%';
-
+	if(obj.id.indexOf("USBdisk") > 0){	// To control USB icon outter ring's color
+		if(diskUtility_support){
+			for(i=0;i < apps_pool_error.length ; i++){
+				if(pool_name[getSelectedDiskOrder()] == apps_pool_error[i][0]){
+					if(apps_pool_error[i][1] == 1){
+						$("statusframe").src = "/device-map/disk_utility.asp";
+						obj.style.backgroundPosition = '0% -202px';					
+					}	
+					else{
+						$("statusframe").src = "/device-map/disk.asp";	
+						obj.style.backgroundPosition = '0% -103px';
+					}	
+				}		
+			}
+		}
+		else{
+			$("statusframe").src = "/device-map/disk.asp";	
+			obj.style.backgroundPosition = '0% -103px';
+		}		
+	}
+	else{
+		obj.style.backgroundPosition = '0% 101%';
+			
+	}
 	$('helpname').innerHTML = stitle;	
 	avoidkey = icon;
 	lastClicked = obj;
@@ -516,7 +595,7 @@ function mouseEvent(obj, key){
 	else if(obj.id.indexOf("Client") > 0){
 		if(wan_route_x == "IP_Bridged")
 			return;
-		
+
 		icon = "iconClient";
 	}
 	else if(obj.id.indexOf("USBdisk") > 0)
@@ -564,9 +643,254 @@ function showstausframe(page){
 	clickEvent($("icon"+page));
 	if(page == "Client")
 		page = "clients";
-	else 
-		page
+	else if(page.indexOf('Internet') == 0){
+		if(page == "Internet_primary")
+			document.form.dual_wan_flag.value = 0;
+		else	
+			document.form.dual_wan_flag.value = 1;
+			
+		page = "Internet";
+	}
+	
 	window.open("/device-map/"+page.toLowerCase()+".asp","statusframe");
+}
+
+function check_status(flag, diskOrder){
+	document.getElementById('iconUSBdisk_'+diskOrder).style.backgroundImage = "url(/images/New_ui/networkmap/USB_2.png)";	
+	document.getElementById('iconUSBdisk_'+diskOrder).style.backgroundPosition = '0px -3px';
+	document.getElementById('iconUSBdisk_'+diskOrder).style.position = "absolute";
+	document.getElementById('iconUSBdisk_'+diskOrder).style.marginTop = "0px";
+	if(navigator.appName.indexOf("Microsoft") >= 0)
+		document.getElementById('iconUSBdisk_'+diskOrder).style.marginLeft = "0px";
+	else
+		document.getElementById('iconUSBdisk_'+diskOrder).style.marginLeft = "33px";
+
+	document.getElementById('ring_USBdisk_'+diskOrder).style.backgroundImage = "url(/images/New_ui/networkmap/white_04.gif)";	
+	document.getElementById('ring_USBdisk_'+diskOrder).style.display = "";
+
+	if(!diskUtility_support)
+		return true;
+
+	var i, j;
+	var got_code_0, got_code_1, got_code_2, got_code_3;
+
+	got_code_0 = got_code_1 = got_code_2 = got_code_3 = 0;
+
+	for(i = 0; i < pool_name.length; ++i){
+		for(j = 0; j < flag.length; ++j){
+			if(pool_name[i] == flag[j][0] && per_pane_pool_usage_kilobytes(i, diskOrder)[0] > 0){
+				if(flag[j][1] == ""){
+					got_code_3 = 1;
+					continue;
+				}
+
+				switch(parseInt(flag[j][1])){
+					case 3: // don't or can't support.
+						got_code_3 = 1;
+						break;
+					case 2: // proceeding...
+						got_code_2 = 1;
+						break;
+					case 1: // find errors.
+						got_code_1 = 1;
+						break;
+					default: // no error.
+						got_code_0 = 1;
+						break;
+				}
+			}
+		}
+	}
+
+	if(got_code_1){
+		document.getElementById('ring_USBdisk_'+diskOrder).style.backgroundPosition = '0% 101%';
+		document.getElementById('iconUSBdisk_'+diskOrder).style.backgroundPosition = '0px -3px';
+	}
+	else if(got_code_2 || got_code_3){
+		// do nothing.
+	}
+	else{ // got_code_0
+		document.getElementById('iconUSBdisk_'+diskOrder).style.backgroundPosition = '0px -3px';
+		document.getElementById('ring_USBdisk_'+diskOrder).style.backgroundPosition = '0% 50%';
+	}
+}
+
+function check_status2(flag, diskOrder){
+	if(!diskUtility_support)
+		return true;
+
+	if(flag == 1){
+		document.getElementById('ring_USBdisk_'+diskOrder).style.backgroundPosition = '0% 101%';
+		document.getElementById('iconUSBdisk_'+diskOrder).style.backgroundPosition = '0px -3px';		
+	}
+}
+
+function check_wan_unit(){   //To check wan_unit, if USB Modem plug in change wan_unit to 1
+	if(wan0_primary == 1 && document.form.wan_unit.value == 1)
+		change_wan_unit(0);
+	else if(wan1_primary == 1 && document.form.wan_unit.value == 0)
+		change_wan_unit(1);
+}
+function change_wan_unit(wan_unit_flag){
+	document.form.wan_unit.value = wan_unit_flag;	
+	document.form.wl_auth_mode_x.disabled = true;	
+	document.form.wl_wpa_mode.disabled = true;	
+	document.form.wl_wep_x.disabled = true;		
+	FormActions("/apply.cgi", "change_wan_unit", "", "");
+	document.form.submit();
+}
+
+function show_ddns_fail_hint() {
+	var str="";
+	if( !((link_status == "2" && link_auxstatus == "0") || (link_status == "2" && link_auxstatus == "2")) )
+		str = "<#Disconnected#>";
+	else if(ddns_server = 'WWW.ASUS.COM') {
+		if(ddns_return_code == 'register,203')
+                alert("<#LANHostConfig_x_DDNS_alarm_hostname#> '<%nvram_get("ddns_hostname_x");%>' <#LANHostConfig_x_DDNS_alarm_registered#>");
+        	else if(ddns_return_code.indexOf('233')!=-1)
+                	str = "<#LANHostConfig_x_DDNS_alarm_hostname#> '<%nvram_get("ddns_hostname_x");%>' <#LANHostConfig_x_DDNS_alarm_registered_2#> '<%nvram_get("ddns_old_name");%>'.";
+	  	else if(ddns_return_code.indexOf('297')!=-1)
+        		str = "<#LANHostConfig_x_DDNS_alarm_7#>";
+	  	else if(ddns_return_code.indexOf('298')!=-1)
+    			str = "<#LANHostConfig_x_DDNS_alarm_8#>";
+	  	else if(ddns_return_code.indexOf('299')!=-1)
+    			str = "<#LANHostConfig_x_DDNS_alarm_9#>";
+  		else if(ddns_return_code.indexOf('401')!=-1)
+	    		str = "<#LANHostConfig_x_DDNS_alarm_10#>";
+	  	else if(ddns_return_code.indexOf('407')!=-1)
+    			str = "<#LANHostConfig_x_DDNS_alarm_11#>";
+		else if(ddns_return_code.indexOf('-1')!=-1)
+			str = "<#LANHostConfig_x_DDNS_alarm_2#>";
+	  	else if(ddns_return_code =='no_change')
+    			str = "<#LANHostConfig_x_DDNS_alarm_nochange#>";
+	        else if(ddns_return_code == 'Time-out')
+        	        str = "<#LANHostConfig_x_DDNS_alarm_1#>";
+	        else if(ddns_return_code =='unknown_error')
+        	        str = "<#LANHostConfig_x_DDNS_alarm_2#>";
+	  	else if(ddns_return_code =='')
+    			str = "<#LANHostConfig_x_DDNS_alarm_2#>";
+		else if(ddns_return_code =='connect_fail')
+                	str = "<#qis_fail_desc7#>";
+                else if(ddns_return_code =='auth_fail')
+                        str = "<#qis_fail_desc1#>";
+	}
+	else 
+		str = "<#LANHostConfig_x_DDNS_alarm_2#>";
+
+	overlib(str);
+}
+
+function check_dualwan(flag){
+	if(flag == 0){		//single wan
+		$('single_wan_icon').style.display = "";
+		$('single_wan_status').style.display = "";
+		$('single_wan_line').style.display = "";
+		$('primary_wan_icon').style.display = "none";
+		$('secondary_wan_icon').style.display = "none";
+		$('primary_wan_line').style.display = "none";
+		$('secondary_wan_line').style.display = "none";
+		$('dual_wan_gap').style.display = "none";
+	}
+	else{
+		$('single_wan_icon').style.display = "none";
+		$('single_wan_status').style.display = "none";
+		$('single_wan_line').style.display = "none";
+		$('primary_wan_icon').style.display = "";
+		$('secondary_wan_icon').style.display = "";
+		$('primary_wan_line').style.display = "";
+		$('secondary_wan_line').style.display = "";
+		$('dual_wan_gap').style.display = "";
+	}
+}
+
+function update_wan_status(e) {
+  $j.ajax({
+    url: '/status.asp',
+    dataType: 'script', 
+	
+    error: function(xhr) {
+      setTimeout("update_wan_status();", 3000);
+    },
+    success: function(response) {
+		wanlink_status = wanlink_statusstr();
+		wanlink_ipaddr = wanlink_ipaddr();
+		secondary_wanlink_status = secondary_wanlink_statusstr();
+		secondary_wanlink_ipaddr = secondary_wanlink_ipaddr();	
+		change_wan_state(wanlink_status,secondary_wanlink_status);
+		setTimeout("update_wan_status();", 3000);
+    }
+  });
+}
+
+function change_wan_state(primary_status, secondary_status){
+	if (!dualWAN_support)
+		return true;
+
+	if(wans_mode == "fo"){
+		if(wan_unit == 0){
+			$('primary_status').innerHTML = primary_status;
+			if(primary_status == "Disconnected"){				
+				$('primary_line').className = "primary_wan_disconnected";
+			}	
+			else{
+				$('primary_line').className = "primary_wan_connected";
+			}
+			
+			if(secondary_wanlink_ipaddr != '0.0.0.0' && secondary_status != 'Disconnected')
+				secondary_status = "Standby";	
+				
+			$('seconday_status').innerHTML = secondary_status;	
+			if(secondary_status == 'Disconnected'){
+				$('secondary_line').className = "secondary_wan_disconnected";
+			}	
+			else if(secondary_status == 'Standby'){
+				$('secondary_line').className = "secondary_wan_disconnected";
+			}	
+			else{
+				$('secondary_line').className = "secondary_wan_connected";
+			}
+		}
+		else{
+			if(wanlink_ipaddr != '0.0.0.0' && primary_status != 'Disconnected')
+				primary_status = "Standby";
+				
+			$('primary_status').innerHTML = primary_status;
+			if(primary_status == 'Disconnected'){
+				$('primary_line').className = "primary_wan_disconnected";
+			}	
+			else if(primary_status == 'Standby'){
+				$('primary_line').className = "primary_wan_standby";
+			}	
+			else{
+				$('primary_line').className = "primary_wan_connected";
+			}
+			
+			$('seconday_status').innerHTML = secondary_status;
+			if(secondary_status == "Disconnected"){
+				$('secondary_line').className = "secondary_wan_disconnected";
+			}	
+			else{
+				$('secondary_line').className = "secondary_wan_connected";
+			}
+		}	
+	}
+	else{
+		$('primary_status').innerHTML = primary_status;
+		$('seconday_status').innerHTML = secondary_status;
+		if(primary_status == "Disconnected"){				
+			$('primary_line').className = "primary_wan_disconnected";
+		}	
+		else{
+			$('primary_line').className = "primary_wan_connected";
+		}
+		
+		if(secondary_status == "Disconnected"){
+			$('secondary_line').className = "secondary_wan_disconnected";
+		}	
+		else{
+			$('secondary_line').className = "secondary_wan_connected";
+		}	
+	}
 }
 </script>
 </head>
@@ -613,8 +937,9 @@ function showstausframe(page){
 <input type="hidden" name="apps_path" value="">
 <input type="hidden" name="apps_name" value="">
 <input type="hidden" name="apps_flag" value="">
+<input type="hidden" name="wan_unit" value="<% nvram_get("wan_unit"); %>">
+<input type="hidden" name="dual_wan_flag" value="">
 </form>
-
 <table class="content" align="center" cellpadding="0" cellspacing="0">
   <tr>
 	<td valign="top" width="17">&nbsp;</td>
@@ -629,16 +954,30 @@ function showstausframe(page){
 		
 		<!--=====Beginning of Network Map=====-->
 		<div id="tabMenu"></div><br>
-		<div id="NM_shift" style="margin-top:-160px;"></div>
+		<div id="NM_shift" style="margin-top:-155px;"></div>
 		<div id="NM_table" class="NM_table" >
 		<div id="NM_table_div">
 			<table id="_NM_table" border="0" cellpadding="0" cellspacing="0" height="720" style="opacity:.95;" >
 				<tr>
-					<td width="40" rowspan="11" valign="center"></td>
-					<td height="115" align="right" class="NM_radius_left" valign="middle" bgcolor="#444f53" onclick="showstausframe('Internet');">
+					<td width="40px" rowspan="11" valign="center"></td>
+					<!--== Dual WAN ==-->
+					<td id="primary_wan_icon" width="160px;" height="155" align="center" class="NM_radius" valign="middle" bgcolor="#444f53" onclick="showstausframe('Internet_primary');" style="display:none">
+						<a href="/device-map/internet.asp" target="statusframe"><div id="iconInternet_primary" onclick="clickEvent(this);"></div></a>
+						<div>Primary WAN:</div>
+						<div><strong id="primary_status"></strong></div>
+					</td>
+					<td id="dual_wan_gap" width="40px" style="display:none">
+					</td>
+					<td id="secondary_wan_icon" width="160px;" height="155" align="center" class="NM_radius" valign="middle" bgcolor="#444f53" onclick="showstausframe('Internet_secondary');" style="display:none">
+						<a href="/device-map/internet.asp" target="statusframe"><div id="iconInternet_secondary" onclick="clickEvent(this);"></div></a>
+						<div>Secondary WAN:</div>
+						<div><strong id="seconday_status"></strong></div>
+					</td>
+					<!--== single WAN ==-->
+					<td id="single_wan_icon" height="115" align="right" class="NM_radius_left" valign="middle" bgcolor="#444f53" onclick="showstausframe('Internet');" >
 						<a href="/device-map/internet.asp" target="statusframe"><div id="iconInternet" onclick="clickEvent(this);"></div></a>
 					</td>
-					<td colspan="2" valign="middle" bgcolor="#444f53" class="NM_radius_right" onclick="" style="padding:5px;cursor:auto;">
+					<td id="single_wan_status" colspan="2" valign="middle" bgcolor="#444f53" class="NM_radius_right" onclick="" style="padding:5px;cursor:auto;">
 						<div>
 							<span id="NM_connect_title" style="font-size:12px;font-family: Verdana, Arial, Helvetica, sans-serif;"><#statusTitle_Internet#>:</span>
 							<strong id="NM_connect_status" class="index_status" style="font-size:14px;"><#QKSet_Internet_Setup_fail_method1#>...</strong>
@@ -647,12 +986,13 @@ function showstausframe(page){
 							<span style="font-size:12px;font-family: Verdana, Arial, Helvetica, sans-serif;">WAN IP:</span>
 							<strong id="index_status" class="index_status" style="font-size:14px;"></strong>
 						</div>
-						<div id="ddnsHostName_div" style="margin-top:5px;">
+						<div id="ddnsHostName_div" style="margin-top:5px;word-break:break-all;word-wrap:break-word;">
 							<span style="font-size:12px;font-family: Verdana, Arial, Helvetica, sans-serif;">DDNS:</span>
-							<strong id="ddnsHostName" class="index_status" style="font-size:14px;"></strong>
+							<strong id="ddnsHostName" class="index_status" style="font-size:14px;"><#QIS_detectWAN_desc2#></strong>
+							<span id="ddns_fail_hint" class="notificationoff" style="position: absolute;margin-top:-5px;" onClick="show_ddns_fail_hint();" onMouseOut="nd();"></span>
 						</div>
 					</td>
-					<td width="40" rowspan="11" valign="top">
+					<td width="40px" rowspan="11" valign="top">
 						<div class="statusTitle" id="statusTitle_NM">
 							<div id="helpname" style="padding-top:10px;font-size:16px;"></div>
 						</div>							
@@ -662,8 +1002,16 @@ function showstausframe(page){
 					</td>	
 				</tr>			
 				<tr>
-					<td colspan="5" align="center" height="19px">
-						<img style="margin-left:-365px;*margin-left:-185px;" src="/images/New_ui/networkmap/line_one.png">
+					<!--==line of dual wan==-->
+					<td id="primary_wan_line"  align="center" height="40px" style="display:none;">
+						<div id="primary_line" class="primary_wan_connected"></div>
+					</td>
+					<td id="secondary_wan_line" colspan="2" align="center" height="40px"  style="display:none;">
+						<div id="secondary_line" class="secondary_wan_connected"></div>
+					</td>
+					<!--==line of single wan==-->
+					<td id="single_wan_line" colspan="5" align="center" height="19px">
+						<div id="single_wan" class="single_wan_connected"></div>
 					</td>
 				</tr>			
 				<tr>

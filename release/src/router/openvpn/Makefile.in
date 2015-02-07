@@ -288,8 +288,8 @@ EXTRA_DIST = \
 
 SUBDIRS = \
 	images \
-	service-win32 \
-	install-win32
+	service-win32
+#	install-win32
 
 TESTS = t_lpback.sh t_cltsrv.sh
 dist_noinst_HEADERS = \

@@ -21,6 +21,9 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <dirent.h>
+#include <ctype.h>
+#include <sys/socket.h>
+#include <netdb.h>
 
 #include <bcmnvram.h>
 #include <bcmdevs.h>
@@ -230,6 +233,137 @@ const char *ipv6_router_address(struct in6_addr *in6addr)
 	return addr6;
 }
 
+// trim useless 0 from IPv6 address
+const char *ipv6_address(const char *ipaddr6)
+{
+	struct in6_addr addr;
+	static char addr6[INET6_ADDRSTRLEN];
+
+	addr6[0] = '\0';
+
+	if (inet_pton(AF_INET6, ipaddr6, &addr) > 0)
+		inet_ntop(AF_INET6, &addr, addr6, sizeof(addr6));
+
+	return addr6;
+}
+
+// extract prefix from configured IPv6 address
+const char *ipv6_prefix(struct in6_addr *in6addr)
+{
+	static char prefix[INET6_ADDRSTRLEN + 1];
+	struct in6_addr addr;
+	int i, r;
+
+	prefix[0] = '\0';
+
+	if (inet_pton(AF_INET6, nvram_safe_get("ipv6_rtr_addr"), &addr) > 0) {
+		r = nvram_get_int("ipv6_prefix_length") ? : 64;
+		for (r = 128 - r, i = 15; r > 0; r -= 8) {
+			if (r >= 8)
+				addr.s6_addr[i--] = 0;
+			else
+				addr.s6_addr[i--] &= (0xff << r);
+		}
+		inet_ntop(AF_INET6, &addr, prefix, sizeof(prefix));
+	}
+
+	return prefix;
+}
+
+void reset_ipv6_linklocal_addr(const char *ifname, int flush)
+{
+	int sockfd;
+	struct ifreq ifr;
+	char mac[6];
+	unsigned char eui64[8];
+	static char ipv6_lla[32];
+
+	if (!ifname)
+		return;
+
+	if (!strcmp(ifname, "lo") || !strncmp(ifname, "ppp", 3))
+		return;
+
+	if ((sockfd = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0)
+	return;
+
+	strcpy(ifr.ifr_name, ifname);
+	if (ioctl(sockfd, SIOCGIFHWADDR, &ifr) < 0) {
+		close(sockfd);
+		return;
+	}
+
+	close(sockfd);
+
+	memcpy(mac, ifr.ifr_hwaddr.sa_data, 6);
+	memset(eui64, 0, sizeof(eui64));
+	memcpy(eui64, mac, 3);
+	memcpy(eui64 + 5, mac + 3, 3);
+	eui64[3] = 0xff;
+	eui64[4] = 0xfe;
+	eui64[0] ^= 0x02;
+
+	snprintf(ipv6_lla, 32, "fe80::%x%02x:%x%02x:%x%02x:%x%02x/64",
+		eui64[0], eui64[1], eui64[2], eui64[3],
+		eui64[4], eui64[5], eui64[6], eui64[7]);
+
+	if (flush)
+	doSystem("ip -6 addr flush dev %s", ifname);
+	doSystem("ip -6 addr add %s dev %s", ipv6_lla, ifname);
+}
+
+#define PATH_PROC_NET_IF_INET6	"/proc/net/if_inet6"
+#ifndef IPV6_ADDR_LINKLOCAL
+#define IPV6_ADDR_LINKLOCAL	0x0020U
+#endif
+
+int with_ipv6_linklocal_addr(const char *ifname)
+{
+	FILE *fp;
+	char str_addr[40];
+	unsigned int plen, scope, dad_status, if_idx;
+	char devname[IFNAMSIZ];
+	struct in6_addr if_addr;
+
+	if (!ifname)
+		return 0;
+
+	if ((fp = fopen(PATH_PROC_NET_IF_INET6, "r")) == NULL)
+	{
+		dbg("can't open %s: %s", PATH_PROC_NET_IF_INET6,
+			strerror(errno));
+		return 0;
+	}
+
+	while (fscanf(fp, "%32s %x %02x %02x %02x %15s\n",
+		      str_addr, &if_idx, &plen, &scope, &dad_status,
+		      devname) != EOF)
+	{
+		if (scope == IPV6_ADDR_LINKLOCAL &&
+		    strcmp(devname, ifname) == 0)
+		{
+			struct in6_addr addr;
+			unsigned int ap;
+			int i;
+
+			for (i=0; i<16; i++)
+			{
+				sscanf(str_addr + i * 2, "%02x", &ap);
+				addr.s6_addr[i] = (unsigned char)ap;
+			}
+			memcpy(&if_addr, &addr, sizeof(if_addr));
+
+			fclose(fp);
+//			dbg("found linklocal address configured for %s\n", ifname);
+			return 1;
+		}
+	}
+
+	dbg("no linklocal address configured for %s\n", ifname);
+	fclose(fp);
+	return 0;
+}
+
 static const unsigned flagvals[] = { /* Must agree with flagchars[]. */
 	RTF_GATEWAY,
 	RTF_HOST,
@@ -267,7 +401,7 @@ char* INET6_rresolve(struct sockaddr_in6 *sin6, int numeric)
 
 	if (sin6->sin6_family != AF_INET6) {
 		fprintf(stderr, "rresolve: unsupported address family %d!",
-				  sin6->sin6_family);
+			sin6->sin6_family);
 		errno = EAFNOSUPPORT;
 		return NULL;
 	}
@@ -303,7 +437,6 @@ const char *ipv6_gateway_address()
 	char iface[16], flags[16];
 	int iflags, metric, refcnt, use, prefix_len, slen;
 	struct sockaddr_in6 snaddr6;
-	int ret = 0;
 	static char buf[INET6_ADDRSTRLEN];
 	struct in6_addr addr;
 	int found = 0;
@@ -358,11 +491,11 @@ const char *ipv6_gateway_address()
 		r = 0;
 		do {
 			inet_pton(AF_INET6, addr6x + r,
-					  (struct sockaddr *) &snaddr6.sin6_addr);
+				  (struct sockaddr *) &snaddr6.sin6_addr);
 			snaddr6.sin6_family = AF_INET6;
 			naddr6 = INET6_rresolve((struct sockaddr_in6 *) &snaddr6,
-						   0x0fff /* Apparently, upstream never resolves. */
-						   );
+						0x0fff /* Apparently, upstream never resolves. */
+						);
 			inet_pton(AF_INET6, naddr6, &addr);
 
 			if (!r) {			/* 1st pass */
@@ -548,10 +681,9 @@ const char *get_wanip(void)
 	return nvram_safe_get(strcat_r(prefix, "ipaddr", tmp));
 }
 
-const int get_wanstate(void)
+int get_wanstate(void)
 {
 	char tmp[100], prefix[]="wanXXXXX_";
-	int unit=0;
 
 	snprintf(prefix, sizeof(prefix), "wan%d_", wan_primary_ifunit());
 
@@ -586,7 +718,7 @@ int update_6rd_info(void)
 {
 	if (get_ipv6_service() == IPV6_6RD && nvram_match("ipv6_6rd_dhcp", "1")) {
 		char addr6[INET6_ADDRSTRLEN + 1];
-		char *prefix;
+		const char *prefix;
 		struct in6_addr addr;
 
 		if (!nvram_invmatch("wan0_6rd_router", ""))
@@ -710,6 +842,62 @@ int mtd_getinfo(const char *mtdname, int *part, int *size)
 	}
 	return r;
 }
+
+#if defined(RTCONFIG_UBIFS)
+#define UBI_SYSFS_DIR	"/sys/class/ubi"
+/* return device number, volume id, and volume size in bytes
+ * @return:
+ *      1:	ubi volume not found
+ * 	0:	success
+ *     -1:	invalid parameter
+ *     -2:	UBI not exist (open /sys/class/ubi failed)
+ *     <0:	error
+ */
+int ubi_getinfo(const char *ubiname, int *dev, int *part, int *size)
+{
+	DIR *dir;
+	int d, p, l, cmp, ret = 1;
+	char *s1, *s2, path[PATH_MAX];
+	struct dirent *ent;
+
+	if (!ubiname || *ubiname == '\0' || !dev || !part || !size)
+		return -1;
+
+	if ((dir = opendir(UBI_SYSFS_DIR)) == NULL)
+		return -2;
+
+	while (ret && (ent = readdir(dir)) != NULL) {
+		if (!strcmp(ent->d_name, ".") || !strcmp(ent->d_name, "..") || strncmp(ent->d_name, "ubi", 3))
+			continue;
+		if (sscanf(ent->d_name, "ubi%d_%d", &d, &p) != 2)
+			continue;
+
+		snprintf(path, sizeof(path), "%s/ubi%d_%d/name", UBI_SYSFS_DIR, d, p);
+		if (!(s1 = file2str(path)))
+			continue;
+		/* remove tailed line-feed character */
+		l = strlen(s1);
+		if (*(s1+l-1) == '\xa')
+			*(s1+l-1) = '\0';
+		cmp = strcmp(ubiname, s1);
+		free(s1);
+		if (cmp)
+			continue;
+
+		snprintf(path, sizeof(path), "%s/ubi%d_%d/data_bytes", UBI_SYSFS_DIR, d, p);
+		if (!(s2 = file2str(path)))
+			continue;
+		*dev = d;
+		*part = p;
+		*size = atoi(s2);
+		free(s2);
+		ret = 0;
+	}
+	closedir(dir);
+
+	return ret;
+}
+#endif
 
 // -----------------------------------------------------------------------------
 
@@ -858,26 +1046,49 @@ static uint32 crc_table[256]={ 0x00000000,0x77073096,0xEE0E612C,0x990951BA,
 0x53B39330,0x24B4A3A6,0xBAD03605,0xCDD70693,0x54DE5729,0x23D967BF,0xB3667A2E,
 0xC4614AB8,0x5D681B02,0x2A6F2B94,0xB40BBE37,0xC30C8EA1,0x5A05DF1B,0x2D02EF8D};
 
-uint32 crc_calc(uint32 crc, char *buf, int len)
+uint32_t crc_calc(uint32_t crc, const char *buf, int len)
 {
+	crc = crc ^ 0xffffffff;
 	while (len-- > 0) {
-		crc = crc_table[(crc ^ *((char *)buf)) & 0xFF] ^ (crc >> 8);
+		crc = crc_table[(crc ^ *((unsigned char *)buf)) & 0xFF] ^ (crc >> 8);
 		buf++;
 	}
+	crc = crc ^ 0xffffffff;
 	return crc;
 }
 
-// ugly solution
+// ugly solution and doesn't support wantag
 void bcmvlan_models(int model, char *vlan)
 {
-	if(model==MODEL_RTN16||model==MODEL_RTN15U||model==MODEL_RTN66U||model==MODEL_RTAC66U)
+	switch (model) {
+	case MODEL_RTAC68U:
+	case MODEL_RTAC56U:
+	case MODEL_RTAC66U:
+	case MODEL_RTN66U:
+	case MODEL_RTN16:
+	case MODEL_RTN18UHP:
+	case MODEL_RTN15U:
 		strcpy(vlan, "vlan1");
-	else if(model==MODEL_RTN53||model==MODEL_RTN12||model==MODEL_RTN12B1||model==MODEL_RTN12C1||model==MODEL_RTN12D1||model==MODEL_RTN12HP||model==MODEL_RTN10U||model==MODEL_RTN10D1)
+		break;
+	case MODEL_RTN53:
+	case MODEL_RTN12:
+	case MODEL_RTN12B1:
+	case MODEL_RTN12C1:
+	case MODEL_RTN12D1:
+	case MODEL_RTN12HP:
+	case MODEL_RTN14UHP:
+	case MODEL_RTN10U:
+	case MODEL_RTN10P:
+	case MODEL_RTN10D1:
 		strcpy(vlan, "vlan0");
-	else strcpy(vlan, "");
+		break;
+	default:
+		strcpy(vlan, "");
+		break;
+	}
 }
 
-char *get_productid()
+char *get_productid(void)
 {
 	char *productid = nvram_safe_get("productid");
 #ifdef RTCONFIG_ODMPID
@@ -913,10 +1124,20 @@ unsigned int netdev_calc(char *ifname, char *ifname_desc, unsigned long *rx, uns
 				return 1;
 			}
 
+#ifdef RTCONFIG_RALINK
+			if(model == MODEL_RTN65U && strncmp(ifname, "rai", 3) == 0) // invalid traffic amount for interface
+				return 0;
+#endif
+
 			sprintf(tmp, "wl%d_vifnames", i);
 			j = 0;
 			foreach(word1, nvram_safe_get(tmp), next1) {
-				if(strcmp(word1, ifname)==0) {
+#ifdef RTCONFIG_RALINK
+				if(strcmp(word1, wif_to_vif(ifname))==0)
+#else
+				if(strcmp(word1, ifname)==0)
+#endif
+				{
 					sprintf(ifname_desc, "WIRELESS%d.%d", i, j);
 					return 1;
 				}
@@ -926,20 +1147,47 @@ unsigned int netdev_calc(char *ifname, char *ifname_desc, unsigned long *rx, uns
 			i++;
 		}
 
+#if defined(RTCONFIG_RALINK) && defined(RTCONFIG_WLMODULE_RT3352_INIC_MII)
+		if(model == MODEL_RTN65U)
+		{
+			i = 0;
+			j = 0;
+			foreach(word, nvram_safe_get("nic_lan_ifnames"), next) {
+				if(strcmp(word, ifname)==0)
+				{
+					sprintf(tmp, "wl%d_vifnames", 0);
+					foreach(word1, nvram_safe_get(tmp), next1) {
+						char vifname[32];
+						sprintf(vifname, "%s_ifname", word1);
+						if(strlen(nvram_safe_get(vifname)) > 0)
+						{
+							if(i-- == 0)
+								break;
+						}
+						j++;
+					}
+					sprintf(ifname_desc, "WIRELESS%d.%d", 0, j);
+					return 1;
+				}
+				i++;
+			}
+		}
+#endif
+
 		// find wired interface
 		strcpy(ifname_desc, "WIRED");
 
 		// special handle for non-tag wan of broadcom solution
 		// pretend vlanX is must called after ethX
 		if(nvram_match("switch_wantag", "none")) { //Don't calc if select IPTV
-		   if(strlen(modelvlan) && strcmp(ifname, modelvlan)==0) {
-			backup_rx -= *rx;
-			backup_tx -= *tx;
+			if(strlen(modelvlan) && strcmp(ifname, modelvlan)==0) {
+				backup_rx -= *rx;
+				backup_tx -= *tx;
 
-			*rx2 = backup_rx;
-			*tx2 = backup_tx;				
-			strcpy(ifname_desc2, "INTERNET");
-		    }
+				*rx2 = backup_rx;
+				*tx2 = backup_tx;				
+				strcpy(ifname_desc2, "INTERNET");
+			}
 		}//End of switch_wantag
 		return 1;
 	}
@@ -950,7 +1198,7 @@ unsigned int netdev_calc(char *ifname, char *ifname_desc, unsigned long *rx, uns
 		return 1;
 	}
 	// find in WAN interface
-	else if(nvram_contains_word("wan_ifnames", ifname))
+	else if(nvram_match("wan0_primary", "1") && nvram_contains_word("wan_ifnames", ifname))
 	{
 		if(strlen(modelvlan) && strcmp(ifname, "eth0")==0) { 
 			backup_rx = *rx;
@@ -961,11 +1209,19 @@ unsigned int netdev_calc(char *ifname, char *ifname_desc, unsigned long *rx, uns
 			return 1;	
 		}
 	}
+#if !defined(RTCONFIG_DUALWAN)
+	else if(nvram_match("wan1_primary", "1") && !strcmp(nvram_safe_get("wan1_pppoe_ifname"), ifname))
+	{
+		strcpy(ifname_desc, "INTERNET");
+		return 1;
+	}
+#endif
 	return 0;
 }
 
 // 0: Not private subnet, 1: A class, 2: B class, 3: C class.
-int is_private_subnet(const char *ip){
+int is_private_subnet(const char *ip)
+{
 	unsigned long long ip_num;
 	unsigned long long A_class_start, A_class_end;
 	unsigned long long B_class_start, B_class_end;
@@ -993,21 +1249,26 @@ int is_private_subnet(const char *ip){
 		return 0;
 }
 
-// clean_mode: 0~3, clean_time: 1~(LONG_MAX-1), threshold(KB): 0: always act, >0: act when lower than.
+// clean_mode: 0~3, clean_time: 0~(LONG_MAX-1), threshold(KB): 0: always act, >0: act when lower than.
 int free_caches(const char *clean_mode, const int clean_time, const unsigned int threshold){
 	int test_num;
 	FILE *fp;
 	char memdata[256] = {0};
 	unsigned int memfree = 0;
 
+#ifdef RTCONFIG_BCMARM
+	return 0;
+#endif
+
 	/* Paul add 2012/7/17, skip free caches for DSL model. */
 	#ifdef RTCONFIG_DSL
 		return 0;
 	#endif
 
-	if(!clean_mode || clean_time <= 0)
+	if(!clean_mode || clean_time < 0)
 		return -1;
 
+_dprintf("clean_mode(%s) clean_time(%d) threshold(%u)\n", clean_mode, clean_time, threshold);
 	test_num = strtol(clean_mode, NULL, 10);
 	if(test_num == LONG_MIN || test_num == LONG_MAX
 			|| test_num < atoi(FREE_MEM_NONE) || test_num > atoi(FREE_MEM_ALL)
@@ -1024,7 +1285,6 @@ _dprintf("%s: memfree=%u.\n", __FUNCTION__, memfree);
 				}
 			}
 			fclose(fp);
-
 			if(memfree > threshold){
 _dprintf("%s: memfree > threshold.\n", __FUNCTION__);
 				return 0;
@@ -1037,11 +1297,52 @@ _dprintf("%s: Start syncing...\n", __FUNCTION__);
 
 _dprintf("%s: Start cleaning...\n", __FUNCTION__);
 	f_write_string("/proc/sys/vm/drop_caches", clean_mode, 0, 0);
+	if(clean_time > 0){
 _dprintf("%s: waiting %d second...\n", __FUNCTION__, clean_time);
-	sleep(clean_time);
+		sleep(clean_time);
 _dprintf("%s: Finish.\n", __FUNCTION__);
-	f_write_string("/proc/sys/vm/drop_caches", FREE_MEM_NONE, 0, 0);
+		f_write_string("/proc/sys/vm/drop_caches", FREE_MEM_NONE, 0, 0);
+	}
 
 	return 0;
 }
 
+char *get_logfile_path(void)
+{
+	static char prefix[] = "/jffsXXXXXX";
+
+#if defined(RTCONFIG_PSISTLOG)
+	strcpy(prefix, "/jffs");
+	if (!check_if_dir_writable(prefix)) {
+		_dprintf("logfile output directory: /tmp.\n");
+		strcpy(prefix, "/tmp");
+	}
+#else
+	strcpy(prefix, "/tmp");
+#endif
+
+	return prefix;
+}
+
+char *get_syslog_fname(unsigned int idx)
+{
+	char prefix[] = "/jffsXXXXXX";
+	static char buf[PATH_MAX];
+
+#if defined(RTCONFIG_PSISTLOG)
+	strcpy(prefix, "/jffs");
+	if (!check_if_dir_writable(prefix)) {
+		_dprintf("syslog output directory: /tmp.\n");
+		strcpy(prefix, "/tmp");
+	}
+#else
+	strcpy(prefix, "/tmp");
+#endif
+
+	if (!idx)
+		sprintf(buf, "%s/syslog.log", prefix);
+	else
+		sprintf(buf, "%s/syslog.log-%d", prefix, idx);
+
+	return buf;
+}

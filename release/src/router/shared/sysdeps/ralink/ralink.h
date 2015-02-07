@@ -20,50 +20,109 @@
 #include <iwlib.h>
 
 #define WIF	"ra0"
+
+#if defined(RTN14U) || defined(RTAC52U)
+#define WIF_5G	"rai0"
+#define WIF_2G	"ra0"
+#define WDSIF_5G	"wdsi"
+#else
 #define WIF_5G	"ra0"
 #define WIF_2G	"rai0"
+#define WDSIF_5G	"wds"
+#endif
+
 #define URE	"apcli0"
 
+#ifndef ETHER_ADDR_LEN
 #define ETHER_ADDR_LEN		6
+#endif
 #define MAX_NUMBER_OF_MAC	64
 
 #define MODE_CCK		0
 #define MODE_OFDM		1
 #define MODE_HTMIX		2
 #define MODE_HTGREENFIELD	3
+#define MODE_VHT		4
 
 #define BW_20			0
 #define BW_40			1
 #define BW_BOTH			2
+#define BW_80			2
 #define BW_10			3
+
+#define INIC_VLAN_ID_START	4 //first vlan id used for RT3352 iNIC MII
+#define INIC_VLAN_IDX_START	2 //first available index to set vlan id and its group.
 
 // MIMO Tx parameter, ShortGI, MCS, STBC, etc.  these are fields in TXWI. Don't change this definition!!!
 typedef union  _MACHTTRANSMIT_SETTING {
-        struct  {
-        unsigned short	MCS:7;	// MCS
-        unsigned short	BW:1;	//channel bandwidth 20MHz or 40 MHz
-        unsigned short	ShortGI:1;
-        unsigned short	STBC:2;	//SPACE 
+	struct  {
+	unsigned short	MCS:7;	// MCS
+	unsigned short	BW:1;	//channel bandwidth 20MHz or 40 MHz
+	unsigned short	ShortGI:1;
+	unsigned short	STBC:2;	//SPACE
 	unsigned short  eTxBF:1;
 	unsigned short  rsv:1;
 	unsigned short  iTxBF:1;
 	unsigned short  MODE:2;	// Use definition MODE_xxx.
-        } field;
-        unsigned short	word;
+	} field;
+	unsigned short	word;
  } MACHTTRANSMIT_SETTING, *PMACHTTRANSMIT_SETTING;
 
 // MIMO Tx parameter, ShortGI, MCS, STBC, etc.  these are fields in TXWI. Don't change this definition!!!
 typedef union  _MACHTTRANSMIT_SETTING_2G {
-        struct  {
-        unsigned short	MCS:7;	// MCS
-        unsigned short	BW:1;	//channel bandwidth 20MHz or 40 MHz
-        unsigned short	ShortGI:1;
-        unsigned short	STBC:2;	//SPACE 
-        unsigned short	rsv:3;
-        unsigned short	MODE:2;	// Use definition MODE_xxx.  
-        } field;
-        unsigned short	word;
+	struct  {
+	unsigned short	MCS:7;	// MCS
+	unsigned short	BW:1;	//channel bandwidth 20MHz or 40 MHz
+	unsigned short	ShortGI:1;
+	unsigned short	STBC:2;	//SPACE
+	unsigned short	rsv:3;
+	unsigned short	MODE:2;	// Use definition MODE_xxx.
+	} field;
+	unsigned short	word;
  } MACHTTRANSMIT_SETTING_2G, *PMACHTTRANSMIT_SETTING_2G;
+
+typedef union  _MACHTTRANSMIT_SETTING_11AC {
+	struct  {
+	unsigned short	MCS:7;	// MCS
+	unsigned short	BW:2;	//channel bandwidth 20MHz or 40 MHz
+	unsigned short	ShortGI:1;
+	unsigned short	STBC:1;	//SPACE
+	unsigned short	eTxBF:1;
+	unsigned short	iTxBF:1;
+	unsigned short	MODE:3;	// Use definition MODE_xxx.
+	} field;
+	unsigned short	word;
+ } MACHTTRANSMIT_SETTING_11AC, *PMACHTTRANSMIT_SETTING_11AC;
+
+typedef struct _RT_802_11_MAC_ENTRY_RT3352_iNIC {
+    unsigned char	ApIdx;
+    unsigned char	Addr[ETHER_ADDR_LEN];
+    unsigned char	Aid;
+    unsigned char	Psm;	// 0:PWR_ACTIVE, 1:PWR_SAVE
+    unsigned char	MimoPs;	// 0:MMPS_STATIC, 1:MMPS_DYNAMIC, 3:MMPS_Enabled
+    char		AvgRssi0;
+    char		AvgRssi1;
+    char		AvgRssi2;
+    unsigned int	ConnectedTime;
+    MACHTTRANSMIT_SETTING_2G	TxRate;
+    MACHTTRANSMIT_SETTING_2G	MaxTxRate;
+} RT_802_11_MAC_ENTRY_RT3352_iNIC, *PRT_802_11_MAC_ENTRY_RT3352_iNIC;
+
+typedef struct _RT_802_11_MAC_ENTRY_RT3883 {
+    unsigned char	ApIdx;
+    unsigned char	Addr[ETHER_ADDR_LEN];
+    unsigned char	Aid;
+    unsigned char	Psm;     // 0:PWR_ACTIVE, 1:PWR_SAVE
+    unsigned char	MimoPs;  // 0:MMPS_STATIC, 1:MMPS_DYNAMIC, 3:MMPS_Enabled
+    char		AvgRssi0;
+    char		AvgRssi1;
+    char		AvgRssi2;
+    unsigned int	ConnectedTime;
+    MACHTTRANSMIT_SETTING_2G       TxRate;
+    unsigned int	LastRxRate;
+    short		StreamSnr[3];
+    short		SoundingRespSnr[3];
+} RT_802_11_MAC_ENTRY_RT3883, *PRT_802_11_MAC_ENTRY_RT3883;
 
 typedef struct _RT_802_11_MAC_ENTRY {
     unsigned char	ApIdx;
@@ -85,14 +144,33 @@ typedef struct _RT_802_11_MAC_ENTRY_2G {
     unsigned char	ApIdx;
     unsigned char	Addr[ETHER_ADDR_LEN];
     unsigned char	Aid;
-    unsigned char	Psm;	// 0:PWR_ACTIVE, 1:PWR_SAVE
-    unsigned char	MimoPs;	// 0:MMPS_STATIC, 1:MMPS_DYNAMIC, 3:MMPS_Enabled
+    unsigned char	Psm;	/* 0:PWR_ACTIVE, 1:PWR_SAVE */
+    unsigned char	MimoPs;	/* 0:MMPS_STATIC, 1:MMPS_DYNAMIC, 3:MMPS_Enabled */
     char		AvgRssi0;
     char		AvgRssi1;
     char		AvgRssi2;
     unsigned int	ConnectedTime;
     MACHTTRANSMIT_SETTING_2G	TxRate;
+    unsigned int	LastRxRate;
+    short		StreamSnr[3];	/* BF SNR from RXWI. Units=0.25 dB. 22 dB offset removed */
+    short		SoundingRespSnr[3];
 } RT_802_11_MAC_ENTRY_2G, *PRT_802_11_MAC_ENTRY_2G;
+
+typedef struct _RT_802_11_MAC_ENTRY_11AC {
+    unsigned char	ApIdx;
+    unsigned char	Addr[ETHER_ADDR_LEN];
+    unsigned char	Aid;
+    unsigned char	Psm;	/* 0:PWR_ACTIVE, 1:PWR_SAVE */
+    unsigned char	MimoPs;	/* 0:MMPS_STATIC, 1:MMPS_DYNAMIC, 3:MMPS_Enabled */
+    char		AvgRssi0;
+    char		AvgRssi1;
+    char		AvgRssi2;
+    unsigned int	ConnectedTime;
+    MACHTTRANSMIT_SETTING_11AC	TxRate;
+    unsigned int	LastRxRate;
+    short		StreamSnr[3];	/* BF SNR from RXWI. Units=0.25 dB. 22 dB offset removed */
+    short		SoundingRespSnr[3];
+} RT_802_11_MAC_ENTRY_11AC, *PRT_802_11_MAC_ENTRY_11AC;
 
 typedef struct _RT_802_11_MAC_TABLE {
     unsigned long	Num;
@@ -103,6 +181,22 @@ typedef struct _RT_802_11_MAC_TABLE_2G {
     unsigned long	Num;
     RT_802_11_MAC_ENTRY_2G Entry[MAX_NUMBER_OF_MAC];
 } RT_802_11_MAC_TABLE_2G, *PRT_802_11_MAC_TABLE_2G;
+
+typedef struct _SITE_SURVEY_RT3352_iNIC
+{
+	char channel[4];
+	unsigned char ssid[33];
+	char bssid[20];
+	char authmode[15];	//security part1
+	char encryption[8];	//security part2 and need to shift data
+	char signal[9];
+	char wmode[8];
+	char extch[7];
+	char nt[3];
+	char wps[4];
+	char dpid[4];
+	char newline;
+} SITE_SURVEY_RT3352_iNIC;
 
 typedef struct _SITE_SURVEY 
 { 
@@ -116,6 +210,10 @@ typedef struct _SITE_SURVEY
 	char authmode[16];
 	char signal[9];
 	char wmode[8];
+#if defined(RTN14U)
+	char wps[4];
+	char dpid[5];
+#endif
 //	char bsstype[3];
 //	char centralchannel[3];
 } SITE_SURVEY;
@@ -145,11 +243,12 @@ typedef struct _SITE_SURVEY_ARRAY
 #define RT_PRIV_IOCTL			(SIOCIWFIRSTPRIV + 0x01)
 #define RTPRIV_IOCTL_SET		(SIOCIWFIRSTPRIV + 0x02)
 #define RTPRIV_IOCTL_GSITESURVEY	(SIOCIWFIRSTPRIV + 0x0D)
+#define RTPRIV_IOCTL_GET_MAC_TABLE	(SIOCIWFIRSTPRIV + 0x0F) //used by rt2860v2
+#define	RTPRIV_IOCTL_SHOW		(SIOCIWFIRSTPRIV + 0x11)
 #define RTPRIV_IOCTL_WSC_PROFILE	(SIOCIWFIRSTPRIV + 0x12)
-#define	RTPRIV_IOCTL_GSTAINFO		(SIOCIWFIRSTPRIV + 0x1A)
-#define	RTPRIV_IOCTL_GSTAT		(SIOCIWFIRSTPRIV + 0x1B)
-#define RTPRIV_IOCTL_GRSSI		(SIOCIWFIRSTPRIV + 0x1C)
-#define RTPRIV_IOCTL_RADIO_STATUS	(SIOCIWFIRSTPRIV + 0x1E)
+#define RTPRIV_IOCTL_SWITCH		(SIOCIWFIRSTPRIV + 0x1D) //used by iNIC_RT3352 on RTN65U
+#define RTPRIV_IOCTL_ASUSCMD		(SIOCIWFIRSTPRIV + 0x1E)
+#define RTPRIV_IOCTL_GET_MAC_TABLE_STRUCT	(SIOCIWFIRSTPRIV + 0x1F)	/* RT3352 iNIC driver doesn't support this ioctl. */
 #define OID_802_11_DISASSOCIATE		0x0114
 #define OID_802_11_BSSID_LIST_SCAN	0x0508
 #define OID_802_11_SSID			0x0509
@@ -163,6 +262,17 @@ typedef struct _SITE_SURVEY_ARRAY
 #define RT_OID_SYNC_RT61		0x0D010750
 #define RT_OID_WSC_QUERY_STATUS		((RT_OID_SYNC_RT61 + 0x01) & 0xffff)
 #define RT_OID_WSC_PIN_CODE		((RT_OID_SYNC_RT61 + 0x02) & 0xffff)
+
+enum ASUS_IOCTL_SUBCMD {
+	ASUS_SUBCMD_UNKNOWN = 0,
+	ASUS_SUBCMD_GSTAINFO,
+	ASUS_SUBCMD_GSTAT,
+	ASUS_SUBCMD_GRSSI,
+	ASUS_SUBCMD_RADIO_STATUS,
+	ASUS_SUBCMD_CHLIST,
+	ASUS_SUBCMD_MAX
+};
+
 
 #if 0
 typedef enum _RT_802_11_PHY_MODE {
@@ -180,18 +290,53 @@ typedef enum _RT_802_11_PHY_MODE {
 } RT_802_11_PHY_MODE;
 #endif
 
+#define SPI_PARALLEL_NOR_FLASH_FACTORY_LENGTH	0x10000
+/* Below offset addresses, actually, based on start address of Flash.
+ * Thus, there are absolute addresses and only valid on products
+ * associated with parallel NOR Flash and SPI Flash.
+ */
+#define OFFSET_MTD_FACTORY	0x40000
 #define OFFSET_BOOT_VER		0x4018A
 #define OFFSET_COUNTRY_CODE	0x40188
+#if defined(RTN14U)
+#define OFFSET_MAC_ADDR		0x40004
+#define OFFSET_MAC_ADDR_2G	0x40004 //only one MAC
+#define OFFSET_MAC_GMAC2	0x4018E
+#define OFFSET_MAC_GMAC0	0x40194
+#elif defined(RTAC52U)
+#define OFFSET_MAC_ADDR_2G	0x40004
+#define OFFSET_MAC_ADDR		0x48004
+#define OFFSET_MAC_GMAC0	0x40022
+#define OFFSET_MAC_GMAC2	0x40028
+#else
 #define OFFSET_MAC_ADDR		0x40004
 #define OFFSET_MAC_ADDR_2G	0x48004
 #define OFFSET_MAC_GMAC2	0x40022
 #define OFFSET_MAC_GMAC0	0x40028
+#endif
 #define OFFSET_PIN_CODE		0x40180
 #define OFFSET_TXBF_PARA	0x401A0
+
+#if defined(RTCONFIG_NEW_REGULATION_DOMAIN)
+#define	MAX_REGDOMAIN_LEN	10
+#define	MAX_REGSPEC_LEN		4
+#define REG2G_EEPROM_ADDR	0x40234 //10 bytes
+#define REG5G_EEPROM_ADDR	0x4023E //10 bytes
+#define REGSPEC_ADDR		0x40248 // 4 bytes
+#endif /* RTCONFIG_NEW_REGULATION_DOMAIN */
+
+#define OFFSET_DEV_FLAGS	0x4ffa0 //device dependent flags
+#define OFFSET_ODMPID		0x4ffb0 //the shown model name (for Bestbuy and others)
 #define OFFSET_FAIL_RET		0x4ffc0
 #define OFFSET_FAIL_BOOT_LOG	0x4ffd0	//bit operation for max 100
 #define OFFSET_FAIL_DEV_LOG	0x4ffe0	//bit operation for max 100
 #define OFFSET_SERIAL_NUMBER	0x4fff0
+
+#define OFFSET_POWER_5G_TX0_36_x6	0x40096
+#define OFFSET_POWER_5G_TX1_36_x6	0x400CA
+#define OFFSET_POWER_5G_TX2_36_x6	0x400FE
+#define OFFSET_POWER_2G		0x480DE
+
 
 #define RA_LED_ON		0	// low active (all 5xx series)
 #define RA_LED_OFF		1
@@ -234,26 +379,6 @@ typedef enum _RT_802_11_PHY_MODE {
 #define GPIO6		0x0040
 #define GPIO7		0x0080
 #define GPIO15		0x8000
-
-#define TASK_HTTPD       0
-#define TASK_UDHCPD      1
-#define TASK_LLD2D       2
-#define TASK_WANDUCK     3
-#define TASK_UDHCPC      4
-#define TASK_NETWORKMAP  5
-#define TASK_DPROXY      6
-#define TASK_NTP         7
-#define TASK_U2EC        8
-#define TASK_OTS         9
-#define TASK_LPD         10
-#define TASK_UPNPD       11
-#define TASK_WATCHDOG    12
-#define TASK_INFOSVR     13
-#define TASK_SYSLOGD     14
-#define TASK_KLOGD       15
-#define TASK_PPPD        16
-#define TASK_PPPOE_RELAY 17
-#define TASK_IGMP	 18
 
 unsigned long task_mask;
 

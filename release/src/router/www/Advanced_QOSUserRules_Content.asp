@@ -23,6 +23,44 @@
 	font-size: 12px;
 	font-family: Lucida Console;
 }
+
+#ClientList_Block_PC{
+	border:1px outset #999;
+	background-color:#576D73;
+	position:absolute;
+	margin-top:25px;
+	margin-left:3px;
+	*margin-left:-125px;
+	width:255px;
+	*width:259px;
+	text-align:left;
+	height:auto;
+	overflow-y:auto;
+	z-index:200;
+	padding: 1px;
+	display:none;
+}
+#ClientList_Block_PC div{
+	background-color:#576D73;
+	height:20px;
+	line-height:20px;
+	text-decoration:none;
+	font-family: Lucida Console;
+	padding-left:2px;
+}
+
+#ClientList_Block_PC a{
+	background-color:#EFEFEF;
+	color:#FFF;
+	font-size:12px;
+	font-family:Arial, Helvetica, sans-serif;
+	text-decoration:none;	
+}
+#ClientList_Block_PC div:hover, #ClientList_Block a:hover{
+	background-color:#3366FF;
+	color:#FFFFFF;
+	cursor:default;
+}
 </style>
 <script>
 wan_route_x = '<% nvram_get("wan_route_x"); %>';
@@ -44,25 +82,20 @@ function key_event(evt){
 }
 
 function initial(){
+	$('pull_arrow').title = Untranslated.select_service;
+	$('pull_arrow_mac').title = Untranslated.select_client;
 	show_menu();
 	showqos_rulelist();
 
 	load_QoS_rule();
 	if('<% nvram_get("qos_enable"); %>' == "1")
 		$('is_qos_enable_desc').style.display = "none";
+		
+	showLANIPList();	
 }
 
 function applyRule(){	
-
 		save_table();
-		
-		/* Viz banned 2012.07.30
-		if(document.form.qos_enable.value != document.form.qos_enable_orig.value)
-    	FormActions("start_apply.htm", "apply", "reboot", "<% get_default_reboot_time(); %>"); */		
-    	
-		if(wl6_support != -1)
-			document.form.action_wait.value = parseInt(document.form.action_wait.value)+10;			// extend waiting time for BRCM new driver
-
 		showLoading();	 	
 		document.form.submit();
 }
@@ -112,6 +145,10 @@ function addRow(obj, head){
 }
 
 function validForm(){
+	if(document.form.qos_service_name_x_0.value == '<#Select_menu_default#>'){  // when service name is default "Please select", change it to null value. Jieming added at 2012/12/21
+		document.form.qos_service_name_x_0.value = "";		
+	}
+	
 	if(!Block_chars(document.form.qos_service_name_x_0, ["<" ,">" ,"'" ,"%"])){
 				return false;		
 	}
@@ -126,8 +163,8 @@ function validForm(){
 		return false;
 	}	
 		
-	if(document.form.qos_max_transferred_x_0.value.length > 0 
-	   && document.form.qos_max_transferred_x_0.value < document.form.qos_min_transferred_x_0.value){
+	if((document.form.qos_max_transferred_x_0.value.length > 0) 
+	   && (parseInt(document.form.qos_max_transferred_x_0.value) < parseInt(document.form.qos_min_transferred_x_0.value))){
 				document.form.qos_max_transferred_x_0.focus();
 				alert("<#vlaue_haigher_than#> "+document.form.qos_min_transferred_x_0.value);	
 				return false;
@@ -203,7 +240,7 @@ function addRow_Group(upper){
 				}	
 			}
 		}
-	
+		
 		addRow(document.form.qos_service_name_x_0 ,1);
 		addRow(document.form.qos_ip_x_0, 0);
 		addRow(document.form.qos_port_x_0, 0);
@@ -328,10 +365,9 @@ function conv_to_transf(){
 }
 
 function switchPage(page){
-	
 	if(page == "1")
 		location.href = "/QoS_EZQoS.asp";
-	else if(page == "2")
+	else if(page == "3")
 		location.href = "/Advanced_QOSUserPrio_Content.asp";	
 	else
 		return false;		
@@ -698,6 +734,67 @@ function valid_IPorMAC(obj){
 	}	
 }
 
+
+function showLANIPList(){
+	var code = "";
+	var show_name = "";
+	var client_list_array = '<% get_client_detail_info(); %>';	
+	var client_list_row = client_list_array.split('<');
+
+	for(var i = 1; i < client_list_row.length; i++){
+		var client_list_col = client_list_row[i].split('>');
+		if(client_list_col[1] && client_list_col[1].length > 20)
+			show_name = client_list_col[1].substring(0, 16) + "..";
+		else
+			show_name = client_list_col[1];
+
+		if(client_list_col[1])
+			code += '<a><div onmouseover="over_var=1;" onmouseout="over_var=0;" onclick="setClientIP_mac(\''+client_list_col[1]+'\', \''+client_list_col[3]+'\');"><strong>'+client_list_col[2]+'</strong> ';
+		else
+			code += '<a><div onmouseover="over_var=1;" onmouseout="over_var=0;" onclick="setClientIP_mac(\''+client_list_col[3]+'\', \''+client_list_col[3]+'\');"><strong>'+client_list_col[2]+'</strong> ';
+			if(show_name && show_name.length > 0)
+				code += '( '+show_name+')';
+			code += ' </div></a>';
+		}
+	code +='<!--[if lte IE 6.5]><iframe class="hackiframe2"></iframe><![endif]-->';	
+	$("ClientList_Block_PC").innerHTML = code;
+}
+
+function pullLANIPList(obj){
+	if(isMenuopen_mac == 0){		
+		obj.src = "/images/arrow-top.gif"
+		$("ClientList_Block_PC").style.display = 'block';		
+		document.form.qos_ip_x_0.focus();		
+		isMenuopen_mac = 1;
+	}
+	else
+		hideClients_Block_mac();
+}
+
+var over_var = 0;
+var isMenuopen_mac = 0;
+
+function hideClients_Block_mac(){
+	$("pull_arrow_mac").src = "/images/arrow-down.gif";
+	$('ClientList_Block_PC').style.display='none';
+	isMenuopen_mac = 0;
+}
+
+function setClientIP_mac(devname, macaddr){
+	document.form.qos_ip_x_0.value = macaddr;
+	hideClients_Block_mac();
+	over_var = 0;
+}
+
+//Viz add 2013.03 for "iptables rule -p xxx --d port", that xxx is not allowed to set null
+function linkport(obj){
+		if(obj.value == "any"){
+					document.form.qos_port_x_0.value = "";
+					document.form.qos_port_x_0.disabled = true;
+		}else{
+					document.form.qos_port_x_0.disabled = false;
+		}
+}
 </script>
 </head>
 
@@ -747,11 +844,11 @@ function valid_IPorMAC(obj){
 									</td>
 						<td align="right" >	
 						<div style="margin-top:5px;">
-	   					<select onchange="switchPage(this.options[this.selectedIndex].value)" class="input_option">
+							<select onchange="switchPage(this.options[this.selectedIndex].value)" class="input_option">
 								<!--option><#switchpage#></option-->
 								<option value="1"><#qos_automatic_mode#></option>
-								<option value="2"><#qos_user_prio#></option>
-								<option value="3" selected><#qos_user_rules#></option>
+								<option value="2" selected><#qos_user_rules#></option>
+								<option value="3"><#qos_user_prio#></option>
 							</select>	    
 						</div>
 						
@@ -774,7 +871,7 @@ function valid_IPorMAC(obj){
 						<table width="100%" border="1" align="center" cellpadding="4" cellspacing="0" class="FormTable_table" style="margin-top:8px">
 							<thead>
 							<tr>
-								<td colspan="4" id="TriggerList" style="border-right:none;"><#BM_UserList_title#></td>
+								<td colspan="4" id="TriggerList" style="border-right:none;"><#BM_UserList_title#>&nbsp;(<#List_limit#>&nbsp;32)</td>
 								<td colspan="3" id="TriggerList" style="border-left:none;">
 									<div style="margin-top:0px;display:none" align="right">
 										<select id='qos_default_sel' name='qos_default_sel' class="input_option" onchange="change_wizard(this);"></select>
@@ -794,21 +891,27 @@ function valid_IPorMAC(obj){
 							</tr>							
 							<tr>
 								<td width="20%">							
-									<input type="text" class="input_12_table" style="float:left;width:105px;" value="<#Select_menu_default#>" name="qos_service_name_x_0" onKeyPress="return is_string(this, event)">
-									<img id="pull_arrow" height="14px;" src="/images/arrow-down.gif" onclick="pullQoSList(this);" title="Select the device name of DHCP clients." >
+									<input type="text" class="input_12_table" style="float:left;width:105px;" placeholder="<#Select_menu_default#>" name="qos_service_name_x_0" onKeyPress="return is_string(this, event)">
+									<img id="pull_arrow" height="14px;" src="/images/arrow-down.gif" onclick="pullQoSList(this);" title="" >
 									<div id="QoSList_Block" class="QoSList_Block" onclick="hideClients_Block()"></div>
 								</td>
-								<td width="19%"><input type="text" maxlength="17" class="input_15_table" name="qos_ip_x_0" style="width:125px;"></td>
+								<td width="19%">
+									<input type="text" maxlength="17" class="input_15_table" name="qos_ip_x_0" style="width:100px;float:left">
+									<img id="pull_arrow_mac" class="pull_arrow"height="14px;" src="/images/arrow-down.gif" onclick="pullLANIPList(this);" title="" >
+									<div id="ClientList_Block_PC" class="ClientList_Block_PC" ></div>
+								</td>
+								
+								
 								<td width="15%"><input type="text" class="input_12_table" name="qos_port_x_0" onKeyPress="return is_portrange(this, event)"></td>
 								<td width="13%">
-									<select name='qos_proto_x_0' class="input_option" style="width:75px;">
-										<option value='tcp'>TCP</option>
-										<option value='udp'>UDP</option>
-										<option value='tcp/udp' selected>TCP/UDP</option>
-										<option value='any'>ANY</option>
+									<select name="qos_proto_x_0" class="input_option" style="width:75px;" onChange="linkport(this);">
+										<option value="tcp">TCP</option>
+										<option value="udp">UDP</option>
+										<option value="tcp/udp" selected>TCP/UDP</option>
+										<option value="any">ANY</option>
 										<!--	marked By Viz 2011.12 for "iptables -p"
-										option value='icmp'>ICMP</option>
-										<option value='igmp'>IGMP</option -->
+										option value="icmp">ICMP</option>
+										<option value="igmp">IGMP</option -->
 									</select>
 								</td>
 								<td width="16%">

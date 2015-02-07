@@ -2,6 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
 <title></title>
 <style>
 html{
@@ -44,7 +45,7 @@ function select_all(){
 	text_val.select();
 }
 
-function doOK(e) {
+function doRenameOK(e) {
 	
 	var oldFile = this_url;
 	var newName = $('input#dir_name').val();
@@ -75,11 +76,12 @@ function doCancel(e) {
 	parent.closeJqmWindow();
 };
 
-function onTextChange(e){
-	$('button#ok').attr("disabled", "");
+function onKeyDownHandler(e){	
+	$('button#ok').attr("disabled", false);
 	
-	if(e.keyCode==13)
-		doOK(e);
+	if(e.keyCode==13){
+		doRenameOK(e);
+	}
 }
 
 function getUrlVars(){
@@ -102,7 +104,7 @@ function getUrlVars(){
   	<td>
     <div id="mainRegion" style="overflow:hidden">
     	<input id='dir_name' type='text' value='' style='width:480px' 
-    		onKeyDown='onTextChange(event);' 
+    		onkeydown='onKeyDownHandler(event);' 
     		maxlength='50'>
 		</div>
     </td>    
@@ -111,8 +113,8 @@ function getUrlVars(){
   <tr>
   	<td>
   	<div class="table_block_footer" style="text-align:right">
-    	<button id="ok" class='btnStyle' onClick="doOK();" disabled="true">OK</button>
-      <button id="cancel" class="btnStyle" onClick="doCancel();">Close</button>
+    	<button id="ok" class='btnStyle' onmousedown="doRenameOK();" disabled="true">OK</button>
+      <button id="cancel" class="btnStyle" onmousedown="doCancel();">Close</button>
     </div>
     </td>
   </tr>

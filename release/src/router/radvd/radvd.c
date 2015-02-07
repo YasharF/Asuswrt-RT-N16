@@ -9,7 +9,7 @@
  *
  *   The license which is distributed with this software in the file COPYRIGHT
  *   applies to this software. If your distribution is missing this file, you
- *   may request it from <pekkas@netcore.fi>.
+ *   may request it from <reubenhwk@gmail.com>.
  *
  */
 
@@ -664,6 +664,13 @@ sigint_handler(int sig)
 	}
 }
 
+void sigusr1_handler(int sig)
+{
+	/* Linux has "one-shot" signals, reinstall the signal handler */
+	signal(SIGUSR1, sigusr1_handler);
+
+	sigusr1_received = 1;
+}
 
 void reset_prefix_lifetimes(void)
 {
@@ -693,15 +700,6 @@ void reset_prefix_lifetimes(void)
 		
 	}
 
-}
-
-void sigusr1_handler(int sig)
-{
-
-	/* Linux has "one-shot" signals, reinstall the signal handler */
-	signal(SIGUSR1, sigusr1_handler);
-
-	sigusr1_received = 1;
 }
 
 int
@@ -763,7 +761,9 @@ check_conffile_perm(const char *username, const char *conf_file)
 int
 check_ip6_forwarding(void)
 {
+#ifdef HAVE_SYS_SYSCTL_H
 	int forw_sysctl[] = { SYSCTL_IP6_FORWARDING };
+#endif
 	int value;
 	size_t size = sizeof(value);
 	FILE *fp = NULL;
@@ -779,18 +779,22 @@ check_ip6_forwarding(void)
 		}
 		fclose(fp);
 	}
-	else
+	else {
 		flog(LOG_DEBUG, "Correct IPv6 forwarding procfs entry not found, "
 	                       "perhaps the procfs is disabled, "
 	                        "or the kernel interface has changed?");
+		value = -1;
+	}
 #endif /* __linux__ */
 
+#ifdef HAVE_SYS_SYSCTL_H
 	if (!fp && sysctl(forw_sysctl, sizeof(forw_sysctl)/sizeof(forw_sysctl[0]),
 	    &value, &size, NULL, 0) < 0) {
 		flog(LOG_DEBUG, "Correct IPv6 forwarding sysctl branch not found, "
 			"perhaps the kernel interface has changed?");
 		return(0);	/* this is of advisory value only */
 	}
+#endif
 
 	if (value != 1 && !warned) {
 		warned = 1;

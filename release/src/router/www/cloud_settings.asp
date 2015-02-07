@@ -40,13 +40,54 @@ function initial(){
 		inputCtrl(document.form.webdav_lock_times, 0);
 		inputCtrl(document.form.webdav_lock_interval, 0);
 	}
+
+	if('<% nvram_get("rrsut"); %>' != '1')
+		$("rrsLink").style.display = "none";
+
+	if(aicloudipk_support){
+		document.form.action_script.value = "restart_setting_webdav";
+	}
 }
 
 function applyRule(){
-	validate_number_range(document.form.webdav_lock_times, 1, 10);
-	validate_number_range(document.form.webdav_lock_interval, 1, 60);
-	showLoading();	
-	document.form.submit();	
+
+	if(	validate_number_range(document.form.webdav_lock_times, 1, 10)
+		&&validate_number_range(document.form.webdav_lock_interval, 1, 60)
+		&&validate_number_range(document.form.webdav_http_port, 1, 65535)
+		&&validate_number_range(document.form.webdav_https_port, 1, 65535)
+		&&isPortConflict_webdav(document.form.webdav_http_port)
+		&&isPortConflict_webdav(document.form.webdav_https_port)
+	){
+		document.form.webdav_http_port.value = parseInt(document.form.webdav_http_port.value);	
+		document.form.webdav_https_port.value = parseInt(document.form.webdav_https_port.value);	
+		showLoading();	
+		document.form.submit();	
+	}
+}
+
+function isPortConflict_webdav(obj){
+	if(obj.value == '<% nvram_get("login_port"); %>'){
+		alert("<#portConflictHint#> HTTP LAN port.");
+		obj.focus();
+		return false;
+	}	
+	else if(obj.value == '<% nvram_get("dm_http_port"); %>'){
+		alert("<#portConflictHint#> Download Master.");
+		obj.focus();
+		return false;
+	}	
+	else if(obj.value == '<% nvram_get("misc_httpsport_x"); %>'){
+		alert("<#portConflictHint#> [<#FirewallConfig_x_WanWebPort_itemname#>(HTTPS)].");
+		obj.focus();
+		return false;
+	}	
+	else if(obj.value == '<% nvram_get("misc_httpport_x"); %>'){
+		alert("<#portConflictHint#> [<#FirewallConfig_x_WanWebPort_itemname#>(HTTP)].");
+		obj.focus();
+		return false;
+	}
+	
+	return true;	
 }
 
 function unlockAcc(){
@@ -90,6 +131,9 @@ function unlockAcc(){
 							<a href="cloud_sync.asp"><div class="tab"><span>Smart Sync</span></div></a>
 						</td>
 						<td>
+							<a id="rrsLink" href="cloud_router_sync.asp"><div class="tab"><span>Sync Server</span></div></a>
+						</td>
+						<td>
 							<div class="tabclick"><span>Settings</span></div>
 						</td>
 						<td>
@@ -112,10 +156,10 @@ function unlockAcc(){
 									<div style="margin-left:5px;margin-top:10px;margin-bottom:10px"><img src="/images/New_ui/export/line_export.png"></div>
 
 								  <div class="formfontdesc" style="font-style: italic;font-size: 14px;">
-										Password protection mechanism
-										The password protection mechanism allows AiCloud to prevent account from Brute-Force Attack.
-										You can define allowable account/password login retry attempts.
-										For example, 3 times / 2mins refers to user could only 3 chances to try the account and password in 2 minutes, once exceed,  the AiCloud account will be locked, and administrator need to enter this page to unlock it.
+										<#AiCloud_PWD_Mechanism#><br>
+										<#AiCloud_PWD_note1#><br>
+										<#AiCloud_PWD_note2#><br>
+										<#AiCloud_PWD_note3#><br>
 									</div>
 
 									<table width="100%" style="border-collapse:collapse;">
@@ -123,7 +167,7 @@ function unlockAcc(){
 									  <tr bgcolor="#444f53">
 									    <td colspan="5" class="cloud_main_radius">
 												<div style="padding:30px;font-size:18px;word-break:break-all;border-style:dashed;border-radius:10px;border-width:1px;border-color:#999;">
-													<div>Enable password protection mechanism.</div>
+													<div><#AiCloud_PWD_enable#></div>
 
 													<div align="center" class="left" style="margin-top:-26px;margin-left:320px;width:94px; float:left; cursor:pointer;" id="radio_enable_webdav_lock"></div>
 													<div class="iphone_switch_container" style="height:32px; width:74px; position: relative; overflow: hidden">
@@ -146,13 +190,19 @@ function unlockAcc(){
 													</script>			
 													</div>
 
-													<input type="text" name="webdav_lock_times" class="input_3_table" maxlength="2" onblur="validate_number_range(this, 1, 10);" value="<% nvram_get("webdav_lock_times"); %>"> times in 
-													<input type="text" name="webdav_lock_interval" class="input_3_table" maxlength="2" onblur="validate_number_range(this, 1, 60);" value="<% nvram_get("webdav_lock_interval"); %>"> minutes the AiCloud account will be locked.
+													<input type="text" name="webdav_lock_times" class="input_3_table" maxlength="2" onblur="validate_number_range(this, 1, 10);" value="<% nvram_get("webdav_lock_times"); %>"> <#AiCloud_lock_time#>
+													<input type="text" name="webdav_lock_interval" class="input_3_table" maxlength="2" onblur="validate_number_range(this, 1, 60);" value="<% nvram_get("webdav_lock_interval"); %>"> <#AiCloud_lock_interval#>
 							            <br/>
 							            <br/>
-													<div class="apply_gen" style="background-color:#444F53;">
+													<!--div class="apply_gen" style="background-color:#444F53;">
 														<input style="margin-left:10px;" class="button_gen" onclick="applyRule();" type="button" value="<#CTL_apply#>"/>
-							            </div>
+							            </div-->
+													<div>
+														<div style="margin-top:10px;"><#AiCloud_account_status#></div>
+														<img style="margin-top:-30px;margin-left:150px" id="accIcon" width="40px" src="/images/cloudsync/account_icon.png">
+														<div style="margin-top:-30px;margin-left:200px;font-size:16px;font-weight:bolder;"><% nvram_get("http_username"); %></div>
+														<input id="unlockBtn" style="margin-top:-28px;margin-left:260px;display:none;" class="button_gen" onclick="unlockAcc();" type="button" value="<#AiCloud_account_unlock#>"/>
+													</div>
 												</div>
 											</td>
 									  </tr>
@@ -165,18 +215,17 @@ function unlockAcc(){
 									  <tr bgcolor="#444f53">
 									    <td colspan="5" class="cloud_main_radius">
 												<div style="padding:30px;font-size:18px;word-break:break-all;border-style:dashed;border-radius:10px;border-width:1px;border-color:#999;">
-													AiCloud account information:
-													<div style="padding:15px;font-size:16px;">
-														<img id="accIcon" width="40px" src="/images/cloudsync/account_icon.png">
-														<div style="margin-top:-30px;margin-left:50px;font-size:16px;font-weight:bolder;">admin</div>
-														<input id="unlockBtn" style="display:none;margin-top:-27px;margin-left:120px;" class="button_gen_short" onclick="unlockAcc();" type="button" value="Unlock"/>
-													</div>
+													<#AiCloud_webport#> <input type="text" name="webdav_https_port" class="input_6_table" maxlength="5" onKeyPress="return is_number(this,event);" value="<% nvram_get("webdav_https_port"); %>">
+													<br>
+													<br>
+													<#AiCloud_streamport#> <input type="text" name="webdav_http_port" class="input_6_table" maxlength="5" onKeyPress="return is_number(this,event);" value="<% nvram_get("webdav_http_port"); %>">
 												</div>
 											</td>
 									  </tr>
-
 									</table>
-
+									<div class="apply_gen">
+										<input class="button_gen" onclick="applyRule();" type="button" value="<#CTL_apply#>"/>
+			            </div>
 							  </td>
 							</tr>				
 							</tbody>	

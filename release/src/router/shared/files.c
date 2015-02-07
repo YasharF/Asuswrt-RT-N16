@@ -14,6 +14,7 @@
 #include <stdarg.h>
 #include <dirent.h>
 #include <bcmnvram.h>
+#include <syslog.h>
 #include "shutils.h"
 #include "shared.h"
 
@@ -187,4 +188,79 @@ check_if_file_exist(const char *filepath)
 		return 0;
 }
 
+
+/* Test whether we can write to a directory.
+ * @return:
+ * 0		not writable
+ * -1		invalid parameter
+ * otherwise	writable
+ */
+int check_if_dir_writable(const char *dir)
+{
+	char tmp[PATH_MAX];
+	FILE *fp;
+	int ret = 0;
+
+	if (!dir || *dir == '\0')
+		return -1;
+
+	sprintf(tmp, "%s/.test_dir_writable", dir);
+	if ((fp = fopen(tmp, "w")) != NULL) {
+		fclose(fp);
+		unlink(tmp);
+		ret = 1;
+	}
+
+	return ret;
+}
+
+
+/* Serialize using fcntl() calls 
+ */
+
+int file_lock(char *tag)
+{
+        char fn[64];
+        struct flock lock;
+        int lockfd = -1;
+        pid_t lockpid;
+
+        sprintf(fn, "/var/lock/%s.lock", tag);
+        if ((lockfd = open(fn, O_CREAT | O_RDWR, 0666)) < 0)
+                goto lock_error;
+
+        pid_t pid = getpid();
+        if (read(lockfd, &lockpid, sizeof(pid_t))) {
+                // check if we already hold a lock
+                if (pid == lockpid) {
+                        // don't close the file here as that will release all locks
+                        return -1;
+                }
+        }
+
+        memset(&lock, 0, sizeof(lock));
+        lock.l_type = F_WRLCK;
+        lock.l_pid = pid;
+
+        if (fcntl(lockfd, F_SETLKW, &lock) < 0) {
+                close(lockfd);
+                goto lock_error;
+        }
+
+        lseek(lockfd, 0, SEEK_SET);
+        write(lockfd, &pid, sizeof(pid_t));
+        return lockfd;
+lock_error:
+        // No proper error processing
+        syslog(LOG_DEBUG, "Error %d locking %s, proceeding anyway", errno, fn);
+        return -1;
+}
+
+void file_unlock(int lockfd)
+{
+        if (lockfd >= 0) {
+                ftruncate(lockfd, 0);
+                close(lockfd);
+        }
+}
 

@@ -3,9 +3,10 @@
 # Makefile
 #
 #***********************************************************************
-#CC = mipsel-linux-gcc
 
-CFLAGS = -g -rdynamic
+include ../common.mak
+
+#CFLAGS = -g -rdynamic -DMYDEBUG -DDEBUG
 LIBS = -lpthread
 
 #all: asuswebstorage inotify

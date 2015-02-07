@@ -7,6 +7,7 @@ include ../common.mak
 IFLAGS  = -idirafter dummyinc
 #CFLAGS = -g
 CFLAGS	= -O2 -Wall $(EXTRACFLAGS) -ffunction-sections -fdata-sections -W -Wshadow #-pedantic -Werror -Wconversion
+CFLAGS  += -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE=1 -D_LARGEFILE64_SOURCE=1 -D_LARGE_FILES=1
 LDFLAGS = -ffunction-sections -fdata-sections -Wl,--gc-sections
 
 #LIBS	=	`./vsf_findlibs.sh`
@@ -24,7 +25,10 @@ CFLAGS	+=	-I$(OPENSSLINC)
 endif
 
 CFLAGS  += 	-I$(SRCBASE)/include -I$(TOP)/shared -I$(TOP)/libdisk
-LDFLAGS  +=	-L$(TOP)/nvram -lnvram -L$(TOP)/shared -lshared -L$(TOP)/libdisk -ldisk
+LDFLAGS  +=	-L$(TOP)/nvram${BCMEX} -lnvram -L$(TOP)/shared -lshared -L$(TOP)/libdisk -ldisk
+ifeq ($(RTCONFIG_BCMARM),y)
+LDFLAGS += -lgcc_s
+endif
 
 OBJS	=	main.o utility.o prelogin.o ftpcmdio.o postlogin.o privsock.o \
 		tunables.o ftpdataio.o secbuf.o ls.o \

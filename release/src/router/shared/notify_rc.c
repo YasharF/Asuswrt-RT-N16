@@ -37,30 +37,36 @@
 #include <typedefs.h>
 #include<stdarg.h>
 #include <bcmnvram.h>
+#include <syslog.h>
 #include "shutils.h"
 #include "shared.h"
 #include "notify_rc.h"
 
-static void notify_rc_internal(const char *event_name, bool do_wait, int wait);
+static int notify_rc_internal(const char *event_name, bool do_wait, int wait);
 
-void notify_rc(const char *event_name)
+int notify_rc(const char *event_name)
 {
-	notify_rc_internal(event_name, FALSE, 15);
+	return notify_rc_internal(event_name, FALSE, 15);
 }
 
-void notify_rc_after_wait(const char *event_name)
+int notify_rc_after_wait(const char *event_name)
 {
-	notify_rc_internal(event_name, FALSE, 30);
+	return notify_rc_internal(event_name, FALSE, 30);
 }
 
-void notify_rc_after_period_wait(const char *event_name, int wait)
+int notify_rc_after_period_wait(const char *event_name, int wait)
 {
-	notify_rc_internal(event_name, FALSE, wait);
+	return notify_rc_internal(event_name, FALSE, wait);
 }
 
-void notify_rc_and_wait(const char *event_name)
+int notify_rc_and_wait(const char *event_name)
 {
-	notify_rc_internal(event_name, TRUE, 10);
+	return notify_rc_internal(event_name, TRUE, 10);
+}
+
+int notify_rc_and_wait_2min(const char *event_name)
+{
+	return notify_rc_internal(event_name, TRUE, 120);
 }
 
 static void logmessage(char *logheader, char *fmt, ...)
@@ -77,12 +83,23 @@ static void logmessage(char *logheader, char *fmt, ...)
   va_end(args);
 }
 
-static void notify_rc_internal(const char *event_name, bool do_wait, int wait)
+/* @return:
+ * 	0:	success
+ *     -1:	invalid parameter
+ *      1:	wait pending rc_service timeout
+ */
+static int notify_rc_internal(const char *event_name, bool do_wait, int wait)
 {
 	int i;
+	char p1[16], p2[16];
 
-	_dprintf("notify_rc: %s\n", event_name);
-	logmessage("notify_rc ", event_name);
+	if (!event_name || wait < 0)
+		return -1;
+
+	psname(nvram_get_int("rc_service_pid"), p1, sizeof(p1));
+	psname(getpid(), p2, sizeof(p2));
+	_dprintf("%s %d:notify_rc: %s\n", p2, getpid(), event_name);
+	logmessage("rc_service", "%s %d:notify_rc %s", p2, getpid(), event_name);
 
 	i=wait;
 	int first_try = 1, got_right = 1;
@@ -92,7 +109,7 @@ static void notify_rc_internal(const char *event_name, bool do_wait, int wait)
 			first_try = 0;
 		}
 
-		_dprintf("wait for previous script(%d/%d): %s %d.\n", i, wait, nvram_safe_get("rc_service"), nvram_get_int("rc_service_pid"));
+		_dprintf("%d %s: wait for previous script(%d/%d): %s %d %s.\n", getpid(), p2, i, wait, nvram_safe_get("rc_service"), nvram_get_int("rc_service_pid"), p1);
 		sleep(1);
 
 		if(i <= 0)
@@ -102,7 +119,7 @@ static void notify_rc_internal(const char *event_name, bool do_wait, int wait)
 	if(!got_right){
 		logmessage("rc_service", "skip the event: %s.", event_name);
 		_dprintf("rc_service: skip the event: %s.\n", event_name);
-		return;
+		return 1;
 	}
 
 	nvram_set("rc_service", event_name);
@@ -113,10 +130,12 @@ static void notify_rc_internal(const char *event_name, bool do_wait, int wait)
 	{
 		i = wait;
 		while((nvram_match("rc_service", (char *)event_name))&&(i-- > 0)) {
-			dprintf("%s %d: waiting after %d/%d.\n", event_name, getpid(), i, wait);
+			_dprintf("%s %d: waiting after %d/%d.\n", event_name, getpid(), i, wait);
 			sleep(1);
 		}
 	}
+
+	return 0;
 }
 
 

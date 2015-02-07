@@ -5,6 +5,8 @@
 #
 #
 
+include ../.config
+
 #ifeq ($(strip $(CROSS_COMPILE)),)
 #CROSS_COMPILE := mipsel-linux-
 #CC := $(CROSS_COMPILE)gcc
@@ -37,14 +39,18 @@ endif
 #else
 	CFLAGS = -DSUPPORT_LPRng
 	CFLAGS += -I. -I$(TOP)/shared
-	CFLAGS += -I$(LINUXDIR)/include -I$(SRCBASE)/include
+	CFLAGS += -I$(TOP)/kernel_header/include -I$(SRCBASE)/include
 	LDFLAGS = -lpthread
 #	LDFLAGS += -L$(TOP)/libusb10/libusb/.libs -lusb-1.0
 #	LDFLAGS += -L$(TOP)/libusb/libusb/.libs -lusb
 #	LDFLAGS += -L$(TOP)/libusb-0.1.12/.libs -lusb
 	LDFLAGS += -L$(TOP)/shared -lshared
-	LDFLAGS += -L$(TOP)/nvram -lnvram
+	LDFLAGS += -L$(TOP)/nvram${BCMEX} -lnvram
 #endif
+
+ifeq ($(RTCONFIG_BCMARM),y)
+LDFLAGS += -lgcc_s
+endif
 
 CFLAGS += -Wall -I.
 CFLAGS += $(DEBFLAGS)

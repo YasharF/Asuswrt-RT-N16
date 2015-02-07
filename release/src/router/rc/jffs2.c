@@ -44,20 +44,21 @@ void start_jffs2(void)
 	int part;
 	const char *p;
 	struct statfs sf;
+	int model = 0;
 
 	if (!wait_action_idle(10)) return;
 
 	if (!mtd_getinfo("jffs2", &part, &size)) return;
 
+	model = get_model();
 _dprintf("*** jffs2: %d, %d\n", part, size);
 	if (nvram_match("jffs2_format", "1")) {
 		nvram_set("jffs2_format", "0");
-
-		if (!mtd_erase("jffs2")) {
-			error("formatting");
-			return;
+		if( (model==MODEL_RTAC56U || model==MODEL_RTAC68U) ^ (!mtd_erase(JFFS_NAME)) ){
+                        error("formatting");
+                        return;
 		}
-
+		
 		format = 1;
 	}
 
@@ -74,23 +75,55 @@ _dprintf("*** jffs2: %d, %d\n", part, size);
 		}
 	}
 
-	if ((statfs("/jffs", &sf) == 0) && (sf.f_type != 0x73717368 /* squashfs */)) {
-		// already mounted
-		notice_set("jffs", format ? "Formatted" : "Loaded");
-		return;
+	if (statfs("/jffs", &sf) == 0) { 
+		switch(model) {
+			case MODEL_RTAC56U: 
+			case MODEL_RTAC68U: 
+			case MODEL_RTN65U:
+			{
+				if (sf.f_type != 0x73717368 /* squashfs */) {
+					// already mounted
+					notice_set("jffs", format ? "Formatted" : "Loaded");
+					return;
+				}
+				break;
+			}
+			default:
+			{
+	                        if (sf.f_type != 0x71736873 /* squashfs */) {
+        	                        // already mounted
+                	                notice_set("jffs", format ? "Formatted" : "Loaded");
+                        	        return;
+				}
+				break;
+			}
+		}
 	}
-	if (!mtd_unlock("jffs2")) {
-		error("unlocking");
-		return;
+	if (nvram_get_int("jffs2_clean_fs")) {
+		if (!mtd_unlock("jffs2")) {
+			error("unlocking");
+			return;
+		}
 	}
 	modprobe(JFFS_NAME);
 	sprintf(s, MTD_BLKDEV(%d), part);
+
 	if (mount(s, "/jffs", JFFS_NAME, MS_NOATIME, "") != 0) {
 _dprintf("*** jffs2 mount error\n");
-		//modprobe_r(JFFS_NAME);
-		error("mounting");
-		return;
+                if( (get_model()==MODEL_RTAC56U || get_model()==MODEL_RTAC68U) ^ (!mtd_erase(JFFS_NAME)) ){
+                        error("formatting");
+                        return;
+                }
+
+		format = 1;
+		if (mount(s, "/jffs", JFFS_NAME, MS_NOATIME, "") != 0) {
+			_dprintf("*** jffs2 2-nd mount error\n");
+			//modprobe_r(JFFS_NAME);
+			error("mounting");
+			return;
+		}
 	}
+
 #ifdef TEST_INTEGRITY
 	int test;
 
@@ -108,6 +141,13 @@ _dprintf("*** jffs2 mount error\n");
 	}
 #endif
 
+	if (nvram_get_int("jffs2_clean_fs")) {
+		_dprintf("Clean /jffs/*\n");
+		system("rm -fr /jffs/*");
+		nvram_unset("jffs2_clean_fs");
+		nvram_commit_x();
+	}
+
 	notice_set("jffs", format ? "Formatted" : "Loaded");
 
 	if (((p = nvram_get("jffs2_exec")) != NULL) && (*p != 0)) {
@@ -122,6 +162,9 @@ _dprintf("*** jffs2 mount error\n");
 void stop_jffs2(void)
 {
 	struct statfs sf;
+#if defined(RTCONFIG_PSISTLOG)
+	int restart_syslogd = 0;
+#endif
 
 	if (!wait_action_idle(10)) return;
 
@@ -131,7 +174,20 @@ void stop_jffs2(void)
 		run_nvscript("script_autostop", "/jffs", 5);
 	}
 
+#if defined(RTCONFIG_PSISTLOG)
+	if (!strncmp(get_syslog_fname(0), "/jffs/", 6)) {
+		restart_syslogd = 1;
+		stop_syslogd();
+		eval("cp", "/jffs/syslog.log", "/jffs/syslog.log-1", "/tmp");
+	}
+#endif
+
 	notice_set("jffs", "Stopped");
 	umount2("/jffs", MNT_DETACH);
 	modprobe_r(JFFS_NAME);
+
+#if defined(RTCONFIG_PSISTLOG)
+	if (restart_syslogd)
+		start_syslogd();
+#endif
 }

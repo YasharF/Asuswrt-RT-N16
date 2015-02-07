@@ -2,6 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
 <title></title>
 <style>
 html{
@@ -71,8 +72,8 @@ function onKeyHandler(e){
   <tr>
   	<td>
   	<div class="table_block_footer" style="text-align:right">
-    	<button id="ok" class='btnStyle' onClick="doOK();">OK</button>
-      <button id="cancel" class="btnStyle" onClick="doCancel();">Close</button>
+    	<button id="ok" class='btnStyle' onmousedown="doOK();">OK</button>
+      <button id="cancel" class="btnStyle" onmousedown="doCancel();">Close</button>
     </div>
     </td>
   </tr>

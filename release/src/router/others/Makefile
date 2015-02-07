@@ -28,4 +28,8 @@ endif
 # chpasswd script
 	install -m 0700 chpasswd.sh $(INSTALLDIR)/usr/sbin
 
+ifeq ($(RTN14U)$(RTAC52U),y)
+# for read/write Ralink PHY registers
+	install -D mii_mgr $(INSTALLDIR)/bin/mii_mgr
+endif
 clean:

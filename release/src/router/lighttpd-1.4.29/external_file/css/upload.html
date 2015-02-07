@@ -2,6 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
 <link href="/smb/css/ui-progress-bar.css" media="screen" rel="stylesheet" type="text/css" />
 <title></title>
 <style>
@@ -78,6 +79,19 @@ color: #fff;
 padding: 0 10px;
 display: none;
 }
+.chrome-require {
+font-weight: bold;
+font-size: 20px;
+padding:10px;
+}
+.chrome-require a{
+color: #FDC049;
+text-decoration: none;
+}
+.chrome-require a:hover{
+color: #FDC049;
+text-decoration: underline;
+}
 .upload-drop-alt {
 display: none;
 padding: 15px 0 5px;
@@ -85,12 +99,13 @@ font-weight: bold;
 font-size: 15px;
 color: #fff;
 }
-.upload-select-here {
+.upload-select-here, .upload-select-directorys-here{
 font-weight: bold;
 font-size: 15px;
 color: #fff;
 padding: 0 10px;
 }
+
 #nav {
 width: 100%;
 height: 100%;
@@ -109,11 +124,6 @@ text-indent: 1em;
 }
 ul ul ul {
 text-indent: 2em;
-}
-#files{
-font-weight: bold;
-font-size: 15px;
-color: #fff;
 }
 .ml-btn-1 {
 display: inline-block;
@@ -150,6 +160,20 @@ rgba(255, 255, 255, 0.5);
 -ms-filter: "progid:DXImageTransform.Microsoft.gradient(startColorstr=#fffefefe,endColorstr=#ffebebeb,GradientType=0) progid:DXImageTransform.Microsoft.Glow(Color=#ff000000,Strength=3)";
 filter: progid:DXImageTransform.Microsoft.gradient(startColorstr=#fffefefe,endColorstr=#ffebebeb,GradientType=0) progid:DXImageTransform.Microsoft.Glow(Color=#ff000000,Strength=3);
 }
+
+input[type="file"] {
+border: 1px solid #EEE;
+border-radius: 10px;
+padding: 8px;
+font-weight: bold;
+font-size: 15px;
+color: #fff;
+}
+
+div#divApplet{
+width:100px;
+height:40px;
+}
 </style>
 </head>
 <script type="text/javascript" src="/smb/js/tools.js"></script>
@@ -169,56 +193,7 @@ function getUrlVars(){
   }
   return vars;
 }
-/*
-function toBin(str){
- var st,i,j,d;
- var arr = [];
- var len = str.length;
- for (i = 1; i<=len; i++){
-                //reverse so its like a stack
-  d = str.charCodeAt(len-i);
-  for (j = 0; j < 8; j++) {
-   st = d%2 == '0' ? "class='zero'" : "" 
-   arr.push(d%2);
-   d = Math.floor(d/2);
-  }
- }
-        //reverse all bits again.
- return arr.reverse().join("");
-}
 
-function string2byteArray(str){
-    var result = [];
-    alert(str.length);
-  for (var i = 0; i < str.length; i++) {
-  	
-    result.push(str.charCodeAt(i));
-  }
-  alert(result.length);
-  return result;
-}
-
-function utf8encode(string) {
-  string = string.replace(/\r\n/g,"\n");
-  var utftext = "";
-  for (var n = 0; n < string.length; n++) {
-  	var c = string.charCodeAt(n);
-    if (c < 128) {
-    	utftext += String.fromCharCode(c);
-    }
-    else if((c > 127) && (c < 2048)) {
-    	utftext += String.fromCharCode((c >> 6) | 192);
-      utftext += String.fromCharCode((c & 63) | 128);
-    }
-    else {
-    	utftext += String.fromCharCode((c >> 12) | 224);
-      utftext += String.fromCharCode(((c >> 6) & 63) | 128);
-      utftext += String.fromCharCode((c & 63) | 128);
-   	}
-  }
-  return utftext;
-}
-*/
 function adjustLayout(){	
 	//alert($("table#main_table").height());
 	var h = parent.getFileViewHeight();
@@ -226,14 +201,19 @@ function adjustLayout(){
 	$("#uploadRegion").css("height", h-120);
 }
 
+var this_upload_files = new Array();
+
 $("document").ready(function() {
 	
 	var this_upload_index = 0;
 	var this_upload_count = 0;
 	var this_upload_total = 0;
-	var this_upload_files = new Array();
+	//var this_upload_files = new Array();
 	var this_selected_files = new Array();
 	var this_url = getUrlVars()["u"];
+	
+	//- show upload option, 0: show all, 1: show upload file, 2:show upload folder
+	var this_upload_option = getUrlVars()["d"];
 	
 	var g_support_html5 = 0;
 	
@@ -241,9 +221,38 @@ $("document").ready(function() {
 	var lan = ( g_storage.get('lan') == undefined ) ? loc_lan : g_storage.get('lan');
 	m.setLanguage(lan);
 	
-	$('.upload-drop-here').text(m.getString('hint_selfile1'));
 	$('.upload-drop-alt').text(m.getString('hint_selfile2'));
 	$('.upload-select-here').text(m.getString('hint_selfile3'));
+	
+	if(this_upload_option==0){
+		$('.select-files').show();
+		$('.select-directorys').show();
+	}
+	else if(this_upload_option==1){
+		$('.select-files').show();
+		$('.select-directorys').hide();
+	}
+	else if(this_upload_option==2){
+		$('.select-files').hide();
+		$('.select-directorys').show();
+	}
+	else{
+		$('.select-files').hide();
+		$('.select-directorys').hide();
+	}
+	/*
+	$('.chrome-require').hide();
+	else{
+		$('.select-directorys').hide();
+		$('.chrome-require').show();
+		$('.upload-drop-here').text(m.getString('hint_selfile1'));
+		$('.upload-support-directorys').text(m.getString('hint_selfile6'));
+	}
+	*/
+	
+	$('.upload-drop-here').text(m.getString('hint_selfile1'));
+	$('.upload-support-directorys').text(m.getString('hint_selfile6'));
+		
 	$('#upload').text(m.getString('btn_upload'));
 	$('#cancel').text(m.getString('btn_cancel'));
    
@@ -271,7 +280,11 @@ $("document").ready(function() {
   	$(".upload-drop-alt").css("display", "block");
   }
 	
-	document.getElementById('files').addEventListener('change', handleFileSelect, false);
+	if(document.getElementById('files'))
+		document.getElementById('files').addEventListener('change', handleFileSelect, false);
+	
+	if(document.getElementById('directorys'))
+		document.getElementById('directorys').addEventListener('change', handleFileSelect, false);
 	
 	function webdav_put_callbackfunction(error, content){
 		
@@ -286,6 +299,23 @@ $("document").ready(function() {
 			  }else{
 					//alert("In Progress");
 			  }
+			}/*
+			else if(error==427){
+				//- If target folder is not exist!
+				
+				var path = this_upload_files[this_upload_index].thepath;
+				var openurl = addPathSlash(g_storage.get('openurl'));
+				var this_url = openurl + myencodeURI(path);
+				alert(this_url);
+				webdav_client.MKCOL(this_url, function(error){
+					this_upload_files[this_upload_index].status = "Init";
+					uploadFile();
+				});	
+				
+				return;				
+			}*/
+			else if(error==0){
+				this_upload_files[this_upload_index].status = "UploadFail";
 			}
 			else{
 				this_upload_files[this_upload_index].status = "UploadFail";
@@ -301,7 +331,9 @@ $("document").ready(function() {
 		//this_upload_count++;
 		if( uploadFile() == 0 ){	
 			showUploadProgress(m.getString('msg_upload_complete'), 100);				
-			g_storage.set('stopLogoutTimer', "0");
+			//g_storage.set('stopLogoutTimer', "0");
+			//g_storage.set('isOnUploadFile', "0");
+			stop_upload();
 			parent.closeUploadPanel(1);
 		}
 	}
@@ -411,7 +443,7 @@ $("document").ready(function() {
   	return true;
   } // msSaveOrOpenBlobSupported
   */   
- 	function PutToWeb(pfile, opt_startByte, opt_stopByte, filesize) {		
+ 	function PutToWeb(path, pfile, opt_startByte, opt_stopByte, filesize) {		
 		var start = opt_startByte;
 		var stop = opt_stopByte;
 		
@@ -421,8 +453,8 @@ $("document").ready(function() {
 		// If we use onloadend, we need to check the readyState.
 		reader.onloadend = function(evt) {			
 			if (evt.target.readyState == FileReader.DONE) { // DONE == 2      	
-				var tURL = this_url + pfile.name;
-				webdav_client.PUT(tURL, evt.target.result, bSliceAsBinary, start, stop, filesize,
+				var tURL = this_url + path + pfile.name;
+				webdav_client.PUT(tURL, evt.target.result, bSliceAsBinary, start, stop, filesize, "T",
 					  webdav_put_callbackfunction, webdav_put_progress_callbackfunction  );
 			}
 		};
@@ -478,14 +510,14 @@ $("document").ready(function() {
 		}
 		f_offset = stop+1;
 		
-		PutToWeb(f.thefile, start, stop, filesize);
+		PutToWeb(f.thepath, f.thefile, start, stop, filesize);
 	}
 	
 	var current_file_size;	
-	function uploadFile(){
-		for (var i = 0, f; f = this_upload_files[i]; i++) {
+	function uploadFile(){	
+		for (var i = 0, f; f = this_upload_files[i]; i++) {			
 			loop_cnt =  Math.ceil(f.thefile.size/segment_size);
-			current_file_size = f.thefile.size;		
+			current_file_size = f.thefile.size;
 			if(f.status=="Init" || f.status=="Upload"){
 				this_upload_index = i;
 				f.status = "Upload";				
@@ -505,11 +537,13 @@ $("document").ready(function() {
 	      return;
 	    }
 			
-			$('button#upload').attr("disabled", "disabled");
+			//$('button#upload').attr("disabled", "disabled");			
+			$('button#upload').hide();
 			
 			this_upload_total = this_upload_files.length;
 			f_offset =0;
 			
+			g_storage.set('isOnUploadFile', "1");
 			g_storage.set('stopLogoutTimer', "1");
 			uploadFile();			
     }
@@ -523,11 +557,22 @@ $("document").ready(function() {
     	/*
     	output.push('<li><strong>', f.thefile.name, '</strong> (', f.thefile.type || 'n/a', ') - ',
                   f.thefile.size, m.getString('upload_item'), m.getString(f.status), '</li>');*/
-     	output.push('<li><strong>', f.thefile.name, '</strong> ', ' - ',
+                  
+      if(g_storage.get('isOnUploadFile')==1)
+      	output.push('<li><strong>', f.thepath + f.thefile.name, '</strong> ', ' - ',
                   f.thefile.size, m.getString('upload_item'), ' [ ', m.getString(f.status), ' ] ', '</li>');
+      else
+     		output.push('<li id="', i, '"><strong>', f.thepath + f.thefile.name, '</strong> ', ' - ',
+                  f.thefile.size, m.getString('upload_item'), ' [ ', m.getString(f.status), ' ] ', '<button id="delete_item" item="', i, '">X</button></li>');
     }
     
-    document.getElementById('upload_file_list').innerHTML = '<ul id="nav">' + output.join('') + '</ul>';    
+    document.getElementById('upload_file_list').innerHTML = '<ul id="nav">' + output.join('') + '</ul>'; 
+    
+    $("button#delete_item").click(function(){
+    	var del_item_id = $(this).attr("item");
+    	this_upload_files.splice(del_item_id, 1);    	
+    	outputUploadResult();
+    });   
 	}
 	
 	function showUploadProgress(status, progress_percent){
@@ -544,6 +589,33 @@ $("document").ready(function() {
 		  $('.ui-label .value').text(status);
 		}
 	}
+	
+	function traverseFileTree(item, path) {
+  	path = path || "";
+  	if (item.isFile) {
+    	// Get file
+    	item.file(function(file) {
+      	console.log("File:", path + file.name);
+      	
+      	var oObject = new Object();
+				oObject.status = "Init";
+				oObject.thepath = path;
+				oObject.thefile = file;
+				this_upload_files.push(oObject);
+				
+				outputUploadResult();
+    	});
+  	} 
+  	else if (item.isDirectory) {
+    	// Get folder contents
+    	var dirReader = item.createReader();
+    	dirReader.readEntries(function(entries) {
+      	for (var i=0; i<entries.length; i++) {
+        	traverseFileTree(entries[i], path + item.name + "/");
+      	}
+    	});
+  	}
+	}
 
   function handleFileSelect(evt) { 
   	var sel_files; 
@@ -551,15 +623,44 @@ $("document").ready(function() {
   	if(evt.type=='drop'){
     	evt.stopPropagation();
     	evt.preventDefault();
-    	sel_files = evt.dataTransfer.files; // FileList object.
+    	
+    	//- test
+    	if(evt.dataTransfer.items!=undefined){
+    		
+    		var items = evt.dataTransfer.items;
+    		
+    		if(items.length>0)
+    			$("#upload-container").css("display", "none");
+    		
+			  for (var i=0; i<items.length; i++) {
+			    // webkitGetAsEntry is where the magic happens
+			    var item = items[i].webkitGetAsEntry();
+			    if (item) {
+			      traverseFileTree(item);
+			    }
+			  }
+			  
+			  return;
+			}
+			else
+				sel_files = evt.dataTransfer.files; // FileList object.
 		}
-		else{
+		else{			
 			sel_files = evt.target.files;
 		}
 		
 		for (var i = 0, s; s = sel_files[i]; i++) {
+			if(s.name=="."||s.name=="..")
+				continue;
+			
+			var path = "";
+			if(s.webkitRelativePath){
+				path = String(s.webkitRelativePath).replace(s.name,"");
+			}
+			
 			var oObject = new Object();
 			oObject.status = "Init";
+			oObject.thepath = path;			
 			oObject.thefile = s;
 			this_upload_files.push(oObject);
 		}
@@ -574,10 +675,9 @@ $("document").ready(function() {
   }
   
   $('button#cancel').click(function(){
-  	if (this_upload_files&&this_upload_files.length>0) {
-			this_upload_files.splice(0,this_upload_files.length);
-		}
-		
+  	if(parent.confirmCancelUploadFile()==0)
+			return;
+			
 		parent.closeUploadPanel();
   });
   
@@ -585,6 +685,23 @@ $("document").ready(function() {
   	
 });
 
+function get_user_agent(){
+   return navigator.userAgent;
+}
+  	
+function get_server_url(){
+	var openurl = window.location.protocol + "//" + window.location.host + addPathSlash(g_storage.get('openurl'));
+	return openurl;
+}
+
+function stop_upload(){
+	console.log("stop_upload");
+	if( this_upload_files && this_upload_files.length > 0 )
+		this_upload_files.splice(0,this_upload_files.length);
+		
+	g_storage.set('stopLogoutTimer', "0");
+	g_storage.set('isOnUploadFile', "0");
+}
 </script>
 
 <body>
@@ -603,16 +720,29 @@ $("document").ready(function() {
     								<td>
     									<div class="upload-drop-here">將檔案拖曳到這裡</div>
     									<div class="upload-drop-alt">或者，您也可以...</div>
-    									<div id=":5.select-files-parent-label">
+    									<div id="select-files-parent-label" class='select-files'>
     										<span class="upload-select-here">選取電腦中的檔案</span>
-    										<input type='file' id='files' multiple />
+    										<input type='file' id='files' multiple/>
+    									</div>
+    									<div id="select-directorys-parent-label" class='select-directorys'>
+    										<span class="upload-select-directorys-here">選取電腦中的資料夾</span>
+    										<input type='file' id='directorys' webkitdirectory="" directory=""/>
     									</div>
     								</td>
     							</tr>
+    							<!--
+    							<tr>
+    								<td>
+    									<div id="chrome-require-label" class="chrome-require">
+    										<a href="https://www.google.com/chrome" target="_blank"><span class="upload-support-directorys"></span></a>
+    									</div>
+    								</td>
+    							</tr>
+    							-->
     						</tbody>
     					</table>
     				</td>
-    			</tr>
+    			</tr>	
     		</tbody>
     	</table>
     	<output id='upload_file_list'></output>    	

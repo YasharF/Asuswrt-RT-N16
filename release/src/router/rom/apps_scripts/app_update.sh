@@ -1,6 +1,11 @@
 #!/bin/sh
+# $1: only update the list name.
 
 
+apps_ipkg_old=`nvram get apps_ipkg_old`
+is_arm_machine=`uname -m |grep arm`
+
+ASUS_SERVER=`nvram get apps_ipkg_server`
 wget_timeout=`nvram get apps_wget_timeout`
 #wget_options="-nv -t 2 -T $wget_timeout --dns-timeout=120"
 wget_options="-q -t 2 -T $wget_timeout"
@@ -27,6 +32,10 @@ if [ "$link_internet" != "1" ]; then
 	exit 1
 fi
 
+if [ -n "$is_arm_machine" ]; then
+	sed -i '/^#src\/gz.*ASUSWRT$/c src/gz optware.mbwe-bluering http://ipkg.nslu2-linux.org/feeds/optware/mbwe-bluering/cross/stable' $CONF_FILE
+fi
+
 grep -n '^src.*' $CONF_FILE |sort -r |awk '{print $2 " " $3}' > $TEMP_FILE
 row_num=`wc -l < $TEMP_FILE`
 if [ -z "$row_num" ]; then
@@ -42,13 +51,23 @@ while [ $i -lt $row_num ]; do
 	list_name=`sed -n $i'p' $TEMP_FILE |awk '{print $1}'`
 	server_name=`sed -n $i'p' $TEMP_FILE |awk '{print $2}'`
 
+	if [ -n "$1" ] && [ "$1" != "$list_name" ]; then
+		continue;
+	fi
+
 	if [ "$list_name" == "optware.asus" ]; then
-		if [ "$SQ_TEST" == "1" ]; then
-			#cp -f $apps_local_space/$list_name $LIST_DIR/$list_name
-			#continue
-			server_name=http://dlcdnet.asus.com/pub/ASUS/LiveUpdate/Release/Wireless_SQ
+		if [ -z "$is_arm_machine" ] && [ -n "$apps_ipkg_old" ] && [ "$apps_ipkg_old" == "1" ]; then
+			if [ "$SQ_TEST" == "1" ]; then
+				server_name=http://dlcdnet.asus.com/pub/ASUS/LiveUpdate/Release/Wireless_SQ
+			else
+				server_name=http://dlcdnet.asus.com/pub/ASUS/LiveUpdate/Release/Wireless
+			fi
 		else
-			server_name=http://dlcdnet.asus.com/pub/ASUS/LiveUpdate/Release/Wireless
+			if [ "$SQ_TEST" == "1" ]; then
+				server_name=`echo "$ASUS_SERVER" |sed 's/stable/unstable/g'`
+			else
+				server_name=$ASUS_SERVER
+			fi
 		fi
 	fi
 

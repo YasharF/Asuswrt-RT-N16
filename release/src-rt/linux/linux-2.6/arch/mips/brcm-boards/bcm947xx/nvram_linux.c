@@ -37,7 +37,7 @@
 #include <hndsoc.h>
 #include <siutils.h>
 #include <hndmips.h>
-#include <sflash.h>
+#include <hndsflash.h>
 #include <linux/delay.h>
 #ifdef NFLASH_SUPPORT
 #include <nflash.h>
@@ -96,6 +96,38 @@ extern spinlock_t bcm947xx_sih_lock;
 #define sih_lock bcm947xx_sih_lock
 #define KB * 1024
 #define MB * 1024 * 1024
+
+#ifdef NFLASH_SUPPORT
+static unsigned char nflash_nvh[NVRAM_SPACE];
+
+static struct nvram_header *
+BCMINITFN(nand_find_nvram)(hndnand_t *nfl, uint32 off)
+{
+	int blocksize = nfl->blocksize;
+	unsigned char *buf = nflash_nvh;
+	int rlen = sizeof(nflash_nvh);
+	int len;
+
+	for (; off < NFL_BOOT_SIZE; off += blocksize) {
+		if (hndnand_checkbadb(nfl, off) != 0)
+			continue;
+
+		len = blocksize;
+		if (len >= rlen)
+			len = rlen;
+
+		if (hndnand_read(nfl, off, len, buf) == 0)
+			break;
+
+		buf += len;
+		rlen -= len;
+		if (rlen == 0)
+			return (struct nvram_header *)nflash_nvh;
+	}
+
+	return NULL;
+}
+#endif /* NFLASH_SUPPORT */
 
 #define _nvram_safe_get(name) (_nvram_get(name) ? : "")
 
@@ -328,15 +360,15 @@ early_nvram_init(void)
 {
 	struct nvram_header *header;
 	chipcregs_t *cc;
-	struct sflash *info = NULL;
 	int i;
 	uint32 base, off, lim;
 	u32 *src, *dst;
 	uint32 fltype;
 #ifdef NFLASH_SUPPORT
-	struct nflash *nfl_info = NULL;
+	hndnand_t *nfl_info = NULL;
 	uint32 blocksize;
 #endif
+	hndsflash_t *sfl_info = NULL;
 	header = (struct nvram_header *)ram_nvram_buf;
 
 	if ((cc = si_setcore(sih, CC_CORE_ID, 0)) != NULL) {
@@ -357,13 +389,13 @@ early_nvram_init(void)
 
 		case SFLASH_ST:
 		case SFLASH_AT:
-			if ((info = sflash_init(sih, cc)) == NULL)
+			if ((sfl_info = hndsflash_init(sih)) == NULL)
 				return -1;
-			lim = info->size;
+			lim = sfl_info->size;
 			break;
 #ifdef NFLASH_SUPPORT
 		case NFLASH:
-			if ((nfl_info = nflash_init(sih, cc)) == NULL)
+			if ((nfl_info = hndnand_init(sih)) == NULL)
 				return -1;
 			lim = SI_FLASH1_SZ;
 			break;
@@ -381,20 +413,21 @@ early_nvram_init(void)
 	if (nfl_info != NULL) {
 		blocksize = nfl_info->blocksize;
 		off = blocksize;
-		while (off <= lim) {
-			if (nflash_checkbadb(sih, cc, off) != 0) {
-				off += blocksize;
+		for (; off < NFL_BOOT_SIZE; off += blocksize) {
+			if (hndnand_checkbadb(nfl_info, off) != 0)
 				continue;
-			}
 			header = (struct nvram_header *) KSEG1ADDR(base + off);
-			if (header->magic == NVRAM_MAGIC)
-				if (nvram_calc_crc(header) == (uint8) header->crc_ver_init) {
-					goto found;
-				}
-			off += blocksize;
+			if (header->magic != NVRAM_MAGIC)
+				continue;
+
+			/* Read into the nand_nvram */
+			if ((header = nand_find_nvram(nfl_info, off)) == NULL)
+				continue;
+			if (nvram_calc_crc(header) == (uint8)header->crc_ver_init)
+				goto found;
 		}
 	} else
-#endif
+#endif /* NFLASH_SUPPORT */
 	off = FLASH_MIN;
 
 #ifdef RTN66U_NVRAM_64K_SUPPORT
@@ -695,13 +728,12 @@ int
 nvram_nflash_commit(void)
 {
 	char *buf;
-	size_t len, magic_len;
+	size_t len;
 	unsigned int i;
 	int ret;
 	struct nvram_header *header;
 	unsigned long flags;
 	u_int32_t offset;
-	struct erase_info erase;
 
 	if (!(buf = kmalloc(NVRAM_SPACE, GFP_KERNEL))) {
 		printk("nvram_commit: out of memory\n");
@@ -737,7 +769,7 @@ done:
 	kfree(buf);
 	return ret;
 }
-#endif
+#endif	/* NFLASH_SUPPORT */
 
 //#define NVRAM2HANDLER 1
 
@@ -826,7 +858,7 @@ nvram_commit(void)
 		header = (struct nvram_header *)nvram_commit_buf;
 	}
 
-	/* clear the existing magic # to mark the NVRAM as unusable 
+	/* clear the existing magic # to mark the NVRAM as unusable
 	 * we can pull MAGIC bits low without erase
 	 */
 	header->magic = NVRAM_CLEAR_MAGIC; /* All zeros magic */
@@ -1178,7 +1210,7 @@ dev_nvram_init(void)
 
 printk("dev_nvram_init: _nvram_init\n");
         /* Initialize hash table */
-        _nvram_init(sih);
+	_nvram_init((void *)sih);
 
 	/* Create /dev/nvram handle */
 	nvram_class = class_create(THIS_MODULE, "nvram");

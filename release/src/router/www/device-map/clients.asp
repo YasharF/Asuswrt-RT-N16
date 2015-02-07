@@ -33,28 +33,36 @@ p{
 	font-family: Lucida Console;
 }
 #device_img1{
-  background: url(../images/wl_device/wl_devices.png);
-  background-position: 4px -0px; width: 26px; height: 22px;
+  background: url(../images/wl_device/wl_devices.png) no-repeat;
+  background-position: 4px 6px; width: 30px; height: 32px;
 }
 #device_img2{
-  background: url(../images/wl_device/wl_devices.png);
-  background-position: 4px -32px; width: 24px; height: 20px;
+  background: url(../images/wl_device/wl_devices.png) no-repeat;
+  background-position: 4px -25px; width: 30px; height: 32px;
 }
 #device_img3{
-  background: url(../images/wl_device/wl_devices.png);
-  background-position: 4px -62px; width: 24px; height: 20px;
+  background: url(../images/wl_device/wl_devices.png) no-repeat;
+  background-position: 4px -57px; width: 30px; height: 32px;
 }
 #device_img4{
-  background: url(../images/wl_device/wl_devices.png);
-  background-position: 4px -92px; width: 24px; height: 20px;
+  background: url(../images/wl_device/wl_devices.png) no-repeat;
+  background-position: 4px -89px; width: 30px; height: 32px;
 }
 #device_img5{
-  background: url(../images/wl_device/wl_devices.png);
-  background-position: 4px -122px; width: 24px; height: 20px;
+  background: url(../images/wl_device/wl_devices.png) no-repeat;
+  background-position: 7px -121px; width: 30px; height: 32px;
 }
 #device_img6{
-  background: url(../images/wl_device/wl_devices.png);
-  background-position: -0px -152px; width: 30px; height: 30px;
+  background: url(../images/wl_device/wl_devices.png) no-repeat;
+  background-position: 7px -152px; width: 30px; height: 33px;
+}
+#device_img7{
+  background: url(../images/wl_device/wl_devices.png) no-repeat;
+  background-position: 5px -182px; width: 30px; height: 32px;
+}
+#device_img8{
+  background: url(../images/wl_device/wl_devices.png) no-repeat;
+  background-position: 3px -215px; width: 30px; height: 32px;
 }
 </style>
 <link href="/form_style.css" rel="stylesheet" type="text/css" />
@@ -62,13 +70,14 @@ p{
 <link rel="stylesheet" type="text/css" href="../form_style.css"> 
 <script type="text/javascript" src="/state.js"></script>
 <script type="text/javascript" src="/jquery.js"></script>
+<script type="text/javascript" src="/jquery.xdomainajax.js"></script>
 <script type="text/javascript" src="/help.js"></script>
 <script>
 var $j = jQuery.noConflict();
 <% login_state_hook(); %>
 
-var DEVICE_TYPE = ["", "<#Device_type_01_PC#>", "<#Device_type_02_RT#>", "<#Device_type_03_AP#>", "<#Device_type_04_NS#>", "<#Device_type_05_IC#>", "<#Device_type_06_OD#>"];
-var client_list_array;
+var DEVICE_TYPE = ["", "<#Device_type_01_PC#>", "<#Device_type_02_RT#>", "<#Device_type_03_AP#>", "<#Device_type_04_NS#>", "<#Device_type_05_IC#>", "<#Device_type_06_OD#>", "Printer", "TV Game Console"];
+var client_list_array = '<% get_client_detail_info(); %>';
 var client_list_row;
 var networkmap_scanning;
 var macfilter_rulelist_array = '<% nvram_get("macfilter_rulelist"); %>';
@@ -131,7 +140,7 @@ function parsedhcpLease(xmldoc)
 }
 
 var retHostName = function(_mac){
-	if(parent.sw_mode != 1) return false;
+	if(parent.sw_mode != 1 || !leasemac) return false;
 
 	for(var idx=0; idx<leasemac.length; idx++){
 		if(!(leasehostname[idx].childNodes[0].nodeValue.split("value=")[1]) || !(leasemac[idx].childNodes[0].nodeValue.split("value=")[1]))
@@ -159,30 +168,41 @@ function update_clients(e) {
     success: function(response) {
 			client_list_row = client_list_array.split('<');
 			showclient_list(0);
+			_showNextItem(listFlag);
 			if(networkmap_scanning == 1 || client_list_array == "")
 				setTimeout("update_clients();", 2000);
-			_showNextItem(listFlag);
 		}    
   });
 }
 
 function gotoMACFilter(){
-	if(parent.ParentalCtrl2_support != -1)
+	if(parent.ParentalCtrl2_support)
 		parent.location.href = "/ParentalControl.asp";
 	else
 		parent.location.href = "/Advanced_MACFilter_Content.asp";
 }
 
 function initial(){
+	if(client_list_array != ""){
+		client_list_row = client_list_array.split('<');
+		showclient_list(0);
+		setTimeout("_showNextItem(listFlag);", 1);
+	}
+	else{
+		var HTMLCode = '<table width="100%" border="1" cellspacing="0" cellpadding="4" align="center" class="list_table" id="client_list_table">';
+		HTMLCode += '<tr><td style="color:#FFCC00;font-size:12px; border-collapse: collapse;border:1;" colspan="4"><span style="line-height:25px;"><#Device_Searching#></span>&nbsp;<img style="margin-top:10px;" src="/images/InternetScan.gif"></td></tr>';
+		HTMLCode += '</table>';
+		$("client_list_Block").innerHTML = HTMLCode;
+	}
 	setTimeout("update_clients();", 1000);
-	
-	if((macfilter_enable != 0 || ParentalCtrl_support != -1) && sw_mode == 1)
+	if((macfilter_enable != 0 || ParentalCtrl_support) && sw_mode == 1)
 			$("macFilterHint").style.display = "";
 }
 
 var listFlag = 0;
 var itemperpage = 14;
 function _showNextItem(num){
+	$("client_list_Block").style.display = "";
 	var _client_list_row_length = client_list_row.length-1;
 
 	if(_client_list_row_length < parseInt(itemperpage)+1){
@@ -240,6 +260,7 @@ function showNextItem(act){
 	_showNextItem(listFlag);
 }
 
+var overlib_str_tmp = "";
 function showclient_list(list){
 	var code = "";
 	networkmap_scanning = 0;
@@ -268,7 +289,7 @@ function showclient_list(list){
 				client_list_col[1] += "...";
 			}
 
-			overlib_str += "<p><#MAC_Address#></p>" + client_list_col[3];
+			overlib_str += "<p><#MAC_Address#>:</p>" + client_list_col[3];
 			if(login_ip_str() == client_list_col[2])
 				overlib_str += "<p><#CTL_localdevice#>:</p>YES";
 			if(client_list_col[5] == 1)
@@ -276,29 +297,22 @@ function showclient_list(list){
 			if(client_list_col[6] == 1)
 				overlib_str += "<p><#Device_service_iTune#></p>YES";
 
-			for(var j = 0; j < client_list_col.length-3; j++){				
+			for(var j = 0; j < client_list_col.length-3; j++){
 				if(j == 0){
 					if(client_list_col[0] == "0" || client_list_col[0] == ""){
-
 						code +='<td width="12%" height="30px;" title="'+DEVICE_TYPE[client_list_col[0]]+'"><div id="device_img6"></div></td>';
-						//if(client_list_col[1] != "")
-							//code +='<td width="12%" height="30px;"><img title="'+DEVICE_TYPE[client_list_col[0]]+'" src="/images/wl_device/6.png"></td>';
-						//else
-							//code +='<td width="12%" height="30px;"><img title="'+DEVICE_TYPE[client_list_col[0]]+'" src="/images/InternetScan.gif"></td>';
-
 						networkmap_scanning = 1;
 					}
 					else{
-						/*code +='<td width="12%" height="30px;"><img title="'+DEVICE_TYPE[client_list_col[0]]+'" src="/images/wl_device/' + client_list_col[0] +'.png"></td>';*/
 						code +='<td width="12%" height="30px;" title="'+DEVICE_TYPE[client_list_col[0]]+'">';
 						code +='<div id="device_img'+client_list_col[0]+'"></div></td>';
 					}	
 				}
 				else if(j == 1){
 					if(client_list_col[1] != "")	
-						code += '<td width="40%"><span class="ClientName" onmouseover="return overlib(\''+ overlib_str +'\');" onmouseout="nd();">'+ client_list_col[1] +'</span></td>';	//Device-name
+						code += '<td width="40%" onclick="oui_query(\'' + client_list_col[3] + '\');overlib_str_tmp=\''+ overlib_str +'\';return overlib(\''+ overlib_str +'\');" onmouseout="nd();" class="ClientName" style="cursor:pointer;text-decoration:underline;">'+ client_list_col[1] +'</td>';	// Show Device-name
 					else
-						code += '<td width="40%"><span class="ClientName" onmouseover="return overlib(\''+ overlib_str +'\');" onmouseout="nd();">'+ client_list_col[3] +'</span></td>';	//MAC	
+						code += '<td width="40%" onclick="oui_query(\'' + client_list_col[3] + '\');overlib_str_tmp=\''+ overlib_str +'\';return overlib(\''+ overlib_str +'\');" onmouseout="nd();" class="ClientName" style="cursor:pointer;text-decoration:underline;">'+ client_list_col[3] +'</td>';	// Show MAC	
 				}
 				else if(j == 2){
 					if(client_list_col[4] == "1")			
@@ -309,11 +323,10 @@ function showclient_list(list){
 				else if(j == client_list_col.length-4)
 					code += '';
 				else				
-					code += '<td width="36%"><span class="ClientName" onmouseover="return overlib(\''+ overlib_str +'\');" onmouseout="nd();">'+ client_list_col[j] +'</span></td>';
+					code += '<td width="36%" class="ClientName" onclick="oui_query(\'' + client_list_col[3] + '\');overlib_str_tmp=\''+ overlib_str +'\';return overlib(\''+ overlib_str +'\');" onmouseout="nd();">'+ client_list_col[j] +'</td>';
 			}
-			//code += "<td>"+ gen_prio_code(client_list_col[2]) +"</td>";	
 			
-			if(parent.sw_mode == 1 && ParentalCtrl_support != -1)
+			if(parent.sw_mode == 1 && ParentalCtrl_support)
 				code += '<td width="12%"><input class="remove_btn_NM" type="submit" title="<#Block#>" onclick="block_this_client(this);" value=""/></td></tr>';
 			else
 				code += '</tr>';
@@ -321,7 +334,8 @@ function showclient_list(list){
 	}
 	code +='</table>';
 	$("client_list_Block").innerHTML = code;
-	
+	$("client_list_Block").style.display = "none";
+
 	for(var i=client_list_row.length-1; i>0; i--){
 		var client_list_col = client_list_row[i].split('>');
 		if(list == is_blocked_client(client_list_col[3])){
@@ -338,28 +352,29 @@ function showclient_list(list){
 	parent.show_client_status();
 }
 
-/*function gen_prio_code(ip){
-			var prio_code;
-		  clients_prio = get_client_priority(ip);
+overlib.isOut = true;
+function oui_query(mac) {
+	var tab = new Array();	
+	tab = mac.split(mac.substr(2,1));
 
-	   	var selected_one = ["","",""];
-			if(clients_prio == 1)
-				selected_one[0] = "selected";
-			else if(clients_prio == 4)
-				selected_one[1] = "selected";
-			else if(clients_prio == 6)
-				selected_one[2] = "selected";
+  $j.ajax({
+    url: 'http://standards.ieee.org/cgi-bin/ouisearch?'+ tab[0] + '-' + tab[1] + '-' + tab[2],
+		type: 'GET',
+    error: function(xhr) {
+			if(overlib.isOut)
+				return true;
 			else
-				selected_one[1] = "selected";   
-	
-			if(ip.length > 0){
-		  	prio_code = "<select class='input_option' onchange='get_changed_priority(this);'><option value='1' "+selected_one[0]+"><#Priority_Level_1#></option><option value='4' "+selected_one[1]+"><#Priority_Level_2#></option><option value='6'  "+selected_one[2]+"><#Priority_Level_3#></option></select>";
-			}
-			else{
-				prio_code = "<select disabled=disabled class='input'><option value=1><#btn_Disabled#></option></select>";
-			}
-			return prio_code;
-}*/
+				oui_query(mac);
+    },
+    success: function(response) {
+			if(overlib.isOut)
+				return nd();
+			var retData = response.responseText.split("pre")[1].split("(base 16)")[1].replace("PROVINCE OF CHINA", "R.O.C").split("&lt;/");
+			overlib_str_tmp += "<p><span>.....................................</span></p>";
+			return overlib(overlib_str_tmp + "<p style='margin-top:5px'>Manufacturer:</p>" + retData[0]);
+		}    
+  });
+}
 
 function is_blocked_client(client_mac){
 	var macfilter_rulelist_row = macfilter_rulelist_array.split('&#60');
@@ -473,9 +488,6 @@ function networkmap_update(){
   		<tr>
     			<td style="padding:3px 3px 5px 5px;">
 						<div id="client_list_Block">
-							<table width="100%" border="1" cellspacing="0" cellpadding="4" align="center" class="list_table" id="client_list_table">
-								<tr><td style="color:#FFCC00;font-size:12px; border-collapse: collapse;border:1;" colspan="4"><span style="line-height:25px;"><#Device_Searching#></span>&nbsp;<img style="margin-top:10px;" src="/images/InternetScan.gif"></td></tr>
-							</table>
 						</div>
     			</td>
   		</tr>

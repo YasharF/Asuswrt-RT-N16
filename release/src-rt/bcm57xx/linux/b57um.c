@@ -2271,7 +2271,7 @@ bcm5700_vlan_rx_kill_vid(struct net_device *dev, uint16_t vid)
 #endif
 
 STATIC int
-bcm5700_start_xmit(struct sk_buff *skb, struct net_device *dev)
+_bcm5700_start_xmit(struct sk_buff *skb, struct net_device *dev)
 {
 	PUM_DEVICE_BLOCK pUmDevice = (PUM_DEVICE_BLOCK)dev->priv;
 	PLM_DEVICE_BLOCK pDevice = (PLM_DEVICE_BLOCK) pUmDevice;
@@ -2487,6 +2487,16 @@ bcm5700_start_xmit(struct sk_buff *skb, struct net_device *dev)
 
 
 	return 0;
+}
+
+STATIC int
+bcm5700_start_xmit(struct sk_buff *skb, struct net_device *dev)
+{
+	void *n;
+
+	FOREACH_CHAINED_PKT(skb, n) {
+		_bcm5700_start_xmit(skb, dev);
+	}
 }
 
 #ifdef BCM_NAPI_RXPOLL
@@ -4255,8 +4265,10 @@ STATIC int bcm5700_ioctl(struct net_device *dev, struct ifreq *rq, int cmd)
 
 		/* Invalidate current robo page */
 		if ((pDevice->Flags & ROBO_SWITCH_FLAG) && pUmDevice->robo &&
-		    (pDevice->PhyAddr == 0x1e) && ((data[1] & 0x1f) == 0x10))
-			((robo_info_t *)pUmDevice->robo)->page = (data[2] >> 8);
+		    (pDevice->PhyAddr == 0x1e) && ((data[1] & 0x1f) == 0x10)) {
+			LM_ReadPhy(pDevice, 0x10, (LM_UINT32 *)&value), value &= 0xffff;
+			((robo_info_t *)pUmDevice->robo)->page = (value == 0xffff) ? -1 : (value >> 8);
+		}
 
 		if (data[0] != 0xffff)
 			pDevice->PhyAddr = savephyaddr;
@@ -4290,8 +4302,10 @@ STATIC int bcm5700_ioctl(struct net_device *dev, struct ifreq *rq, int cmd)
 
 		/* Invalidate current robo page */
 		if ((pDevice->Flags & ROBO_SWITCH_FLAG) && pUmDevice->robo &&
-		    (pDevice->PhyAddr == 0x1e) && ((args[0] & 0xffff) == 0x10))
-			((robo_info_t *)pUmDevice->robo)->page = ((uint16)args[1] >> 8);
+		    (pDevice->PhyAddr == 0x1e) && ((args[0] & 0xffff) == 0x10)) {
+			LM_ReadPhy(pDevice, 0x10, (LM_UINT32 *)&value), value &= 0xffff;
+			((robo_info_t *)pUmDevice->robo)->page = (value == 0xffff) ? -1 : (value >> 8);
+		}
 
 		if (cmd == SIOCSETCPHYWR2)
 			pDevice->PhyAddr = savephyaddr;

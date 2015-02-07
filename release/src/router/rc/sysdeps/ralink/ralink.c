@@ -26,7 +26,6 @@
 #include <net/if_arp.h>
 #include <shutils.h>
 #include <sys/signal.h>
-#include <semaphore_mfp.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <dirent.h>
@@ -34,6 +33,7 @@
 #include <iwlib.h>
 #include <wps.h>
 #include <stapriv.h>
+#include "flash_mtd.h"
 
 #define MAX_FRW 64
 #define MACSIZE 12
@@ -41,8 +41,8 @@
 #define	DEFAULT_SSID_2G	"ASUS"
 #define	DEFAULT_SSID_5G	"ASUS_5G"
 
-#define RTL8367M_DEV  "/dev/rtl8367m"
-#define RTL8367R_DEV  "/dev/rtl8367r" //Support RTL8367R switch
+#define RTKSWITCH_DEV  "/dev/rtkswitch"
+
 #define LED_CONTROL(led, flag) ralink_gpio_write_bit(led, flag)
 
 
@@ -53,6 +53,18 @@ typedef struct {
 
 int g_wsc_configured = 0;
 int g_isEnrollee = 0;
+
+int getCountryRegion5G(const char *countryCode, int *warning);
+
+static void 
+iwprivSet(const char *ifname, const char *name, const char *value)
+{
+	char tmpBuf[256];
+	sprintf(tmpBuf, "%s=%s", name, value);
+	_dprintf("[%s] %s (%s)\n", __func__, ifname, tmpBuf);
+	eval("iwpriv", (char*) ifname, "set", tmpBuf);
+}
+
 
 char *
 get_wscd_pidfile()
@@ -91,7 +103,7 @@ get_wifname(int band)
 }
 
 char *
-get_wpsifname()
+get_wpsifname(void)
 {
 	int wps_band = nvram_get_int("wps_band");
 
@@ -121,7 +133,7 @@ getMAC_5G()
 	memset(buffer, 0, sizeof(buffer));
 	memset(macaddr, 0, sizeof(macaddr));
 
-	if (FRead((unsigned int *)buffer, OFFSET_MAC_ADDR, 6)<0)
+	if (FRead(buffer, OFFSET_MAC_ADDR, 6)<0)
 		dbg("READ MAC address: Out of scope\n");
 	else
 	{
@@ -139,7 +151,7 @@ getMAC_2G()
 	memset(buffer, 0, sizeof(buffer));
 	memset(macaddr, 0, sizeof(macaddr));
 
-	if (FRead((unsigned int *)buffer, OFFSET_MAC_ADDR_2G, 6)<0)
+	if (FRead(buffer, OFFSET_MAC_ADDR_2G, 6)<0)
 		dbg("READ MAC address 2G: Out of scope\n");
 	else
 	{
@@ -148,6 +160,46 @@ getMAC_2G()
 	}
 	return 0;
 }
+
+#if defined(RTN14U)
+int
+eeprom_upgrade(const char *path, int is_bk)
+{
+#define FLASH_OFFSET	0x40000
+	FILE *fp=NULL;
+	char buf_org[512], buf_new[512];
+	int ret=0;
+	int len, offset;
+
+	fp=fopen(path, "r");
+	if (!fp) goto quit_out;
+	len=fread(buf_new, 1, 512, fp);
+	if (len!=512) goto quit_out;
+	if (is_bk)
+	{
+		FRead(buf_org, FLASH_OFFSET, 512);
+		offset=OFFSET_BOOT_VER-FLASH_OFFSET;
+		memcpy(buf_new+offset,buf_org+offset,4);
+		offset=OFFSET_COUNTRY_CODE-FLASH_OFFSET;
+		memcpy(buf_new+offset,buf_org+offset,2);
+		offset=OFFSET_MAC_ADDR-FLASH_OFFSET;
+		memcpy(buf_new+offset,buf_org+offset,6);
+		offset=OFFSET_PIN_CODE-FLASH_OFFSET;
+		memcpy(buf_new+offset,buf_org+offset,8);
+		offset=OFFSET_TXBF_PARA-FLASH_OFFSET;
+		memcpy(buf_new+offset,buf_org+offset,33);
+	}
+	FWrite(buf_new, FLASH_OFFSET, 512);
+	ret=1;
+quit_out:
+	if (fp) fclose(fp);
+	if (ret)
+		fprintf(stderr,"success!\n");
+	else
+		fprintf(stderr,"fail!\n");
+	return ret;
+}
+#endif
 
 int
 setMAC_5G(const char *mac)
@@ -204,6 +256,238 @@ void get_country_code_from_rc(char* country_code)
 }
 #endif
 
+
+int
+isWifiPower1(const char *cc)
+{
+	if ((strcmp(cc, "US") == 0)
+	 || (strcmp(cc, "TW") == 0))
+		return 1;
+	return 0;
+}
+
+int
+isWifiPower2(const char *cc)
+{
+	if ((strcmp(cc, "CN") == 0)
+	 || (strcmp(cc, "GB") == 0))
+		return 1;
+	return 0;
+}
+
+#if !defined(RTN14U) && !defined(RTAC52U)
+//for specific power
+int
+isWifiPower3(const char *cc)
+{
+	if ((strcmp(cc, "DB") == 0)
+	 || (strcmp(cc, "Z1") == 0)
+	 || (strcmp(cc, "Z2") == 0)
+	 || (strcmp(cc, "Z3") == 0)
+	 || (strcmp(cc, "Z4") == 0))
+		return 1;
+	return 0;
+}
+
+void
+modify_ralink_power_2g(const char *old_CC, const char *CC, unsigned char *flash_buf)
+{
+	const unsigned char power1Value[] = {0x66,0x66,0x66,0x66,0x66,0x66,0x77,0x66,0x55,0x33,0x77,0x66,0x55,0x11,0x77,0x66,0x55,0x33};
+	const unsigned char power2Value[] = {0x33,0x33,0x33,0x33,0x33,0x33,0x44,0x44,0x33,0x33,0x44,0x44,0x33,0x11,0x44,0x44,0x33,0x33};
+	const unsigned char power3Value[] = {0x77,0x77,0x77,0x77,0x77,0x66,0x77,0x66,0x55,0x33,0x77,0x66,0x55,0x11,0x77,0x66,0x55,0x33};
+	const unsigned char *powerValue = NULL;
+	int len;
+
+	if(!isValidCountryCode(CC))
+	{
+	}
+	else if(isWifiPower1(CC))
+	{
+		powerValue = power1Value;
+		len = sizeof(power1Value);
+	}
+	else if(isWifiPower2(CC))
+	{
+		powerValue = power2Value;
+		len = sizeof(power2Value);
+	}
+	//for specific power
+	else if(isWifiPower3(CC))
+	{
+		printf("use power3\n");
+		powerValue = power3Value;
+		len = sizeof(power3Value);
+	}
+	memcpy(flash_buf + (OFFSET_POWER_2G - OFFSET_MTD_FACTORY), powerValue, len);
+}
+
+void
+modify_ralink_power_5g(const char *old_CC, const char *CC, unsigned char *flash_buf)
+{
+	signed char modify;
+	signed char oldP = 0, newP = 0;
+
+	
+	if(!isValidCountryCode(old_CC))
+		oldP = 0;
+	else if(isWifiPower1(old_CC))
+		oldP = -7;
+	else if(isWifiPower2(old_CC))
+		oldP = 0;
+	else if(isWifiPower3(old_CC))
+	   	oldP = 0;
+
+	if(!isValidCountryCode(CC))
+		newP = 0;
+	else if(isWifiPower1(CC))
+		newP = -7;
+	else if(isWifiPower2(CC))
+		newP = 0;
+	else if(isWifiPower3(CC))
+	   	newP = 0;
+
+	modify = newP - oldP;
+
+	_dprintf("old(%s, %d) new(%s, %d) modify(%d)\n", old_CC, oldP, CC, newP, modify);
+	if(modify != 0)
+	{
+		struct ralink_eeprom {unsigned int offset; int number;};
+		const struct ralink_eeprom pa[] = {
+			{OFFSET_POWER_5G_TX0_36_x6, 6},
+			{OFFSET_POWER_5G_TX1_36_x6, 6},
+			{OFFSET_POWER_5G_TX2_36_x6, 6},
+		};
+		int i,cnt;
+		unsigned char *pPower;
+
+		for(i =0; i < ARRAY_SIZE(pa); i++)
+		{
+			pPower = flash_buf + (pa[i].offset - OFFSET_MTD_FACTORY);
+			for(cnt = 0; cnt < pa[i].number; cnt++)
+			{
+				pPower[cnt] += modify;
+			}
+		}
+	}
+}
+#endif
+
+#if defined(RTCONFIG_NEW_REGULATION_DOMAIN)
+int getRegSpec(void)
+{
+	char value_str[MAX_REGSPEC_LEN+1];
+	int i;
+
+	memset(value_str, 0, sizeof(value_str));
+	FRead(value_str, REGSPEC_ADDR, MAX_REGSPEC_LEN);
+	for(i = 0; i < MAX_REGSPEC_LEN && value_str[i] != '\0'; i++) {
+		if ((unsigned char)value_str[i] == 0xff)
+		{
+			value_str[i] = '\0';
+			break;
+		}
+	}
+	puts(value_str);
+	return 0;
+}
+
+int getRegDomain_2G(void)
+{
+	char value_str[MAX_REGDOMAIN_LEN+1];
+	int i;
+
+	memset(value_str, 0, sizeof(value_str));
+	FRead(value_str, REG2G_EEPROM_ADDR, MAX_REGDOMAIN_LEN);
+
+	for(i=0; i<MAX_REGDOMAIN_LEN; ++i) {
+		if ((value_str[i]==(char)0xFF) || (value_str[i]=='\0'))
+			break;
+		printf("%c", value_str[i]);
+	}
+	printf("\n");
+	return 0;
+}
+
+int getRegDomain_5G(void)
+{
+	char value_str[MAX_REGDOMAIN_LEN+1];
+	int i;
+
+	memset(value_str, 0, sizeof(value_str));
+	FRead(value_str, REG5G_EEPROM_ADDR, MAX_REGDOMAIN_LEN);
+
+	for(i=0; i<MAX_REGDOMAIN_LEN; ++i) {
+		if ((value_str[i]==(char)0xFF) || (value_str[i]=='\0'))
+			break;
+		printf("%c", value_str[i]);
+	}
+	printf("\n");
+	return 0;
+}
+
+
+int setRegSpec(const char *regSpec)
+{
+	char REGSPEC[MAX_REGSPEC_LEN+1];
+	int i;
+
+	if (regSpec == NULL || regSpec[0] == '\0' || strlen(regSpec) > 3)
+		return -1;
+	if (!strcasecmp(regSpec, "CE")) ;
+	else if (!strcasecmp(regSpec, "FCC")) ;
+	else
+		return -1;
+
+	memset(REGSPEC, 0, sizeof(REGSPEC));
+	for (i=0; regSpec[i]!='\0' ;i++)
+		REGSPEC[i]=(char)toupper(regSpec[i]);
+	FWrite(REGSPEC, REGSPEC_ADDR, MAX_REGSPEC_LEN);
+	return 0;
+}
+
+int setRegDomain_2G(const char *cc)
+{
+	char CC[MAX_REGDOMAIN_LEN+1];
+	int i;
+
+	if (!strcasecmp(cc, "2G_CH11")) ;
+	else if (!strcasecmp(cc, "2G_CH13")) ;
+	else if (!strcasecmp(cc, "2G_CH14")) ;
+	else
+		return -1;
+
+	memset(CC, 0x0, sizeof(CC));
+	strcpy(CC, cc);
+	for (i=0;CC[i]!='\0';i++)
+		CC[i]=(char)toupper(CC[i]);
+	FWrite(CC, REG2G_EEPROM_ADDR, MAX_REGDOMAIN_LEN);
+	return 0;
+}
+
+int setRegDomain_5G(const char *cc)
+{
+	char CC[MAX_REGDOMAIN_LEN+1];
+	int i;
+
+	if (!strcasecmp(cc, "5G_ALL")) ;
+	else if (!strcasecmp(cc, "5G_BAND14")) ;
+	else if (!strcasecmp(cc, "5G_BAND24")) ;
+	else if (!strcasecmp(cc, "5G_BAND1")) ;
+	else if (!strcasecmp(cc, "5G_BAND4")) ;
+	else if (!strcasecmp(cc, "5G_BAND123")) ;
+	else
+		return -1;
+
+	memset(CC, 0x0, sizeof(CC));
+	strcpy(CC, cc);
+	for (i=0;CC[i]!='\0';i++)
+		CC[i]=(char)toupper(CC[i]);
+	FWrite(CC, REG5G_EEPROM_ADDR, MAX_REGDOMAIN_LEN);
+	return 0;
+}
+
+
+#else	/* ! RTCONFIG_NEW_REGULATION_DOMAIN */
 
 int
 getCountryCode_2G()
@@ -265,6 +549,9 @@ setCountryCode_2G(const char *cc)
 	else if (!strcasecmp(cc, "FR")) ;
 	else if (!strcasecmp(cc, "GB")) ;
 	else if (!strcasecmp(cc, "GE")) ;
+#if defined(RTN14U) || defined(RTAC52U)
+	else if (!strcasecmp(cc, "EU")) ;
+#endif
 	else if (!strcasecmp(cc, "GR")) ;
 	else if (!strcasecmp(cc, "GT")) ;
 	else if (!strcasecmp(cc, "HK")) ;
@@ -330,6 +617,13 @@ setCountryCode_2G(const char *cc)
 	else if (!strcasecmp(cc, "YE")) ;
 	else if (!strcasecmp(cc, "ZA")) ;
 	else if (!strcasecmp(cc, "ZW")) ;
+#if !defined(RTN14U) && !defined(RTAC52U)
+	//for specific power
+	else if (!strcasecmp(cc, "Z1")) ; //US
+	else if (!strcasecmp(cc, "Z2")) ; //GB
+	else if (!strcasecmp(cc, "Z3")) ; //TW
+	else if (!strcasecmp(cc, "Z4")) ; //CN
+#endif
 	else
 	{
 		return 0;
@@ -338,23 +632,63 @@ setCountryCode_2G(const char *cc)
 	memset(&CC[0], toupper(cc[0]), 1);
 	memset(&CC[1], toupper(cc[1]), 1);
 	memset(&CC[2], 0, 1);
+
+#if defined(RTN14U)
 	FWrite(CC, OFFSET_COUNTRY_CODE, 2);
+#else
+#define MTD_SIZE_FACTORY 0x10000
+    {
+	unsigned char *flash_buf;
+	if((flash_buf = malloc(MTD_SIZE_FACTORY)) == NULL)
+	{
+		return 0;
+	}
+	FRead(flash_buf, OFFSET_MTD_FACTORY, MTD_SIZE_FACTORY);
+
+#if defined(RTN65U) // adjust power for different regulation domain
+	if(get_model() == MODEL_RTN65U)
+	{
+		char old_CC[3];
+		FRead(old_CC, OFFSET_COUNTRY_CODE, 2);
+		old_CC[2] = '\0';
+		modify_ralink_power_2g(old_CC, CC, flash_buf);
+		modify_ralink_power_5g(old_CC, CC, flash_buf);
+	}
+#endif // RTN65U
+	memcpy(flash_buf + (OFFSET_COUNTRY_CODE - OFFSET_MTD_FACTORY), CC, 2);
+	FWrite(flash_buf, OFFSET_MTD_FACTORY, MTD_SIZE_FACTORY);
+	free(flash_buf);
+    }
+#endif
+
 	puts(CC);
 	return 1;
 }
+#endif	/* ! RTCONFIG_NEW_REGULATION_DOMAIN */
 
-int
-atoh(const char *a, unsigned char *e)
+static unsigned char nibble_hex(char *c)
+{
+	int val;
+	char tmpstr[3];
+
+	tmpstr[2]='\0';
+	memcpy(tmpstr,c,2);
+	val= strtoul(tmpstr, NULL, 16);
+	return val;
+}
+
+static int atoh(const char *a, unsigned char *e)
 {
 	char *c = (char *) a;
 	int i = 0;
 
 	memset(e, 0, MAX_FRW);
-	for (;;) {
-		e[i++] = (unsigned char) strtoul(c, &c, 16);
-		if (!*c++ || i == MAX_FRW)
+	for (i = 0; i < MAX_FRW; ++i, c += 3) {
+		if (!isxdigit(*c) || !isxdigit(*(c+1)) || isxdigit(*(c+2))) // should be "AA:BB:CC:DD:..."
 			break;
+		e[i] = (unsigned char) nibble_hex(c);
 	}
+
 	return i;
 }
 
@@ -380,7 +714,7 @@ FREAD(unsigned int addr_sa, int len)
 	memset(buffer, 0, sizeof(buffer));
 	memset(buffer_h, 0, sizeof(buffer_h));
 
-	if (FRead((unsigned int *)buffer, addr_sa, len)<0)
+	if (FRead(buffer, addr_sa, len)<0)
 		dbg("FREAD: Out of scope\n");
 	else
 	{
@@ -399,7 +733,7 @@ FREAD(unsigned int addr_sa, int len)
  *
  */
 int
-FWRITE(char *da, char* str_hex)
+FWRITE(const char *da, const char* str_hex)
 {
 	unsigned char ee[MAX_FRW];
 	unsigned int addr_da;
@@ -441,17 +775,26 @@ int setSN(const char *SN)
 }
 #ifdef RTCONFIG_ODMPID
 int setMN(const char *MN)
-{	// TODO: Ralink sysdep
-	if (MN==NULL || !is_valid_hostname(MN))
+{
+	char modelname[16];
+
+	if(MN==NULL || !is_valid_hostname(MN))
 		return 0;
 
+	memset(modelname, 0, sizeof(modelname));
+	strncpy(modelname, MN, sizeof(modelname) -1);
+	FWrite(modelname, OFFSET_ODMPID, sizeof(modelname));
+
+	nvram_set("odmpid", modelname);
+	puts(nvram_safe_get("odmpid"));
 	return 1;
 }
 
 int getMN(void)
-{	// TODO: Ralink sysdep
+{
+	puts(nvram_safe_get("odmpid"));
 	return 1;
-}
+}	
 #endif
 int
 setPIN(const char *pin)
@@ -476,7 +819,7 @@ getBootVer()
 	memset(btv, 0, sizeof(btv));
 	memset(output_buf, 0, sizeof(output_buf));
 	FRead(btv, OFFSET_BOOT_VER, 4);
-	sprintf(output_buf, "%s-%c.%c.%c.%c", get_productid(), btv[0], btv[1], btv[2], btv[3]);
+	sprintf(output_buf, "%s-%c.%c.%c.%c", nvram_safe_get("productid"), btv[0], btv[1], btv[2], btv[3]);
 	puts(output_buf);
 
 	return 0;
@@ -494,22 +837,32 @@ getPIN()
 }
 
 //Supports both RTL8367M and RTL8367R Realtek switch
+/*
+ * This function is used by factory only and always
+ * think the LAN port next to WAN port as LAN1
+ * even WebUI/case define another LAN port as LAN1.
+ */
 int
 GetPhyStatus(void)
 {
+#if defined(RTN14U) || defined(RTAC52U)
+	ATE_mt7620_esw_port_status();
+	return 1;
+#else
 	int fd;
 	char buf[32];
-	char dev_path[32];
+	int porder_56u[5] = {4,3,2,1,0};
+	int *o = porder_56u;
 
 #ifdef RTCONFIG_DSL
-	strcpy(dev_path, RTL8367R_DEV);
-#else
-	strcpy(dev_path, RTL8367M_DEV);
+	int porder_dsl[5] = {0,1,2,3,4};
+
+	o = porder_dsl;
 #endif
 
-	fd = open(dev_path, O_RDONLY);
+	fd = open(RTKSWITCH_DEV, O_RDONLY);
 	if (fd < 0) {
-		perror(dev_path);
+		perror(RTKSWITCH_DEV);
 		return 0;
 	}
 
@@ -520,7 +873,7 @@ GetPhyStatus(void)
 
 	if (ioctl(fd, 18, &pS) < 0)
 	{
-		sprintf(buf, "ioctl: %s", dev_path);
+		sprintf(buf, "ioctl: %s", RTKSWITCH_DEV);
 		perror(buf);
 		close(fd);
 		return 0;
@@ -528,37 +881,35 @@ GetPhyStatus(void)
 
 	close(fd);
 
-#ifdef RTCONFIG_DSL
 	sprintf(buf, "W0=%C;L1=%C;L2=%C;L3=%C;L4=%C;",
-		(pS.link[0] == 1) ? (pS.speed[0] == 2) ? 'G' : 'M': 'X',
-		(pS.link[1] == 1) ? (pS.speed[1] == 2) ? 'G' : 'M': 'X',
-		(pS.link[2] == 1) ? (pS.speed[2] == 2) ? 'G' : 'M': 'X',
-		(pS.link[3] == 1) ? (pS.speed[3] == 2) ? 'G' : 'M': 'X',
-		(pS.link[4] == 1) ? (pS.speed[4] == 2) ? 'G' : 'M': 'X');
+		(pS.link[o[0]] == 1) ? (pS.speed[o[0]] == 2) ? 'G' : 'M': 'X',
+		(pS.link[o[1]] == 1) ? (pS.speed[o[1]] == 2) ? 'G' : 'M': 'X',
+		(pS.link[o[2]] == 1) ? (pS.speed[o[2]] == 2) ? 'G' : 'M': 'X',
+		(pS.link[o[3]] == 1) ? (pS.speed[o[3]] == 2) ? 'G' : 'M': 'X',
+		(pS.link[o[4]] == 1) ? (pS.speed[o[4]] == 2) ? 'G' : 'M': 'X');
 
-#else
-	sprintf(buf, "W0=%C;L1=%C;L2=%C;L3=%C;L4=%C;",
-		(pS.link[4] == 1) ? (pS.speed[4] == 2) ? 'G' : 'M': 'X',
-		(pS.link[3] == 1) ? (pS.speed[3] == 2) ? 'G' : 'M': 'X',
-		(pS.link[2] == 1) ? (pS.speed[2] == 2) ? 'G' : 'M': 'X',
-		(pS.link[1] == 1) ? (pS.speed[1] == 2) ? 'G' : 'M': 'X',
-		(pS.link[0] == 1) ? (pS.speed[0] == 2) ? 'G' : 'M': 'X');
-#endif
 	puts(buf);
 	return 1;
+#endif
 }
 
 int
 setAllLedOn(void)
 {
 #ifdef RTCONFIG_DSL
-  LED_CONTROL(RA_LED_POWER, RA_LED_ON);
-  LED_CONTROL(RA_LED_WAN, RA_LED_ON);
+  	LED_CONTROL(RA_LED_POWER, RA_LED_ON);
+  	LED_CONTROL(RA_LED_WAN, RA_LED_ON);
 #else
-	LED_CONTROL(RA_LED_POWER, RA_LED_ON);
-	LED_CONTROL(RA_LED_WAN, RA_LED_ON);
-	LED_CONTROL(RA_LED_LAN, RA_LED_ON);
-	LED_CONTROL(RA_LED_USB, RA_LED_ON);
+	led_control(LED_POWER, LED_ON);
+	led_control(LED_WAN  , LED_ON);
+	led_control(LED_LAN  , LED_ON);
+	led_control(LED_USB  , LED_ON);
+#if defined(RTN14U)
+	led_control(LED_2G  , LED_ON);
+#endif
+#ifdef RTCONFIG_LED_ALL
+	led_control(LED_ALL  , LED_ON);
+#endif
 #endif
 	puts("1");
 	return 0;
@@ -571,11 +922,18 @@ setAllLedOff(void)
 	LED_CONTROL(RA_LED_POWER, RA_LED_OFF);
 	LED_CONTROL(RA_LED_WAN, RA_LED_OFF);
 #else
-	LED_CONTROL(RA_LED_POWER, RA_LED_OFF);
-	LED_CONTROL(RA_LED_WAN, RA_LED_OFF);
-	LED_CONTROL(RA_LED_LAN, RA_LED_OFF);
-	LED_CONTROL(RA_LED_USB, RA_LED_OFF);
+	led_control(LED_POWER, LED_OFF);
+	led_control(LED_WAN  , LED_OFF);
+	led_control(LED_LAN  , LED_OFF);
+	led_control(LED_USB  , LED_OFF);
+#if defined(RTN14U)
+	led_control(LED_2G  , LED_OFF);
 #endif
+#ifdef RTCONFIG_LED_ALL
+	led_control(LED_ALL  , LED_OFF);
+#endif
+#endif
+	puts("1");
 	return 0;
 }
 
@@ -594,8 +952,8 @@ set40M_Channel_2G(char *channel)
 	if (channel==NULL || !isValidChannel(1, channel))
 		return 0;
 	sprintf(chl_buf,"Channel=%s", channel);
-	eval("iwpriv", "rai0", "set", chl_buf);
-	eval("iwpriv", "rai0", "set", "HtBw=1");
+	eval("iwpriv", WIF_2G, "set", chl_buf);
+	eval("iwpriv", WIF_2G, "set", "HtBw=1");
 	puts("1");
 	return 1;
 }
@@ -607,39 +965,413 @@ set40M_Channel_5G(char *channel)
 	if (channel==NULL || !isValidChannel(0, channel))
 		return 0;
 	sprintf(chl_buf,"Channel=%s", channel);
-	eval("iwpriv", "ra0", "set", chl_buf);
-	eval("iwpriv", "ra0", "set", "HtBw=1");
+	eval("iwpriv", WIF_5G, "set", chl_buf);
+	eval("iwpriv", WIF_5G, "set", "HtBw=1");
 	puts("1");
 	return 1;
 }
 
+
+int Get_channel_list(int unit)
+{
+	unsigned char countryCode[3];
+	char chList[256];
+
+#ifdef RTCONFIG_NEW_REGULATION_DOMAIN
+	char tmp[128], prefix[] = "wlXXXXXXXXXX_";
+
+	snprintf(prefix, sizeof(prefix), "wl%d_", unit);
+	memset(countryCode, 0, sizeof(countryCode));
+	strncpy(countryCode, nvram_safe_get(strcat_r(prefix, "country_code", tmp)), 2);
+#else
+	memset(countryCode, 0, sizeof(countryCode));
+	FRead(countryCode, OFFSET_COUNTRY_CODE, 2);
+#endif
+	if(get_channel_list_via_driver(unit, chList, sizeof(chList)) > 0)
+	{
+		puts(chList);
+	}
+	else if (countryCode[0] != 0xff && countryCode[1] != 0xff)	// 0xffff is default
+	{
+		if(get_channel_list_via_country(unit, countryCode, chList, sizeof(chList)) > 0)
+		{
+			puts(chList);
+		}
+	}
+	return 1;
+}
+
+int Get_ChannelList_2G(void)
+{
+	return Get_channel_list(0);
+}
+
+int Get_ChannelList_5G(void)
+{
+	return Get_channel_list(1);
+}
 //End of new ATE Command
 
-int ralink_mssid_mac_validate(const char *macaddr)
+int getCountryRegion2G(const char *countryCode)
 {
-	unsigned char mac_binary[6];
-	unsigned long long macvalue;
-	char macbuf[13];
+	if (countryCode == NULL)
+	{
+		return 5;	// 1-14
+	}
+	else if((strcasecmp(countryCode, "CA") == 0) || (strcasecmp(countryCode, "CO") == 0) ||
+		(strcasecmp(countryCode, "DO") == 0) || (strcasecmp(countryCode, "GT") == 0) ||
+		(strcasecmp(countryCode, "MX") == 0) || (strcasecmp(countryCode, "NO") == 0) ||
+		(strcasecmp(countryCode, "PA") == 0) || (strcasecmp(countryCode, "PR") == 0) ||
+		(strcasecmp(countryCode, "TW") == 0) || (strcasecmp(countryCode, "US") == 0) ||
+		(strcasecmp(countryCode, "UZ") == 0) || 
+		(strcasecmp(countryCode, "Z1") == 0) || (strcasecmp(countryCode, "Z3") == 0)  
+		)
+	{
+		return 0;	// 1-11
+	}
+	else if (strcasecmp(countryCode, "DB") == 0  || strcasecmp(countryCode, "") == 0)
+	{
+		return 5;	// 1-14
+	}
 
-	if (!macaddr)
-		return 0;
-	else if (!strlen(macaddr))
-		return 1;
-
-	ether_atoe(macaddr, mac_binary);
-	sprintf(macbuf, "%02X%02X%02X%02X%02X%02X",
-		mac_binary[0],
-		mac_binary[1],
-		mac_binary[2],
-		mac_binary[3],
-		mac_binary[4],
-		mac_binary[5]);
-	macvalue = strtoll(macbuf, (char **) NULL, 16);
-	if (macvalue % 4)
-		return 0;
-	else
-		return 1;
+	return 1;	// 1-13
 }
+
+int getChannelNumMax2G(int region)
+{
+	switch(region)
+	{
+		case 0: return 11;
+		case 1: return 13;
+		case 5: return 14;
+	}
+	return 14;
+}
+
+int getCountryRegion5G(const char *countryCode, int *warning)
+{
+	if (		(!strcasecmp(countryCode, "AE")) ||
+			(!strcasecmp(countryCode, "AL")) ||
+#ifdef RTCONFIG_LOCALE2012
+			(!strcasecmp(countryCode, "AR")) ||
+#endif
+			(!strcasecmp(countryCode, "AU")) ||
+			(!strcasecmp(countryCode, "BH")) ||
+			(!strcasecmp(countryCode, "BY")) ||
+			(!strcasecmp(countryCode, "CA")) ||
+			(!strcasecmp(countryCode, "CL")) ||
+			(!strcasecmp(countryCode, "CO")) ||
+			(!strcasecmp(countryCode, "CR")) ||
+			(!strcasecmp(countryCode, "DO")) ||
+			(!strcasecmp(countryCode, "DZ")) ||
+			(!strcasecmp(countryCode, "EC")) ||
+			(!strcasecmp(countryCode, "GT")) ||
+			(!strcasecmp(countryCode, "HK")) ||
+			(!strcasecmp(countryCode, "HN")) ||
+			(!strcasecmp(countryCode, "IL")) ||
+#ifndef RTCONFIG_LOCALE2012
+			(!strcasecmp(countryCode, "IN")) ||
+#endif
+			(!strcasecmp(countryCode, "JO")) ||
+			(!strcasecmp(countryCode, "KW")) ||
+			(!strcasecmp(countryCode, "KZ")) ||
+			(!strcasecmp(countryCode, "LB")) ||
+			(!strcasecmp(countryCode, "MA")) ||
+			(!strcasecmp(countryCode, "MK")) ||
+#ifndef RTCONFIG_LOCALE2012
+			(!strcasecmp(countryCode, "MO")) ||
+			(!strcasecmp(countryCode, "MX")) ||
+#endif
+			(!strcasecmp(countryCode, "MY")) ||
+#ifndef RTCONFIG_LOCALE2012
+			(!strcasecmp(countryCode, "NO")) ||
+#endif
+			(!strcasecmp(countryCode, "NZ")) ||
+			(!strcasecmp(countryCode, "OM")) ||
+			(!strcasecmp(countryCode, "PA")) ||
+			(!strcasecmp(countryCode, "PK")) ||
+			(!strcasecmp(countryCode, "PR")) ||
+			(!strcasecmp(countryCode, "QA")) ||
+#ifndef RTCONFIG_LOCALE2012
+			(!strcasecmp(countryCode, "RO")) ||
+			(!strcasecmp(countryCode, "RU")) ||
+#endif
+			(!strcasecmp(countryCode, "SA")) ||
+			(!strcasecmp(countryCode, "SG")) ||
+			(!strcasecmp(countryCode, "SV")) ||
+			(!strcasecmp(countryCode, "SY")) ||
+			(!strcasecmp(countryCode, "TH")) ||
+#ifndef RTCONFIG_LOCALE2012
+			(!strcasecmp(countryCode, "UA")) ||
+#endif
+			(!strcasecmp(countryCode, "US")) ||
+#ifdef RTCONFIG_LOCALE2012
+			(!strcasecmp(countryCode, "UY")) ||
+#endif
+			(!strcasecmp(countryCode, "VN")) ||
+			(!strcasecmp(countryCode, "YE")) ||
+			(!strcasecmp(countryCode, "ZW")) ||
+#if !defined(RTN14U) && !defined(RTAC52U)
+			//for specific power
+			(!strcasecmp(countryCode, "Z1")) 
+#else
+			0
+#endif
+	)
+	{
+		return 0;
+	}
+	else if (
+#ifdef RTCONFIG_LOCALE2012
+			(!strcasecmp(countryCode, "AM")) ||
+#endif
+			(!strcasecmp(countryCode, "AT")) ||
+#ifdef RTCONFIG_LOCALE2012
+			(!strcasecmp(countryCode, "AZ")) ||
+#endif
+			(!strcasecmp(countryCode, "BE")) ||
+			(!strcasecmp(countryCode, "BG")) ||
+#ifndef RTCONFIG_LOCALE2012
+			(!strcasecmp(countryCode, "BR")) ||
+#endif
+			(!strcasecmp(countryCode, "CH")) ||
+			(!strcasecmp(countryCode, "CY")) ||
+#ifdef RTCONFIG_LOCALE2012
+			(!strcasecmp(countryCode, "CZ")) ||
+#endif
+			(!strcasecmp(countryCode, "DE")) ||
+			(!strcasecmp(countryCode, "DK")) ||
+			(!strcasecmp(countryCode, "EE")) ||
+#ifdef RTCONFIG_LOCALE2012
+			(!strcasecmp(countryCode, "EG")) ||
+#endif
+			(!strcasecmp(countryCode, "ES")) ||
+			(!strcasecmp(countryCode, "FI")) ||
+#ifdef RTCONFIG_LOCALE2012
+			(!strcasecmp(countryCode, "FR")) ||
+#endif
+			(!strcasecmp(countryCode, "GB")) ||
+#ifdef RTCONFIG_LOCALE2012
+			(!strcasecmp(countryCode, "GE")) ||
+#endif
+			(!strcasecmp(countryCode, "GR")) ||
+#ifdef RTCONFIG_LOCALE2012
+			(!strcasecmp(countryCode, "HR")) ||
+#endif
+			(!strcasecmp(countryCode, "HU")) ||
+			(!strcasecmp(countryCode, "IE")) ||
+			(!strcasecmp(countryCode, "IS")) ||
+			(!strcasecmp(countryCode, "IT")) ||
+#ifdef RTCONFIG_LOCALE2012
+			(!strcasecmp(countryCode, "JP")) ||
+			(!strcasecmp(countryCode, "KP")) ||
+			(!strcasecmp(countryCode, "KR")) ||
+#endif
+			(!strcasecmp(countryCode, "LI")) ||
+			(!strcasecmp(countryCode, "LT")) ||
+			(!strcasecmp(countryCode, "LU")) ||
+			(!strcasecmp(countryCode, "LV")) ||
+#ifdef RTCONFIG_LOCALE2012
+			(!strcasecmp(countryCode, "MC")) ||
+#endif
+			(!strcasecmp(countryCode, "NL")) ||
+#ifdef RTCONFIG_LOCALE2012
+			(!strcasecmp(countryCode, "NO")) ||
+#endif
+			(!strcasecmp(countryCode, "PL")) ||
+			(!strcasecmp(countryCode, "PT")) ||
+#ifdef RTCONFIG_LOCALE2012
+			(!strcasecmp(countryCode, "RO")) ||
+#endif
+			(!strcasecmp(countryCode, "SE")) ||
+			(!strcasecmp(countryCode, "SI")) ||
+			(!strcasecmp(countryCode, "SK")) ||
+#ifdef RTCONFIG_LOCALE2012
+			(!strcasecmp(countryCode, "TN")) ||
+			(!strcasecmp(countryCode, "TR")) ||
+			(!strcasecmp(countryCode, "TT")) ||
+#endif
+			(!strcasecmp(countryCode, "UZ")) ||
+			(!strcasecmp(countryCode, "ZA")) ||
+#if !defined(RTN14U) && !defined(RTAC52U)
+			//for specific power
+			(!strcasecmp(countryCode, "Z2"))
+#else
+			0
+#endif
+	)
+	{
+		return 1;
+	}
+	else if (
+#ifndef RTCONFIG_LOCALE2012
+			(!strcasecmp(countryCode, "AM")) ||
+			(!strcasecmp(countryCode, "AZ")) ||
+			(!strcasecmp(countryCode, "CZ")) ||
+			(!strcasecmp(countryCode, "EG")) ||
+			(!strcasecmp(countryCode, "FR")) ||
+			(!strcasecmp(countryCode, "GE")) ||
+			(!strcasecmp(countryCode, "HR")) ||
+			(!strcasecmp(countryCode, "MC")) ||
+			(!strcasecmp(countryCode, "TN")) ||
+			(!strcasecmp(countryCode, "TR")) ||
+			(!strcasecmp(countryCode, "TT"))
+#else
+			(!strcasecmp(countryCode, "IN")) ||
+			(!strcasecmp(countryCode, "MX"))
+#endif
+	)
+	{
+		return 2;
+	}
+	else if (
+#ifndef RTCONFIG_LOCALE2012
+			(!strcasecmp(countryCode, "AR")) ||
+#endif
+			(!strcasecmp(countryCode, "TW")) ||
+#if !defined(RTN14U) && !defined(RTAC52U)
+			//for specific power
+			(!strcasecmp(countryCode, "Z3")) 
+#else
+			0
+#endif
+	)
+	{
+		return 3;
+	}
+	else if (
+#ifdef RTCONFIG_LOCALE2012
+			(!strcasecmp(countryCode, "BR")) ||
+#endif
+			(!strcasecmp(countryCode, "BZ")) ||
+			(!strcasecmp(countryCode, "BO")) ||
+			(!strcasecmp(countryCode, "BN")) ||
+			(!strcasecmp(countryCode, "CN")) ||
+			(!strcasecmp(countryCode, "ID")) ||
+			(!strcasecmp(countryCode, "IR")) ||
+#ifdef RTCONFIG_LOCALE2012
+			(!strcasecmp(countryCode, "MO")) ||
+#endif
+			(!strcasecmp(countryCode, "PE")) ||
+			(!strcasecmp(countryCode, "PH"))
+#ifdef RTCONFIG_LOCALE2012
+						 ||
+			(!strcasecmp(countryCode, "VE"))
+#endif
+						 ||
+#if !defined(RTN14U) && !defined(RTAC52U)
+			//for specific power
+			(!strcasecmp(countryCode, "Z4")) 
+#else
+			0
+#endif
+	)
+	{
+		return 4;
+	}
+#ifndef RTCONFIG_LOCALE2012
+	else if (	(!strcasecmp(countryCode, "KP")) ||
+			(!strcasecmp(countryCode, "KR")) ||
+			(!strcasecmp(countryCode, "UY")) ||
+			(!strcasecmp(countryCode, "VE"))
+	)
+	{
+		return 5;
+	}
+#else
+	else if (!strcasecmp(countryCode, "RU"))
+	{
+		return 6;
+	}
+#endif
+	else if (!strcasecmp(countryCode, "DB"))
+	{
+		return 7;
+	}
+	else if (
+#ifndef RTCONFIG_LOCALE2012
+			(!strcasecmp(countryCode, "JP"))
+#else
+			(!strcasecmp(countryCode, "UA"))
+#endif
+	)
+	{
+		return 9;
+	}
+	else
+	{
+		if (warning)
+			*warning = 2;
+		return 7;
+	}
+}
+
+//Ren.B
+int check_macmode(const char *str)
+{
+	if((!str)||(!strcmp(str, ""))||(!strcmp(str, "disabled")))
+	{
+		return 0;
+	}
+
+	if(strcmp(str, "allow")==0)
+	{
+		return 1;
+	}
+
+	if(strcmp(str, "deny")==0)
+	{
+		return 2;
+	}
+	return 0;
+}
+//Ren.E
+
+//Ren.B
+void gen_macmode(int mac_filter[], int band)
+{
+	int i,j;
+	char temp[128], prefix_mssid[] = "wlXXXXXXXXXX_mssid_";
+
+	snprintf(temp, sizeof(temp), "wl%d_macmode", band);
+	mac_filter[0] = check_macmode(nvram_get(temp));
+	_dprintf("mac_filter[0] = %d\n", mac_filter[0]);
+	if(mac_filter[0] == 0)
+	{
+		for(i = 1, j = 1; i < MAX_NO_MSSID; i++)
+		{
+			sprintf(prefix_mssid, "wl%d.%d_", band, i);
+			if (!nvram_match(strcat_r(prefix_mssid, "bss_enabled", temp), "1"))
+				continue;
+
+			mac_filter[j] = 0;
+			_dprintf("mac_filter[%d] = %d\n", j, mac_filter[j]);
+			j++;
+		}
+	}
+	else
+	{
+		for(i = 1, j = 1; i < MAX_NO_MSSID; i++)
+		{
+			sprintf(prefix_mssid, "wl%d.%d_", band, i);
+			if (!nvram_match(strcat_r(prefix_mssid, "bss_enabled", temp), "1"))
+				continue;
+
+			if(nvram_match(strcat_r(prefix_mssid, "macmode", temp), "disabled"))
+			{
+				mac_filter[j] = 0;
+			}
+			else
+			{
+				mac_filter[j] = mac_filter[0]; //copy rule from "primary" WiFi interface.
+			}
+			_dprintf("mac_filter[%d] = %d\n", j, mac_filter[j]);
+			j++;
+		}
+	}
+}
+//Ren.E
+
 int gen_ralink_config(int band, int is_iNIC)
 {
 	FILE *fp;
@@ -661,6 +1393,10 @@ int gen_ralink_config(int band, int is_iNIC)
 	char *nv, *nvp, *b;
 	int wl_key_type[MAX_NO_MSSID];
 	int mcast_phy, mcast_mcs;
+	int mac_filter[MAX_NO_MSSID];
+#if defined(RTAC52U)
+	int VHTBW_MAX = 0;
+#endif
 
 	if (!is_iNIC)
 	{
@@ -686,26 +1422,10 @@ int gen_ralink_config(int band, int is_iNIC)
 	str = nvram_safe_get(strcat_r(prefix, "country_code", tmp));
 	if (str && strlen(str))
 	{
-		if (    (strcasecmp(str, "CA") == 0) || (strcasecmp(str, "CO") == 0) ||
-			(strcasecmp(str, "DO") == 0) || (strcasecmp(str, "GT") == 0) ||
-			(strcasecmp(str, "MX") == 0) || (strcasecmp(str, "NO") == 0) ||
-			(strcasecmp(str, "PA") == 0) || (strcasecmp(str, "PR") == 0) ||
-			(strcasecmp(str, "TW") == 0) || (strcasecmp(str, "US") == 0) ||
-			(strcasecmp(str, "UZ") == 0))
-		{
-			fprintf(fp, "CountryRegion=%d\n", 0);   // channel 1-11
-			ChannelNumMax_2G = 11;
-		}
-		else if (strcasecmp(str, "DB") == 0  || strcasecmp(str, "") == 0)
-		{
-			fprintf(fp, "CountryRegion=%d\n", 5);   // channel 1-14
-			ChannelNumMax_2G = 14;
-		}
-		else
-		{
-			fprintf(fp, "CountryRegion=%d\n", 1);   // channel 1-13
-			ChannelNumMax_2G = 13;
-		}
+		int region;
+		region = getCountryRegion2G(str);
+		fprintf(fp, "CountryRegion=%d\n", region);
+		ChannelNumMax_2G = getChannelNumMax2G(region);
 	}
 	else
 	{
@@ -717,235 +1437,9 @@ int gen_ralink_config(int band, int is_iNIC)
 	str = nvram_safe_get(strcat_r(prefix, "country_code", tmp));
 	if (str && strlen(str))
 	{
-		if (		(!strcasecmp(str, "AE")) ||
-				(!strcasecmp(str, "AL")) ||
-#ifdef RTCONFIG_LOCALE2012
-				(!strcasecmp(str, "AR")) ||
-#endif
-				(!strcasecmp(str, "AU")) ||
-				(!strcasecmp(str, "BH")) ||
-				(!strcasecmp(str, "BY")) ||
-				(!strcasecmp(str, "CA")) ||
-				(!strcasecmp(str, "CL")) ||
-				(!strcasecmp(str, "CO")) ||
-				(!strcasecmp(str, "CR")) ||
-				(!strcasecmp(str, "DO")) ||
-				(!strcasecmp(str, "DZ")) ||
-				(!strcasecmp(str, "EC")) ||
-				(!strcasecmp(str, "GT")) ||
-				(!strcasecmp(str, "HK")) ||
-				(!strcasecmp(str, "HN")) ||
-				(!strcasecmp(str, "IL")) ||
-#ifndef RTCONFIG_LOCALE2012
-				(!strcasecmp(str, "IN")) ||
-#endif
-				(!strcasecmp(str, "JO")) ||
-				(!strcasecmp(str, "KW")) ||
-				(!strcasecmp(str, "KZ")) ||
-				(!strcasecmp(str, "LB")) ||
-				(!strcasecmp(str, "MA")) ||
-				(!strcasecmp(str, "MK")) ||
-#ifndef RTCONFIG_LOCALE2012
-				(!strcasecmp(str, "MO")) ||
-				(!strcasecmp(str, "MX")) ||
-#endif
-				(!strcasecmp(str, "MY")) ||
-#ifndef RTCONFIG_LOCALE2012
-				(!strcasecmp(str, "NO")) ||
-#endif
-				(!strcasecmp(str, "NZ")) ||
-				(!strcasecmp(str, "OM")) ||
-				(!strcasecmp(str, "PA")) ||
-				(!strcasecmp(str, "PK")) ||
-				(!strcasecmp(str, "PR")) ||
-				(!strcasecmp(str, "QA")) ||
-#ifndef RTCONFIG_LOCALE2012
-				(!strcasecmp(str, "RO")) ||
-				(!strcasecmp(str, "RU")) ||
-#endif
-				(!strcasecmp(str, "SA")) ||
-				(!strcasecmp(str, "SG")) ||
-				(!strcasecmp(str, "SV")) ||
-				(!strcasecmp(str, "SY")) ||
-				(!strcasecmp(str, "TH")) ||
-#ifndef RTCONFIG_LOCALE2012
-				(!strcasecmp(str, "UA")) ||
-#endif
-				(!strcasecmp(str, "US")) ||
-#ifdef RTCONFIG_LOCALE2012
-				(!strcasecmp(str, "UY")) ||
-#endif
-				(!strcasecmp(str, "VN")) ||
-				(!strcasecmp(str, "YE")) ||
-				(!strcasecmp(str, "ZW"))
-		)
-		{
-			fprintf(fp, "CountryRegionABand=%d\n", 0);
-		}
-		else if (
-#ifdef RTCONFIG_LOCALE2012
-				(!strcasecmp(str, "AM")) ||
-#endif
-				(!strcasecmp(str, "AT")) ||
-#ifdef RTCONFIG_LOCALE2012
-				(!strcasecmp(str, "AZ")) ||
-#endif
-				(!strcasecmp(str, "BE")) ||
-				(!strcasecmp(str, "BG")) ||
-#ifndef RTCONFIG_LOCALE2012
-				(!strcasecmp(str, "BR")) ||
-#endif
-				(!strcasecmp(str, "CH")) ||
-				(!strcasecmp(str, "CY")) ||
-#ifdef RTCONFIG_LOCALE2012
-				(!strcasecmp(str, "CZ")) ||
-#endif
-				(!strcasecmp(str, "DE")) ||
-				(!strcasecmp(str, "DK")) ||
-				(!strcasecmp(str, "EE")) ||
-#ifdef RTCONFIG_LOCALE2012
-				(!strcasecmp(str, "EG")) ||
-#endif
-				(!strcasecmp(str, "ES")) ||
-				(!strcasecmp(str, "FI")) ||
-#ifdef RTCONFIG_LOCALE2012
-				(!strcasecmp(str, "FR")) ||
-#endif
-				(!strcasecmp(str, "GB")) ||
-#ifdef RTCONFIG_LOCALE2012
-				(!strcasecmp(str, "GE")) ||
-#endif
-				(!strcasecmp(str, "GR")) ||
-#ifdef RTCONFIG_LOCALE2012
-				(!strcasecmp(str, "HR")) ||
-#endif
-				(!strcasecmp(str, "HU")) ||
-				(!strcasecmp(str, "IE")) ||
-				(!strcasecmp(str, "IS")) ||
-				(!strcasecmp(str, "IT")) ||
-#ifdef RTCONFIG_LOCALE2012
-				(!strcasecmp(str, "JP")) ||
-				(!strcasecmp(str, "KP")) ||
-				(!strcasecmp(str, "KR")) ||
-#endif
-				(!strcasecmp(str, "LI")) ||
-				(!strcasecmp(str, "LT")) ||
-				(!strcasecmp(str, "LU")) ||
-				(!strcasecmp(str, "LV")) ||
-#ifdef RTCONFIG_LOCALE2012
-				(!strcasecmp(str, "MC")) ||
-#endif
-				(!strcasecmp(str, "NL")) ||
-#ifdef RTCONFIG_LOCALE2012
-				(!strcasecmp(str, "NO")) ||
-#endif
-				(!strcasecmp(str, "PL")) ||
-				(!strcasecmp(str, "PT")) ||
-#ifdef RTCONFIG_LOCALE2012
-				(!strcasecmp(str, "RO")) ||
-#endif
-				(!strcasecmp(str, "SE")) ||
-				(!strcasecmp(str, "SI")) ||
-				(!strcasecmp(str, "SK")) ||
-#ifdef RTCONFIG_LOCALE2012
-				(!strcasecmp(str, "TN")) ||
-				(!strcasecmp(str, "TR")) ||
-				(!strcasecmp(str, "TT")) ||
-#endif
-				(!strcasecmp(str, "UZ")) ||
-				(!strcasecmp(str, "ZA"))
-		)
-		{
-			fprintf(fp, "CountryRegionABand=%d\n", 1);
-		}
-		else if (
-#ifndef RTCONFIG_LOCALE2012
-				(!strcasecmp(str, "AM")) ||
-				(!strcasecmp(str, "AZ")) ||
-				(!strcasecmp(str, "CZ")) ||
-				(!strcasecmp(str, "EG")) ||
-				(!strcasecmp(str, "FR")) ||
-				(!strcasecmp(str, "GE")) ||
-				(!strcasecmp(str, "HR")) ||
-				(!strcasecmp(str, "MC")) ||
-				(!strcasecmp(str, "TN")) ||
-				(!strcasecmp(str, "TR")) ||
-				(!strcasecmp(str, "TT"))
-#else
-				(!strcasecmp(str, "IN")) ||
-				(!strcasecmp(str, "MX"))
-#endif
-		)
-		{
-			fprintf(fp, "CountryRegionABand=%d\n", 2);
-		}
-		else if (
-#ifndef RTCONFIG_LOCALE2012
-				(!strcasecmp(str, "AR")) ||
-#endif
-				(!strcasecmp(str, "TW"))
-				
-		)
-		{
-			fprintf(fp, "CountryRegionABand=%d\n", 3);
-		}
-		else if (
-#ifdef RTCONFIG_LOCALE2012
-				(!strcasecmp(str, "BR")) ||
-#endif
-				(!strcasecmp(str, "BZ")) ||
-				(!strcasecmp(str, "BO")) ||
-				(!strcasecmp(str, "BN")) ||
-				(!strcasecmp(str, "CN")) ||
-				(!strcasecmp(str, "ID")) ||
-				(!strcasecmp(str, "IR")) ||
-#ifdef RTCONFIG_LOCALE2012
-				(!strcasecmp(str, "MO")) ||
-#endif
-				(!strcasecmp(str, "PE")) ||
-				(!strcasecmp(str, "PH"))
-#ifdef RTCONFIG_LOCALE2012
-							 ||
-				(!strcasecmp(str, "VE"))
-#endif
-		)
-		{
-			fprintf(fp, "CountryRegionABand=%d\n", 4);
-		}
-#ifndef RTCONFIG_LOCALE2012
-		else if (	(!strcasecmp(str, "KP")) ||
-				(!strcasecmp(str, "KR")) ||
-				(!strcasecmp(str, "UY")) ||
-				(!strcasecmp(str, "VE"))
-		)
-		{
-			fprintf(fp, "CountryRegionABand=%d\n", 5);
-		}
-#else
-		else if (!strcasecmp(str, "RU"))
-		{
-			fprintf(fp, "CountryRegionABand=%d\n", 6);
-		}
-#endif
-		else if (!strcasecmp(str, "DB"))
-		{
-			fprintf(fp, "CountryRegionABand=%d\n", 7);
-		}
-		else if (
-#ifndef RTCONFIG_LOCALE2012
-				(!strcasecmp(str, "JP"))
-#else
-				(!strcasecmp(str, "UA"))
-#endif
-		)
-		{
-			fprintf(fp, "CountryRegionABand=%d\n", 9);
-		}
-		else
-		{
-			warning = 2;
-			fprintf(fp, "CountryRegionABand=%d\n", 7);
-		}
+		int region;
+		region = getCountryRegion5G(str, &warning);
+		fprintf(fp, "CountryRegionABand=%d\n", region);
 	}
 	else
 	{
@@ -957,10 +1451,7 @@ int gen_ralink_config(int band, int is_iNIC)
 	str = nvram_safe_get(strcat_r(prefix, "country_code", tmp));
 	if (str && strlen(str))
 	{
-		if (strcmp(str, "") == 0)
-			fprintf(fp, "CountryCode=DB\n");
-		else
-			fprintf(fp, "CountryCode=%s\n", str);
+		fprintf(fp, "CountryCode=%s\n", str);
 	}
 	else
 	{
@@ -972,7 +1463,7 @@ int gen_ralink_config(int band, int is_iNIC)
 
 
 
-	if (!ralink_mssid_mac_validate(nvram_safe_get(strcat_r(prefix, "hwaddr", tmp))))
+	if (!mssid_mac_validate(nvram_safe_get(strcat_r(prefix, "hwaddr", tmp))))
 	{
 		dbG("Main BSSID is not multiple of 4s!");
 		ssid_num = 1;
@@ -1075,19 +1566,45 @@ int gen_ralink_config(int band, int is_iNIC)
 	{
 		if (str && strlen(str))
 		{
-			if (atoi(str) == 0)       // A,N
-				fprintf(fp, "WirelessMode=%d\n", 8);
-			else if (atoi(str) == 1)  // N
-				fprintf(fp, "WirelessMode=%d\n", 11);
+			if (atoi(str) == 0)       // Auto
+			{
+#if defined(RTAC52U)
+				fprintf(fp, "WirelessMode=%d\n", 14);	// A + AN + AC mixed
+				VHTBW_MAX = 1;
+#else
+				fprintf(fp, "WirelessMode=%d\n", 8);	// A + AN mixed
+#endif
+			}
+			else if (atoi(str) == 1)  // N Only or N + AC
+			{
+#if defined(RTAC52U)
+				fprintf(fp, "WirelessMode=%d\n", 15);	// AN + AC mixed
+				VHTBW_MAX = 1;
+#else
+				fprintf(fp, "WirelessMode=%d\n", 11);	// N in 5G
+#endif
+			}
 			else if (atoi(str) == 2)  // A
 				fprintf(fp, "WirelessMode=%d\n", 2);
 			else			// A,N
+			{
+#if defined(RTAC52U)
+				fprintf(fp, "WirelessMode=%d\n", 14);
+				VHTBW_MAX = 1;
+#else
 				fprintf(fp, "WirelessMode=%d\n", 8);
+#endif
+			}
 		}
 		else
 		{
-			warning = 6;		// A,N
-			fprintf(fp, "WirelessMode=%d\n", 8);
+			warning = 6;
+#if defined(RTAC52U)
+			fprintf(fp, "WirelessMode=%d\n", 14);		// A + AN + AC mixed
+			VHTBW_MAX = 1;
+#else
+			fprintf(fp, "WirelessMode=%d\n", 8);		// A + AN mixed
+#endif
 		}
 	}
 	else
@@ -1453,7 +1970,11 @@ int gen_ralink_config(int band, int is_iNIC)
 		else */if (str && strlen(str))
 		{
 			if (atoi(str) == 0)
+			{
 				fprintf(fp, "AutoChannelSelect=%d\n", 2);
+				if(band && atoi(nvram_safe_get(strcat_r(prefix, "bw", tmp))) > 0)
+					fprintf(fp, "AutoChannelSkipList=%d\n", 165); // skip 165 in A band when bw setting to 20/40Mhz or 40Mhz.
+			}
 			else
 				fprintf(fp, "AutoChannelSelect=%d\n", 0);
 		}
@@ -1498,24 +2019,34 @@ int gen_ralink_config(int band, int is_iNIC)
 	}
 
 	fprintf(fp, "IEEE80211H=0\n");
-	fprintf(fp, "CarrierDetect=%d\n", 0);
-	if (band)
-	fprintf(fp, "ChannelGeography=%d\n", 2);
-//	fprintf(fp, "ITxBfEn=%d\n", 0);
+#ifdef RTCONFIG_AP_CARRIER_DETECTION
+	if (nvram_match(strcat_r(prefix, "country_code", tmp), "JP"))
+	{
+		fprintf(fp, "RDRegion=%s\n", "JAP");
+		fprintf(fp, "CarrierDetect=%d\n", 1);
+	}
+	else
+#endif
+	{
+		fprintf(fp, "RDRegion=\n");
+		fprintf(fp, "CarrierDetect=%d\n", 0);
+	}
+//	if (band)
+//	fprintf(fp, "ChannelGeography=%d\n", 2);
 	fprintf(fp, "PreAntSwitch=\n");
 	fprintf(fp, "PhyRateLimit=%d\n", 0);
 	fprintf(fp, "DebugFlags=%d\n", 0);
-//	fprintf(fp, "ETxBfEnCond=%d\n", 0);
-//	fprintf(fp, "ITxBfTimeout=%d\n", 0);
 	fprintf(fp, "FineAGC=%d\n", 0);
+	if(band)
+		fprintf(fp, "StreamMode=%d\n", 3);	// from RT3883_EVT.TXT for test 5G in factory. But the meaning of value is unknown.
+	else
 	fprintf(fp, "StreamMode=%d\n", 0);
 	fprintf(fp, "StreamModeMac0=\n");
 	fprintf(fp, "StreamModeMac1=\n");
 	fprintf(fp, "StreamModeMac2=\n");
 	fprintf(fp, "StreamModeMac3=\n");
-	fprintf(fp, "CSPeriod=10\n");
-	fprintf(fp, "RDRegion=\n");
 	fprintf(fp, "StationKeepAlive=%d\n", 0);
+	fprintf(fp, "CSPeriod=10\n");
 	fprintf(fp, "DfsLowerLimit=%d\n", 0);
 	fprintf(fp, "DfsUpperLimit=%d\n", 0);
 	fprintf(fp, "DfsIndoor=%d\n", 0);
@@ -1543,6 +2074,17 @@ int gen_ralink_config(int band, int is_iNIC)
 	fprintf(fp, "BlockCh=\n");
 
 	//GreenAP
+#if defined(RTN65U)
+	{
+		fprintf(fp, "GreenAP=%d\n", 1);
+	}
+#elif defined(RTN14U) || defined(RTAC52U)
+	/// MT7620 GreenAP will impact TSSI, force to disable GreenAP here..
+	//  MT7620 GreenAP cause bad site survey result on RTAC52 2G.
+	{
+		fprintf(fp, "GreenAP=%d\n", 0);
+	}
+#else
 	str = nvram_safe_get(strcat_r(prefix, "GreenAP", tmp));
 /*
 	if (nvram_match("sw_mode", "2"))
@@ -1554,16 +2096,21 @@ int gen_ralink_config(int band, int is_iNIC)
 		warning = 22;
 		fprintf(fp, "GreenAP=%d\n", 0);
 	}
+#endif
 
 	//PreAuth
 	memset(tmpstr, 0x0, sizeof(tmpstr));
-
 	for (i = 0; i < ssid_num; i++)
 	{
 		if (i)
+			snprintf(prefix_mssid, sizeof(prefix_mssid), "wl%d.%d_", band, i);
+		else
+			snprintf(prefix_mssid, sizeof(prefix_mssid), "wl%d_", band);
+
+		if (i)
 			sprintf(tmpstr, "%s;", tmpstr);
 
-		sprintf(tmpstr, "%s%s", tmpstr, "0");
+		sprintf(tmpstr, "%s%s", tmpstr, strstr(nvram_safe_get(strcat_r(prefix_mssid, "auth_mode_x", temp)), "wpa") ? "1" : "0");
 	}
 	fprintf(fp, "PreAuth=%s\n", tmpstr);
 /*
@@ -1784,7 +2331,7 @@ int gen_ralink_config(int band, int is_iNIC)
 		else
 			fprintf(fp, "RekeyMethod=TIME\n");
 
-		fprintf(fp, "RekeyInterval=%d\n", atol(str));
+		fprintf(fp, "RekeyInterval=%ld\n", atol(str));
 	}
 	else
 	{
@@ -1793,7 +2340,11 @@ int gen_ralink_config(int band, int is_iNIC)
 		fprintf(fp, "RekeyInterval=%d\n", 0);
 	}
 
-	//PMKCachePeriod
+	//PMKCachePeriod (in minutes)
+	str = nvram_safe_get(strcat_r(prefix, "pmk_cache", tmp));
+	if (str && strlen(str))
+		fprintf(fp, "PMKCachePeriod=%ld\n", atol(str));
+	else
 	fprintf(fp, "PMKCachePeriod=%d\n", 10);
 
 	fprintf(fp, "MeshAutoLink=%d\n", 0);
@@ -1805,7 +2356,7 @@ int gen_ralink_config(int band, int is_iNIC)
 	fprintf(fp, "MeshId=\n");
 
 	//WPAPSK
-	for (i = 0; i < MAX_NO_MSSID; i++)
+	for (i = 0, j = 0; i < MAX_NO_MSSID; i++)
 	{
 		if (i)
 		{
@@ -1813,11 +2364,13 @@ int gen_ralink_config(int band, int is_iNIC)
 
 			if (!nvram_match(strcat_r(prefix_mssid, "bss_enabled", temp), "1"))
 				continue;
+			else
+				j++;
 		}
 		else
 			sprintf(prefix_mssid, "wl%d_", band);
 
-		sprintf(tmpstr, "WPAPSK%d=%s\n", i + 1, nvram_safe_get(strcat_r(prefix_mssid, "wpa_psk", temp)));
+		sprintf(tmpstr, "WPAPSK%d=%s\n", j + 1, nvram_safe_get(strcat_r(prefix_mssid, "wpa_psk", temp)));
 		fprintf(fp, "%s", tmpstr);
 	}
 	for (i = ssid_num; i < 8; i++)
@@ -1910,7 +2463,7 @@ int gen_ralink_config(int band, int is_iNIC)
 	fprintf(fp, "Key1Type=%s\n", tmpstr);
 
 	// Key1Str
-	for (i = 0; i < MAX_NO_MSSID; i++)
+	for (i = 0, j = 0; i < MAX_NO_MSSID; i++)
 	{
 		if (i)
 		{
@@ -1918,11 +2471,13 @@ int gen_ralink_config(int band, int is_iNIC)
 
 			if (!nvram_match(strcat_r(prefix_mssid, "bss_enabled", temp), "1"))
 				continue;
+			else
+				j++;
 		}
 		else
 			sprintf(prefix_mssid, "wl%d_", band);
 
-		sprintf(tmpstr, "Key1Str%d=%s\n", i + 1, nvram_safe_get(strcat_r(prefix_mssid, "key1", temp)));
+		sprintf(tmpstr, "Key1Str%d=%s\n", j + 1, nvram_safe_get(strcat_r(prefix_mssid, "key1", temp)));
 		fprintf(fp, "%s", tmpstr);
 	}
 	for (i = ssid_num; i < 8; i++)
@@ -1944,7 +2499,7 @@ int gen_ralink_config(int band, int is_iNIC)
 	fprintf(fp, "Key2Type=%s\n", tmpstr);
 
 	// Key2Str
-	for (i = 0; i < MAX_NO_MSSID; i++)
+	for (i = 0, j = 0; i < MAX_NO_MSSID; i++)
 	{
 		if (i)
 		{
@@ -1952,11 +2507,13 @@ int gen_ralink_config(int band, int is_iNIC)
 
 			if (!nvram_match(strcat_r(prefix_mssid, "bss_enabled", temp), "1"))
 				continue;
+			else
+				j++;
 		}
 		else
 			sprintf(prefix_mssid, "wl%d_", band);
 
-		sprintf(tmpstr, "Key2Str%d=%s\n", i + 1, nvram_safe_get(strcat_r(prefix_mssid, "key2", temp)));
+		sprintf(tmpstr, "Key2Str%d=%s\n", j + 1, nvram_safe_get(strcat_r(prefix_mssid, "key2", temp)));
 		fprintf(fp, "%s", tmpstr);
 	}
 	for (i = ssid_num; i < 8; i++)
@@ -1978,7 +2535,7 @@ int gen_ralink_config(int band, int is_iNIC)
 	fprintf(fp, "Key3Type=%s\n", tmpstr);
 
 	// Key3Str
-	for (i = 0; i < MAX_NO_MSSID; i++)
+	for (i = 0, j = 0; i < MAX_NO_MSSID; i++)
 	{
 		if (i)
 		{
@@ -1986,11 +2543,13 @@ int gen_ralink_config(int band, int is_iNIC)
 
 			if (!nvram_match(strcat_r(prefix_mssid, "bss_enabled", temp), "1"))
 				continue;
+			else
+				j++;
 		}
 		else
 			sprintf(prefix_mssid, "wl%d_", band);
 
-		sprintf(tmpstr, "Key3Str%d=%s\n", i + 1, nvram_safe_get(strcat_r(prefix_mssid, "key3", temp)));
+		sprintf(tmpstr, "Key3Str%d=%s\n", j + 1, nvram_safe_get(strcat_r(prefix_mssid, "key3", temp)));
 		fprintf(fp, "%s", tmpstr);
 	}
 	for (i = ssid_num; i < 8; i++)
@@ -2012,7 +2571,7 @@ int gen_ralink_config(int band, int is_iNIC)
 	fprintf(fp, "Key4Type=%s\n", tmpstr);
 
 	// Key4Str
-	for (i = 0; i < MAX_NO_MSSID; i++)
+	for (i = 0, j = 0; i < MAX_NO_MSSID; i++)
 	{
 		if (i)
 		{
@@ -2020,11 +2579,13 @@ int gen_ralink_config(int band, int is_iNIC)
 
 			if (!nvram_match(strcat_r(prefix_mssid, "bss_enabled", temp), "1"))
 				continue;
+			else
+				j++;
 		}
 		else
 			sprintf(prefix_mssid, "wl%d_", band);
 
-		sprintf(tmpstr, "Key4Str%d=%s\n", i + 1, nvram_safe_get(strcat_r(prefix_mssid, "key4", temp)));
+		sprintf(tmpstr, "Key4Str%d=%s\n", j + 1, nvram_safe_get(strcat_r(prefix_mssid, "key4", temp)));
 		fprintf(fp, "%s", tmpstr);
 	}
 	for (i = ssid_num; i < 8; i++)
@@ -2195,7 +2756,7 @@ int gen_ralink_config(int band, int is_iNIC)
 		if (Channel == 0)
 			EXTCHA_MAX = 1;
 		else if ((Channel >=1) && (Channel <= 4))
-			;
+			EXTCHA_MAX = 1;
 		else if ((Channel >= 5) && (Channel <= 7))
 			EXTCHA_MAX = 1;
 		else if ((Channel >= 8) && (Channel <= 14))
@@ -2249,6 +2810,13 @@ int gen_ralink_config(int band, int is_iNIC)
 //		warning = 34;
 		fprintf(fp, "HT_BW=%d\n", 0);
 	}
+
+	//HT_BSSCoexistence
+	if(str && (strcmp(str, "1") == 0))
+		fprintf(fp, "HT_BSSCoexistence=%d\n", 1);	// 20 Only and 20/40 coexistence support
+	else
+		fprintf(fp, "HT_BSSCoexistence=%d\n", 0);	// 40 Only
+
 
 	//HT_AutoBA
 	str = nvram_safe_get(strcat_r(prefix, "HT_AutoBA", tmp));
@@ -2356,6 +2924,29 @@ int gen_ralink_config(int band, int is_iNIC)
 	//HT_DisallowTKIP
 	fprintf(fp, "HT_DisallowTKIP=%d\n", 1);
 
+#ifdef RTAC52U
+	//VHT_BW, VHT_DisallowNonVHT
+	str = nvram_safe_get(strcat_r(prefix, "bw", tmp));
+	if(band != 1)
+	{
+	}
+	else if(str && (strcmp(str, "1") == 0) && (HTBW_MAX == 1) && (VHTBW_MAX == 1))	// Auto
+	{
+		fprintf(fp, "VHT_BW=%d\n", 1);
+		fprintf(fp, "VHT_DisallowNonVHT=%d\n", 0);
+	}
+	else if(str && (strcmp(str, "3") == 0) && (HTBW_MAX == 1) && (VHTBW_MAX == 1))	// 80 MHz Only
+	{
+		fprintf(fp, "VHT_BW=%d\n", 1);
+		fprintf(fp, "VHT_DisallowNonVHT=%d\n", 1);
+	}
+	else
+	{
+		fprintf(fp, "VHT_BW=%d\n", 0);
+		fprintf(fp, "VHT_DisallowNonVHT=%d\n", 0);
+	}
+#endif
+
 	// TxBF
 	if (band)
 	{
@@ -2407,9 +2998,17 @@ int gen_ralink_config(int band, int is_iNIC)
 //	fprintf(fp, "ApCliWscPinCode=%s\n", nvram_safe_get("secret_code"));	// removed from SDK 3.3.0.0
 
 	//AccessPolicy0
+	gen_macmode(mac_filter, band); //Ren
 	str = nvram_safe_get(strcat_r(prefix, "macmode", tmp));
+
 	if (str && strlen(str))
 	{
+		#if 1 //Ren.B
+		for (i = 0; i < ssid_num; i++)
+		{
+			fprintf(fp, "AccessPolicy%d=%d\n", i, mac_filter[i]);
+		}
+		#else
 		if (!strcmp(str, "disabled"))
 		{
 			for (i = 0; i < ssid_num; i++)
@@ -2431,6 +3030,7 @@ int gen_ralink_config(int band, int is_iNIC)
 			for (i = 0; i < ssid_num; i++)
 				fprintf(fp, "AccessPolicy%d=%d\n", i, 0);
 		}
+		#endif //Ren.E
 	}
 	else
 	{
@@ -2458,7 +3058,10 @@ int gen_ralink_config(int band, int is_iNIC)
 
 	// AccessControlLis0~3
 	for (i = 0; i < ssid_num; i++)
-		fprintf(fp, "AccessControlList%d=%s\n", i, list);
+		if(mac_filter[i] != 0)
+			fprintf(fp, "AccessControlList%d=%s\n", i, list);
+		else
+			fprintf(fp, "AccessControlList%d=%s\n", i, "");
 
 	if (!nvram_match("sw_mode", "2") && !nvram_match(strcat_r(prefix, "mode_x", tmp), "0"))
 	{
@@ -2630,15 +3233,16 @@ int gen_ralink_config(int band, int is_iNIC)
 		fprintf(fp, "own_ip_addr=%s\n", nvram_safe_get("lan_ipaddr"));
 		fprintf(fp, "Ethifname=\n");
 		fprintf(fp, "EAPifname=%s\n", "br0");
+		fprintf(fp, "PreAuthifname=%s\n", "br0");
 	}
 	else
 	{
 		fprintf(fp, "own_ip_addr=\n");
 		fprintf(fp, "Ethifname=\n");
 		fprintf(fp, "EAPifname=\n");
+		fprintf(fp, "PreAuthifname=\n");
 	}
 
-	fprintf(fp, "PreAuthifname=\n");
 	fprintf(fp, "session_timeout_interval=%d\n", 0);
 	fprintf(fp, "idle_timeout_interval=%d\n", 0);
 
@@ -2767,11 +3371,12 @@ int gen_ralink_config(int band, int is_iNIC)
 	fprintf(fp, "Key3Str=\n");
 	fprintf(fp, "Key4Str=\n");
 
-	//IgmpSnEnable
-	fprintf(fp, "IgmpSnEnable=%d\n", 1);
+	/* Wireless IGMP Snooping */
+	fprintf(fp, "IgmpSnEnable=%d\n",
+		nvram_get_int(strcat_r(prefix, "igs", tmp)) ? 1 : 0);
 
 	/*	McastPhyMode, PHY mode for Multicast frames
-	 *	McastMcs, MCS for Multicast frames, ranges from 0 to 15
+	 *	McastMcs, MCS for Multicast frames
 	 *
 	 *	MODE=1, MCS=0: Legacy CCK 1Mbps
 	 *	MODE=1, MCS=1: Legacy CCK 2Mbps
@@ -2786,16 +3391,20 @@ int gen_ralink_config(int band, int is_iNIC)
 	 *	MODE=2, MCS=6: Legacy OFDM 48Mbps
 	 *	MODE=2, MCS=7: Legacy OFDM 54Mbps
 	 *	MODE=3, MCS=0: HTMIX 6.5/15Mbps
-	 *	MODE=3, MCS=1: HTMIX 15/30Mbps
+	 *	MODE=3, MCS=1: HTMIX 13/30Mbps
 	 *	MODE=3, MCS=2: HTMIX 19.5/45Mbps
-	 *	MODE=3, MCS=8: HTMIX 13/30Mbps
-	 *	MODE=3, MCS=9: HTMIX 26/60Mbps
-	 *	MODE=3, MCS=10: HTMIX 39/90Mbps
-	 *	MODE=3, MCS=15: HTMIX 130/144Mbps
+	 *	MODE=3, MCS=7: HTMIX 65/150Mbps
+	 *	MODE=3, MCS=8: HTMIX 13/30Mbps 2S
+	 *	MODE=3, MCS=9: HTMIX 26/60Mbps 2S
+	 *	MODE=3, MCS=10: HTMIX 39/90Mbps 2S
+	 *	MODE=3, MCS=15: HTMIX 130/300Mbps 2S
 	 **/
 	i = nvram_get_int(strcat_r(prefix, "mrate_x", tmp));
 next_mrate:
 	switch (i++) {
+	case 0: /* HTMIX 65/150Mbps */
+		mcast_phy = 3, mcast_mcs = 7;
+		break;
 	case 1: /* Legacy CCK 1Mbps */
 		mcast_phy = 1, mcast_mcs = 0;
 		break;
@@ -2832,10 +3441,10 @@ next_mrate:
 	case 12: /* Legacy OFDM 54Mbps */
 		mcast_phy = 2, mcast_mcs = 7;
 		break;
-	case 13: /* HTMIX 130/144Mbps */
+	case 13: /* HTMIX 130/300Mbps 2S */
 		mcast_phy = 3, mcast_mcs = 15;
 		break;
-	case 14: /* HTMIX HTMIX 6.5/15Mbps */
+	case 14: /* HTMIX 6.5/15Mbps */
 		mcast_phy = 3, mcast_mcs = 0;
 		break;
 	case 15: /* HTMIX 13/30Mbps */
@@ -2850,7 +3459,7 @@ next_mrate:
 	case 18: /* HTMIX 26/60Mbps 2S */
 		mcast_phy = 3, mcast_mcs = 9;
 		break;
-	case 19: /* HTMIX 36/90Mbps 2S */
+	case 19: /* HTMIX 39/90Mbps 2S */
 		mcast_phy = 3, mcast_mcs = 10;
 		break;
 	default: /* Disable */
@@ -2862,6 +3471,65 @@ next_mrate:
 		goto next_mrate;
 	fprintf(fp, "McastPhyMode=%d\n", mcast_phy);
 	fprintf(fp, "McastMcs=%d\n", mcast_mcs);
+
+	/* Set WSC/WPS variables */
+	if(band)
+		str = " (5G)";
+	else
+		str = "";
+	fprintf(fp, "WscManufacturer=%s\n", "ASUSTeK Computer Inc.");
+	fprintf(fp, "WscModelName=%s%s\n", "WPS Router", str);
+	fprintf(fp, "WscDeviceName=%s%s\n", "ASUS WPS Router", str);
+	fprintf(fp, "WscModelNumber=%s\n", get_productid());
+	fprintf(fp, "WscSerialNumber=%s\n", "00000000");
+
+	fprintf(fp, "WscV2Support=%d\n", 0);	// WPS/WSC v2 feature allows client to create connection via the PinCode of AP.
+						// Disable this feature causes longer detection time (click AP till show dialog box) on WIN7 client when WSC disabled either.
+
+
+#if defined (RTCONFIG_WLMODULE_RT3352_INIC_MII)
+	if (is_iNIC)
+		fprintf(fp, "ExtEEPROM=%d\n", 1);
+
+	if (is_iNIC && nvram_get_int("sw_mode") == SW_MODE_ROUTER)	// Only limite access of Guest network in Router mode
+	{
+		int vlan_id_1st = INIC_VLAN_ID_START;
+		int vlan_id;
+		char buf1[32], buf2[32], buf3[32];
+		char *p1, *p2, *p3;
+
+		p1 = buf1;
+		p2 = buf2;
+		p3 = buf3;
+		memset(buf1, 0, sizeof(buf1));
+		memset(buf2, 0, sizeof(buf2));
+		memset(buf3, 0, sizeof(buf3));
+
+		for (i = 1; i < MAX_NO_MSSID; i++)
+		{
+			vlan_id = 0;	// vlan id 1 for LAN access
+
+			sprintf(prefix_mssid, "wl%d.%d_", band, i);
+			if (!nvram_match(strcat_r(prefix_mssid, "bss_enabled", temp), "1"))
+				continue;
+
+			if (nvram_match(strcat_r(prefix_mssid, "lanaccess", temp), "off"))
+				vlan_id = vlan_id_1st++;	// vlan id for no LAN access
+
+			p1 += sprintf(p1, ";%d", vlan_id);
+			p2 += sprintf(p2, ";%d", 0);
+			p3 += sprintf(p3, ";%d", 0);
+		}
+
+		if(vlan_id_1st != INIC_VLAN_ID_START)
+		{ //has vlan-based MBSSID for LAN access control but would make the wifi QoS field fixed at 0 (Best Effort).
+			fprintf(fp, "VLAN_ID=0%s\n", buf1);
+			fprintf(fp, "VLAN_TAG=0%s\n", buf2);
+			fprintf(fp, "VLAN_Priority=0%s\n", buf3);
+			fprintf(fp, "SwitchRemoveTag=1;1;1;1;1;0;0\n");
+		}
+	}
+#endif
 
 	if (warning)
 	{
@@ -3188,22 +3856,23 @@ getSiteSurvey(int band)
 	char header[128];
 	struct iwreq wrq;
 	SSA *ssap;
+	int lock;
 
 	memset(data, 0x00, 255);
-	strcpy(data, "SiteSurvey=1"); 
-	wrq.u.data.length = strlen(data)+1; 
-	wrq.u.data.pointer = data; 
-	wrq.u.data.flags = 0; 
+	strcpy(data, "SiteSurvey=1");
+	wrq.u.data.length = strlen(data)+1;
+	wrq.u.data.pointer = data;
+	wrq.u.data.flags = 0;
 
-	spinlock_lock(SPINLOCK_SiteSurvey);
+	lock = file_lock("sitesurvey");
 	if (wl_ioctl(get_wifname(band), RTPRIV_IOCTL_SET, &wrq) < 0)
 	{
-		spinlock_unlock(0);
+		file_unlock(lock);
 
 		dbg("Site Survey fails\n");
 		return 0;
 	}
-	spinlock_unlock(SPINLOCK_SiteSurvey);
+	file_unlock(lock);
 
 	dbg("Please wait");
 	sleep(1);
@@ -3341,11 +4010,11 @@ asuscfe(const char *PwqV, const char *IF)
 {
 	if (strcmp(PwqV, "stat") == 0)
 	{
-		eval("iwpriv", IF, "stat");
+		eval("iwpriv", (char*) IF, "stat");
 	}
 	else if (strstr(PwqV, "=") && strstr(PwqV, "=")!=PwqV)
 	{
-		eval("iwpriv", IF, "set", PwqV);
+		eval("iwpriv", (char*) IF, "set", (char*) PwqV);
 		puts("1");
 	}
 	return 0;
@@ -3386,6 +4055,7 @@ int
 wps_pin(int pincode)
 {
 	int wps_band = nvram_get_int("wps_band");
+	char *wscd_pidfile;
 
 	if (nvram_match("lan_ipaddr", ""))
 		return 0;
@@ -3400,13 +4070,15 @@ wps_pin(int pincode)
 	}
 
 	system("route delete 239.255.255.250 1>/dev/null 2>&1");
-	if (check_if_file_exist(get_wscd_pidfile()))
+	wscd_pidfile = get_wscd_pidfile();
+	if (check_if_file_exist(wscd_pidfile))
 	{
-		doSystem("kill -9 `cat %s`", get_wscd_pidfile());
-		unlink(get_wscd_pidfile());
+		doSystem("kill -9 `cat %s`", wscd_pidfile);
+		unlink(wscd_pidfile);
 	}
+	free(wscd_pidfile);
 
-	dbg("start wsc\n");
+	dbg("start wsc %s()\n", __func__);
 
 	doSystem("iwpriv %s set WscConfMode=%d", get_wpsifname(), 0);		// WPS disabled
 	doSystem("iwpriv %s set WscConfMode=%d", get_wpsifname(), 7);		// Enrollee + Proxy + Registrar
@@ -3438,6 +4110,7 @@ int
 wps_pbc()
 {
 	int wps_band = nvram_get_int("wps_band");
+	char *wscd_pidfile;
 
 	if (nvram_match("lan_ipaddr", ""))
 		return 0;
@@ -3452,13 +4125,15 @@ wps_pbc()
 	}
 
 	system("route delete 239.255.255.250 1>/dev/null 2>&1");
-	if (check_if_file_exist(get_wscd_pidfile()))
+	wscd_pidfile = get_wscd_pidfile();
+	if (check_if_file_exist(wscd_pidfile))
 	{
-		doSystem("kill -9 `cat %s`", get_wscd_pidfile());
-		unlink(get_wscd_pidfile());
+		doSystem("kill -9 `cat %s`", wscd_pidfile);
+		unlink(wscd_pidfile);
 	}
+	free(wscd_pidfile);
 
-	dbg("start wsc\n");
+	dbg("start wsc %s()\n", __func__);
 
 	doSystem("iwpriv %s set WscConfMode=%d", get_wpsifname(), 0);		// WPS disabled
 	doSystem("iwpriv %s set WscConfMode=%d", get_wpsifname(), 7);		// Enrollee + Proxy + Registrar
@@ -3479,6 +4154,8 @@ wps_pbc()
 int
 wps_pbc_both()
 {
+	char *wscd_pidfile_band;
+
 	if (nvram_match("lan_ipaddr", ""))
 		return 0;
 
@@ -3486,19 +4163,23 @@ wps_pbc_both()
 
 	system("route delete 239.255.255.250 1>/dev/null 2>&1");
 
-	if (check_if_file_exist(get_wscd_pidfile_band(1)))
+	wscd_pidfile_band = get_wscd_pidfile_band(1);
+	if (check_if_file_exist(wscd_pidfile_band))
 	{
-		doSystem("kill -9 `cat %s`", get_wscd_pidfile_bnad(1));
-		unlink(get_wscd_pidfile_band(1));
+		doSystem("kill -9 `cat %s`", wscd_pidfile_band);
+		unlink(wscd_pidfile_band);
 	}
+	free(wscd_pidfile_band);
 
-	if (check_if_file_exist(get_wscd_pidfile_band(0)))
+	wscd_pidfile_band = get_wscd_pidfile_band(0);
+	if (check_if_file_exist(wscd_pidfile_band))
 	{
-		doSystem("kill -9 `cat %s`", get_wscd_pidfile_band(0));
-		doSystem("rm -f /var/run/wscd.pid.%s", get_wscd_pidfile_band(0));
+		doSystem("kill -9 `cat %s`", wscd_pidfile_band);
+		doSystem("rm -f /var/run/wscd.pid.%s", wscd_pidfile_band);
 	}
+	free(wscd_pidfile_band);
 
-	dbg("start wsc\n");
+	dbg("start wsc %s()\n", __func__);
 
 	doSystem("iwpriv %s set WscConfMode=%d", get_wifname(1), 0);		// WPS disabled
 	doSystem("iwpriv %s set WscConfMode=%d", get_wifname(1), 7);		// Enrollee + Proxy + Registrar
@@ -3588,6 +4269,29 @@ wps_pbc_both()
 }
 #endif
 
+extern struct nvram_tuple router_defaults[];
+
+static void
+wl_default_wps(int unit)
+{
+	struct nvram_tuple *t;
+	char prefix[]="wlXXXXXX_", tmp[100];
+
+	snprintf(prefix, sizeof(prefix), "wl%d_", unit);
+
+	for (t = router_defaults; t->name; t++) {
+		if(strncmp(t->name, "wl_", 3) &&
+			strncmp(t->name, "wl0_", 4) &&
+			strncmp(t->name, "wl1_", 4))
+			continue;
+
+		if(!strncmp(t->name, "wl_", 3))
+			nvram_set(strcat_r(prefix, &t->name[3], tmp), t->value);
+		else if (!strncmp(t->name, prefix, 4))
+			nvram_set(t->name, t->value);
+	}
+}
+
 void
 wps_oob()
 {
@@ -3595,9 +4299,6 @@ wps_oob()
 
 	if (nvram_match("lan_ipaddr", ""))
 		return;
-
-	char tmp[100], prefix[]="wlXXXXXXX_";
-	snprintf(prefix, sizeof(prefix), "wl%d_", wps_band);
 
 	if (wps_band)
 	{
@@ -3613,39 +4314,9 @@ wps_oob()
 		nvram_set("wl0_wsc_config_state", "0");
 	else
 		nvram_set("wl1_wsc_config_state", "0");
-#if defined (W7_LOGO) || defined (wifi_LOGO)
-	nvram_set(strcat_r(prefix, "ssid", tmp), DEFAULT_SSID_5G);
-	nvram_set(strcat_r(prefix, "auth_mode_x", tmp), "open");
-	nvram_set(strcat_r(prefix, "wep_x", tmp), "0");
-	nvram_set(strcat_r(prefix, "crypto", tmp), "tkip");
-	nvram_set(strcat_r(prefix, "key", tmp), "1");
-	nvram_set(strcat_r(prefix, "phrase_x", tmp), "");
-	nvram_set(strcat_r(prefix, "key1", tmp), "");
-	nvram_set(strcat_r(prefix, "key2", tmp), "");
-	nvram_set(strcat_r(prefix, "key3", tmp), "");
-	nvram_set(strcat_r(prefix, "key4", tmp), "");
-	nvram_set(strcat_r(prefix, "wpa_psk", tmp), "");
-#else
-/*
-	nvram_set(strcat_r(prefix, "ssid", tmp), "ASUSInitialAP");
-	nvram_set(strcat_r(prefix, "auth_mode_x", tmp), "psk");
-	nvram_set(strcat_r(prefix, "wep_x", tmp), "0");
-	nvram_set(strcat_r(prefix, "crypto", tmp), "tkip+aes");
-	nvram_set(strcat_r(prefix, "key", tmp), "2");
-	nvram_set(strcat_r(prefix, "wpa_psk", tmp), "12345678");
-*/
-	nvram_set(strcat_r(prefix, "ssid", tmp), DEFAULT_SSID_5G);
-	nvram_set(strcat_r(prefix, "auth_mode_x", tmp), "open");
-	nvram_set(strcat_r(prefix, "wep_x", tmp), "0");
-	nvram_set(strcat_r(prefix, "crypto", tmp), "tkip");
-	nvram_set(strcat_r(prefix, "key", tmp), "1");
-	nvram_set(strcat_r(prefix, "phrase_x", tmp), "");
-	nvram_set(strcat_r(prefix, "key1", tmp), "");
-	nvram_set(strcat_r(prefix, "key2", tmp), "");
-	nvram_set(strcat_r(prefix, "key3", tmp), "");
-	nvram_set(strcat_r(prefix, "key4", tmp), "");
-	nvram_set(strcat_r(prefix, "wpa_psk", tmp), "");
-#endif
+
+	wl_default_wps(wps_band);
+
 	nvram_commit();
 
 #if defined (W7_LOGO) || defined (wifi_LOGO)
@@ -3653,22 +4324,25 @@ wps_oob()
 	doSystem("iwpriv %s set EncrypType=%s", get_wpsifname(), "NONE");
 	doSystem("iwpriv %s set IEEE8021X=%d", get_wpsifname(), 0);
 	if (strlen(nvram_safe_get("wl1_key1")))
-	doSystem("iwpriv %s set Key1=%s", get_wpsifname(), nvram_safe_get("wl1_key1"));
+		iwprivSet(get_wpsifname(), "Key1", nvram_safe_get("wl1_key1"));
 	if (strlen(nvram_safe_get("wl1_key2")))
-	doSystem("iwpriv %s set Key2=%s", get_wpsifname(), nvram_safe_get("wl1_key2"));
+		iwprivSet(get_wpsifname(), "Key2", nvram_safe_get("wl1_key2"));
 	if (strlen(nvram_safe_get("wl1_key3")))
-	doSystem("iwpriv %s set Key3=%s", get_wpsifname(), nvram_safe_get("wl1_key3"));
+		iwprivSet(get_wpsifname(), "Key3", nvram_safe_get("wl1_key3"));
 	if (strlen(nvram_safe_get("wl1_key4")))
-	doSystem("iwpriv %s set Key4=%s", get_wpsifname(), nvram_safe_get("wl1_key4"));
+		iwprivSet(get_wpsifname(), "Key4", nvram_safe_get("wl1_key4"));
 	doSystem("iwpriv %s set DefaultKeyID=%s", get_wpsifname(), nvram_safe_get("wl1_key"));
-	doSystem("iwpriv %s set SSID=%s", get_wpsifname(), nvram_safe_get("wl1_ssid"));
+	iwprivSet(get_wpsifname(), "SSID", nvram_safe_get("wl1_ssid"));
 
 	system("route delete 239.255.255.250 1>/dev/null 2>&1");
-	if (check_if_file_exist(get_wscd_pidfile()))
+	char *wscd_pidfile;
+	wscd_pidfile = get_wscd_pidfile();
+	if (check_if_file_exist(wscd_pidfile))
 	{
-		doSystem("kill -9 `cat %s`", get_wscd_pidfile());
-		unlink(get_wscd_pidfile());
+		doSystem("kill -9 `cat %s`", wscd_pidfile);
+		unlink(wscd_pidfile);
 	}		
+	free(wscd_pidfile);
 
 	doSystem("iwpriv %s set WscConfMode=%d", get_wpsifname(), 0);		// WPS disabled
 	doSystem("iwpriv %s set WscConfMode=%d", get_wpsifname(), 7);		// Enrollee + Proxy + Registrar
@@ -3683,100 +4357,41 @@ wps_oob()
 	doSystem("iwpriv %s set WscMode=1", get_wpsifname());			// PIN method
 //	doSystem("iwpriv %s set WscGetConf=%d", get_wpsifname(), 1);		// Trigger WPS AP to do simple config with WPS Client
 #else
-/*
-	doSystem("iwpriv %s set SSID=ASUSInitialAP", get_wpsifname());
-	doSystem("iwpriv %s set AuthMode=WPAPSK", get_wpsifname());
-	doSystem("iwpriv %s set EncrypType=TKIPAES", get_wpsifname());
-	doSystem("iwpriv %s set WPAPSK=12345678", get_wpsifname());
-	doSystem("iwpriv %s set DefaultKeyID=2", get_wpsifname());
-*/
 	doSystem("iwpriv %s set AuthMode=%s", get_wpsifname(), "OPEN");
 	doSystem("iwpriv %s set EncrypType=%s", get_wpsifname(), "NONE");
 	doSystem("iwpriv %s set IEEE8021X=%d", get_wpsifname(), 0);
 	if (strlen(nvram_safe_get("wl1_key1")))
-	doSystem("iwpriv %s set Key1=%s", get_wpsifname(), nvram_safe_get("wl1_key1"));
+		iwprivSet(get_wpsifname(), "Key1", nvram_safe_get("wl1_key1"));
 	if (strlen(nvram_safe_get("wl1_key2")))
-	doSystem("iwpriv %s set Key2=%s", get_wpsifname(), nvram_safe_get("wl1_key2"));
+		iwprivSet(get_wpsifname(), "Key2", nvram_safe_get("wl1_key2"));
 	if (strlen(nvram_safe_get("wl1_key3")))
-	doSystem("iwpriv %s set Key3=%s", get_wpsifname(), nvram_safe_get("wl1_key3"));
+		iwprivSet(get_wpsifname(), "Key3", nvram_safe_get("wl1_key3"));
 	if (strlen(nvram_safe_get("wl1_key4")))
-	doSystem("iwpriv %s set Key4=%s", get_wpsifname(), nvram_safe_get("wl1_key4"));
+		iwprivSet(get_wpsifname(), "Key4", nvram_safe_get("wl1_key4"));
 	doSystem("iwpriv %s set DefaultKeyID=%s", get_wpsifname(), nvram_safe_get("wl1_key"));
-	doSystem("iwpriv %s set SSID=%s", get_wpsifname(), nvram_safe_get("wl1_ssid"));
+	iwprivSet(get_wpsifname(), "SSID", nvram_safe_get("wl1_ssid"));
 	doSystem("iwpriv %s set WscConfStatus=%d", get_wpsifname(), 1);		// AP is unconfigured
 #endif
 	g_isEnrollee = 0;
 }
 
 void
-wps_oob_both()
+wps_oob_both(void)
 {
+#if defined (W7_LOGO) || defined (wifi_LOGO)
+	char *wscd_pidfile_band;
+#endif
+
 	if (nvram_match("lan_ipaddr", ""))
 		return;
 
 //	if (!need_to_start_wps_5g() || !need_to_start_wps_2g()) return;
 
 	nvram_set("w_Setting", "0");
-	nvram_set("wl0_wsc_config_state", "0");
-	nvram_set("wl1_wsc_config_state", "0");
-#if defined (W7_LOGO) || defined (wifi_LOGO)
+//	nvram_set("wl0_wsc_config_state", "0");
+//	nvram_set("wl1_wsc_config_state", "0");
+	wl_defaults_wps();
 
-	nvram_set("wl1_ssid", DEFAULT_SSID_5G);
-	nvram_set("wl1_auth_mode_x", "open");
-	nvram_set("wl1_wep_x", "0");
-	nvram_set("wl1_crypto", "tkip");
-	nvram_set("wl1_key", "1");
-	nvram_set("wl1_phrase_x", "");
-	nvram_set("wl1_key1", "");
-	nvram_set("wl1_key2", "");
-	nvram_set("wl1_key3", "");
-	nvram_set("wl1_key4", "");
-	nvram_set("wl1_wpa_psk", "");
-
-	nvram_set("wl0_ssid", DEFAULT_SSID_2G);
-	nvram_set("wl0_auth_mode_x", "open");
-	nvram_set("wl0_wep_x", "0");
-	nvram_set("wl0_crypto", "tkip");
-	nvram_set("wl0_key", "1");
-	nvram_set("wl0_phrase_x", "");
-	nvram_set("wl0_key1", "");
-	nvram_set("wl0_key2", "");
-	nvram_set("wl0_key3", "");
-	nvram_set("wl0_key4", "");
-	nvram_set("wl0_wpa_psk", "");
-#else
-/*
-	nvram_set("wl1_ssid", "ASUSInitialAP");
-	nvram_set("wl1_auth_mode_x", "psk");
-	nvram_set("wl1_wep_x", "0");
-	nvram_set("wl1_crypto", "tkip+aes");
-	nvram_set("wl1_key", "2");
-	nvram_set("wl1_wpa_psk", "12345678");
-*/
-	nvram_set("wl1_ssid", DEFAULT_SSID_5G);
-	nvram_set("wl1_auth_mode_x", "open");
-	nvram_set("wl1_wep_x", "0");
-	nvram_set("wl1_crypto", "tkip");
-	nvram_set("wl1_key", "1");
-	nvram_set("wl1_phrase_x", "");
-	nvram_set("wl1_key1", "");
-	nvram_set("wl1_key2", "");
-	nvram_set("wl1_key3", "");
-	nvram_set("wl1_key4", "");
-	nvram_set("wl1_wpa_psk", "");
-
-	nvram_set("wl0_ssid", DEFAULT_SSID_2G);
-	nvram_set("wl0_auth_mode_x", "open");
-	nvram_set("wl0_wep_x", "0");
-	nvram_set("wl0_crypto", "tkip");
-	nvram_set("wl0_key", "1");
-	nvram_set("wl0_phrase_x", "");
-	nvram_set("wl0_key1", "");
-	nvram_set("wl0_key2", "");
-	nvram_set("wl0_key3", "");
-	nvram_set("wl0_key4", "");
-	nvram_set("wl0_wpa_psk", "");
-#endif
 	nvram_commit();
 
 #if defined (W7_LOGO) || defined (wifi_LOGO)
@@ -3784,43 +4399,47 @@ wps_oob_both()
 	doSystem("iwpriv %s set EncrypType=%s", get_wifname(1), "NONE");
 	doSystem("iwpriv %s set IEEE8021X=%d", get_wifname(1), 0);
 	if (strlen(nvram_safe_get("wl1_key1")))
-	doSystem("iwpriv %s set Key1=%s", get_wifname(1), nvram_safe_get("wl1_key1"));
+		iwprivSet(get_wifname(1), "Key1", nvram_safe_get("wl1_key1"));
 	if (strlen(nvram_safe_get("wl1_key2")))
-	doSystem("iwpriv %s set Key2=%s", get_wifname(1), nvram_safe_get("wl1_key2"));
+		iwprivSet(get_wifname(1), "Key2", nvram_safe_get("wl1_key2"));
 	if (strlen(nvram_safe_get("wl1_key3")))
-	doSystem("iwpriv %s set Key3=%s", get_wifname(1), nvram_safe_get("wl1_key3"));
+		iwprivSet(get_wifname(1), "Key3", nvram_safe_get("wl1_key3"));
 	if (strlen(nvram_safe_get("wl1_key4")))
-	doSystem("iwpriv %s set Key4=%s", get_wifname(1), nvram_safe_get("wl1_key4"));
+		iwprivSet(get_wifname(1), "Key4", nvram_safe_get("wl1_key4"));
 	doSystem("iwpriv %s set DefaultKeyID=%s", get_wifname(1), nvram_safe_get("wl1_key"));
-	doSystem("iwpriv %s set SSID=%s", get_wifname(1), nvram_safe_get("wl1_ssid"));
+	iwprivSet(get_wifname(1), "SSID", nvram_safe_get("wl1_ssid"));
 
 	doSystem("iwpriv %s set AuthMode=%s", get_wifname(0), "OPEN");
 	doSystem("iwpriv %s set EncrypType=%s", get_wifname(0), "NONE");
 	doSystem("iwpriv %s set IEEE8021X=%d", get_wifname(0), 0);
 	if (strlen(nvram_safe_get("wl0_key1")))
-	doSystem("iwpriv %s set Key1=%s", get_wifname(0), nvram_safe_get("wl0_key1"));
+		iwprivSet(get_wifname(0), "Key1", nvram_safe_get("wl0_key1"));
 	if (strlen(nvram_safe_get("wl0_key2")))
-	doSystem("iwpriv %s set Key2=%s", get_wifname(0), nvram_safe_get("wl0_key2"));
+		iwprivSet(get_wifname(0), "Key2", nvram_safe_get("wl0_key2"));
 	if (strlen(nvram_safe_get("wl0_key3")))
-	doSystem("iwpriv %s set Key3=%s", get_wifname(0), nvram_safe_get("wl0_key3"));
+		iwprivSet(get_wifname(0), "Key3", nvram_safe_get("wl0_key3"));
 	if (strlen(nvram_safe_get("wl0_key4")))
-	doSystem("iwpriv %s set Key4=%s", get_wifname(0), nvram_safe_get("wl0_key4"));
+		iwprivSet(get_wifname(0), "Key4", nvram_safe_get("wl0_key4"));
 	doSystem("iwpriv %s set DefaultKeyID=%s", get_wifname(0), nvram_safe_get("wl0_key"));
-	doSystem("iwpriv %s set SSID=%s", get_wifname(0), nvram_safe_get("wl0_ssid"));
+	iwprivSet(get_wifname(0), "SSID", nvram_safe_get("wl0_ssid"));
 
 	system("route delete 239.255.255.250 1>/dev/null 2>&1");
 
-	if (check_if_file_exist(get_wscd_pidfile_band(1)))
+	wscd_pidfile_band = get_wscd_pidfile_band(1);
+	if (check_if_file_exist(wscd_pidfile_band))
 	{
-		doSystem("kill -9 `cat %s`", get_wscd_pidfile_band(1));
-		unlink(get_wscd_pidfile_band(1));
+		doSystem("kill -9 `cat %s`", wscd_pidfile_band);
+		unlink(wscd_pidfile_band);
 	}
+	free(wscd_pidfile_band);
 
-	if (check_if_file_exist(get_wscd_pidfile_band(0)))
+	wscd_pidfile_band = get_wscd_pidfile_band(0);
+	if (check_if_file_exist(wscd_pidfile_band))
 	{
-		doSystem("kill -9 `cat %s`", get_wscd_pidfile_band(0));
-		unlink(get_wscd_pidfile_band(0));
+		doSystem("kill -9 `cat %s`", wscd_pidfile_band);
+		unlink(wscd_pidfile_band);
 	}
+	free(wscd_pidfile_band);
 
 	doSystem("iwpriv %s set WscConfMode=%d", get_wifname(1), 0);		// WPS disabled
 	doSystem("iwpriv %s set WscConfMode=%d", get_wifname(1), 7);		// Enrollee + Proxy + Registrar
@@ -3847,26 +4466,19 @@ wps_oob_both()
 
 //	doSystem("iwpriv %s set WscGetConf=%d", get_wifname(1), 1);		// Trigger WPS AP to do simple config with WPS Client
 #else
-/*
-	doSystem("iwpriv %s set SSID=ASUSInitialAP", get_wifname(1));
-	doSystem("iwpriv %s set AuthMode=WPAPSK", get_wifname(1));
-	doSystem("iwpriv %s set EncrypType=TKIPAES", get_wifname(1));
-	doSystem("iwpriv %s set WPAPSK=12345678", get_wifname(1));
-	doSystem("iwpriv %s set DefaultKeyID=2", get_wifname(1));
-*/
 	doSystem("iwpriv %s set AuthMode=%s", get_wifname(1), "OPEN");
 	doSystem("iwpriv %s set EncrypType=%s", get_wifname(1), "NONE");
 	doSystem("iwpriv %s set IEEE8021X=%d", get_wifname(1), 0);
 	if (strlen(nvram_safe_get("wl1_key1")))
-	doSystem("iwpriv %s set Key1=%s", get_wifname(1), nvram_safe_get("wl1_key1"));
+		iwprivSet(get_wifname(1), "Key1", nvram_safe_get("wl1_key1"));
 	if (strlen(nvram_safe_get("wl1_key2")))
-	doSystem("iwpriv %s set Key2=%s", get_wifname(1), nvram_safe_get("wl1_key2"));
+		iwprivSet(get_wifname(1), "Key2", nvram_safe_get("wl1_key2"));
 	if (strlen(nvram_safe_get("wl1_key3")))
-	doSystem("iwpriv %s set Key3=%s", get_wifname(1), nvram_safe_get("wl1_key3"));
+		iwprivSet(get_wifname(1), "Key3", nvram_safe_get("wl1_key3"));
 	if (strlen(nvram_safe_get("wl1_key4")))
-	doSystem("iwpriv %s set Key4=%s", get_wifname(1), nvram_safe_get("wl1_key4"));
+		iwprivSet(get_wifname(1), "Key4", nvram_safe_get("wl1_key4"));
 	doSystem("iwpriv %s set DefaultKeyID=%s", get_wifname(1), nvram_safe_get("wl1_key"));
-	doSystem("iwpriv %s set SSID=%s", get_wifname(1), nvram_safe_get("wl1_ssid"));
+	iwprivSet(get_wifname(1), "SSID", nvram_safe_get("wl1_ssid"));
 	doSystem("iwpriv %s set WscConfMode=%d", get_wifname(1), 0);		// WPS disabled. Force WPS status to change
 	doSystem("iwpriv %s set WscConfStatus=%d", get_wifname(1), 1);		// AP is unconfigured
 	doSystem("iwpriv %s set WscConfMode=%d", get_wifname(1), 1);		// WPS enabled. Force WPS status to change
@@ -3875,15 +4487,15 @@ wps_oob_both()
 	doSystem("iwpriv %s set EncrypType=%s", get_wifname(0), "NONE");
 	doSystem("iwpriv %s set IEEE8021X=%d", get_wifname(0), 0);
 	if (strlen(nvram_safe_get("wl0_key1")))
-	doSystem("iwpriv %s set Key1=%s", get_wifname(0), nvram_safe_get("wl0_key1"));
+		iwprivSet(get_wifname(0), "Key1", nvram_safe_get("wl0_key1"));
 	if (strlen(nvram_safe_get("wl0_key2")))
-	doSystem("iwpriv %s set Key2=%s", get_wifname(0), nvram_safe_get("wl0_key2"));
+		iwprivSet(get_wifname(0), "Key2", nvram_safe_get("wl0_key2"));
 	if (strlen(nvram_safe_get("wl0_key3")))
-	doSystem("iwpriv %s set Key3=%s", get_wifname(0), nvram_safe_get("wl0_key3"));
+		iwprivSet(get_wifname(0), "Key3", nvram_safe_get("wl0_key3"));
 	if (strlen(nvram_safe_get("wl0_key4")))
-	doSystem("iwpriv %s set Key4=%s", get_wifname(0), nvram_safe_get("wl0_key4"));
+		iwprivSet(get_wifname(0), "Key4", nvram_safe_get("wl0_key4"));
 	doSystem("iwpriv %s set DefaultKeyID=%s", get_wifname(0), nvram_safe_get("wl0_key"));
-	doSystem("iwpriv %s set SSID=%s", get_wifname(0), nvram_safe_get("wl0_ssid"));
+	iwprivSet(get_wifname(0), "SSID", nvram_safe_get("wl0_ssid"));
 	doSystem("iwpriv %s set WscConfMode=%d", get_wifname(0), 0);		// WPS disabled. Force WPS status to change
 	doSystem("iwpriv %s set WscConfStatus=%d", get_wifname(0), 1);		// AP is unconfigured
 	doSystem("iwpriv %s set WscConfMode=%d", get_wifname(0), 1);		// WPS enabled. Force WPS status to change
@@ -3892,10 +4504,11 @@ wps_oob_both()
 }
 
 void
-start_wsc()
+start_wsc(void)
 {
 	int wps_band = nvram_get_int("wps_band");
 	char *wps_sta_pin = nvram_safe_get("wps_sta_pin");
+	char *wscd_pidfile;
 
 	if (nvram_match("lan_ipaddr", ""))
 		return;
@@ -3910,13 +4523,15 @@ start_wsc()
 	}
 
 	system("route delete 239.255.255.250 1>/dev/null 2>&1");
-	if (check_if_file_exist(get_wscd_pidfile()))
+	wscd_pidfile = get_wscd_pidfile();
+	if (check_if_file_exist(wscd_pidfile))
 	{
-		doSystem("kill -9 `cat %s`", get_wscd_pidfile());
-		unlink(get_wscd_pidfile());
+		doSystem("kill -9 `cat %s`", wscd_pidfile);
+		unlink(wscd_pidfile);
 	}
+	free(wscd_pidfile);
 
-	dbg("start wsc\n");
+	dbg("start wsc %s()\n", __func__);
 
 	doSystem("iwpriv %s set WscConfMode=%d", get_wpsifname(), 0);	// WPS disabled
 	doSystem("iwpriv %s set WscConfMode=%d", get_wpsifname(), 7);	// Enrollee + Proxy + Registrar
@@ -3945,7 +4560,7 @@ start_wsc()
 	doSystem("iwpriv %s set WscGetConf=%d", get_wpsifname(), 1);	// Trigger WPS AP to do simple config with WPS Client
 //#endif
 }
-
+#if 0
 void
 start_wsc_pbc()
 {
@@ -3963,15 +4578,18 @@ start_wsc_pbc()
 		if (!need_to_start_wps_2g()) return;
 	}
 
-	dbg("start wsc\n");
+	dbg("start wsc %s()\n", __func__);
 	if (nvram_match("wps_enable", "0"))
 	{
+		char *wscd_pidfile;
 		system("route add -host 239.255.255.250 dev br0 1>/dev/null 2>&1");
-		if (check_if_file_exist(get_wscd_pidfile()))
+		wscd_pidfile = get_wscd_pidfile();
+		if (check_if_file_exist(wscd_pidfile))
 		{
-			doSystem("kill -9 `cat %s`", get_wscd_pidfile());
-			unlink(get_wscd_pidfile());
+			doSystem("kill -9 `cat %s`", wscd_pidfile);
+			unlink(wscd_pidfile);
 		}
+		free(wscd_pidfile);
 		
 		char str_lan_ipaddr[16];
 		strcpy(str_lan_ipaddr, nvram_safe_get("lan_ipaddr"));
@@ -3989,27 +4607,33 @@ start_wsc_pbc()
 void
 start_wsc_pbc_both()
 {
+	char *wscd_pidfile_band;
+
 	if (nvram_match("lan_ipaddr", ""))
 		return;
 
 	if (!need_to_start_wps_5g() || !need_to_start_wps_2g()) return;
 
-	dbg("start wsc\n");
+	dbg("start wsc %s()\n", __func__);
 //	if (nvram_match("wps_enable", "0"))
 	{
 		system("route delete 239.255.255.250 1>/dev/null 2>&1");
 
-		if (check_if_file_exist(get_wscd_pidfile_band(1)))
+		wscd_pidfile_band = get_wscd_pidfile_band(1);
+		if (check_if_file_exist(wscd_pidfile_band))
 		{
-			doSystem("kill -9 `cat %s`", get_wscd_pidfile_band(1));
-			unlink(get_wscd_pidfile_band(1));
+			doSystem("kill -9 `cat %s`", wscd_pidfile_band);
+			unlink(wscd_pidfile_band);
 		}
+		free(wscd_pidfile_band);
 
-		if (check_if_file_exist(get_wscd_pidfile_band(0)))
+		wscd_pidfile_band = get_wscd_pidfile_band(0);
+		if (check_if_file_exist(wscd_pidfile_band))
 		{
-			doSystem("kill -9 `cat %s`", get_wscd_pidfile_band(0));
-			unlink(get_wscd_pidfile(0));
+			doSystem("kill -9 `cat %s`", wscd_pidfile_band);
+			unlink(wscd_pidfile_band);
 		}
+		free(wscd_pidfile_band);
 
 		system("route add -host 239.255.255.250 dev br0 1>/dev/null 2>&1");
 
@@ -4033,16 +4657,17 @@ start_wsc_pbc_both()
 
 	nvram_set("wps_enable", "1");
 }
+#endif
 
 void
-start_wsc_pin_enrollee()
+start_wsc_pin_enrollee(void)
 {
 	int wps_band = nvram_get_int("wps_band");
+	char *wscd_pidfile;
 
 	if (nvram_match("lan_ipaddr", ""))
 	{
 		nvram_set("wps_enable", "0");
-//		nvram_set("wps_start_flag", "0");
 		return;
 	}
 
@@ -4056,13 +4681,15 @@ start_wsc_pin_enrollee()
 	}
 
 	system("route add -host 239.255.255.250 dev br0 1>/dev/null 2>&1");
-	if (check_if_file_exist(get_wscd_pidfile()))
+	wscd_pidfile = get_wscd_pidfile();
+	if (check_if_file_exist(wscd_pidfile))
 	{
-		doSystem("kill -9 `cat %s`", get_wscd_pidfile());
-		unlink(get_wscd_pidfile());
+		doSystem("kill -9 `cat %s`", wscd_pidfile);
+		unlink(wscd_pidfile);
 	}
+	free(wscd_pidfile);
 
-	dbg("start wsc\n");
+	dbg("start wsc %s()\n", __func__);
 
 	char str_lan_ipaddr[16];
 	strcpy(str_lan_ipaddr, nvram_safe_get("lan_ipaddr"));
@@ -4076,9 +4703,10 @@ start_wsc_pin_enrollee()
 }
 
 void
-stop_wsc()
+stop_wsc(void)
 {
 	int wps_band = nvram_get_int("wps_band");
+	char *wscd_pidfile;
 
 	if (wps_band)
 	{
@@ -4090,17 +4718,19 @@ stop_wsc()
 	}
 
 	system("route delete 239.255.255.250 1>/dev/null 2>&1");
-	if (check_if_file_exist(get_wscd_pidfile()))
+	wscd_pidfile = get_wscd_pidfile();
+	if (check_if_file_exist(wscd_pidfile))
 	{
-		doSystem("kill -9 `cat %s`", get_wscd_pidfile());
-		unlink(get_wscd_pidfile());
+		doSystem("kill -9 `cat %s`", wscd_pidfile);
+		unlink(wscd_pidfile);
 	}
+	free(wscd_pidfile);
 
 	doSystem("iwpriv %s set WscConfMode=%d", get_wpsifname(), 0);		// WPS disabled
 	doSystem("iwpriv %s set WscStatus=%d", get_wpsifname(), 0);		// Not Used
 }
 
-int getWscStatus()
+int getWscStatus(void)
 {
 	int data = 0;
 	struct iwreq wrq;
@@ -4139,9 +4769,9 @@ stainfo(int band)
 	memset(data, 0x00, 2048);
 	wrq.u.data.length = 2048;
 	wrq.u.data.pointer = (caddr_t) data;
-	wrq.u.data.flags = 0;
+	wrq.u.data.flags = ASUS_SUBCMD_GSTAINFO;
 
-	if (wl_ioctl(get_wifname(band), RTPRIV_IOCTL_GSTAINFO, &wrq) < 0)
+	if (wl_ioctl(get_wifname(band), RTPRIV_IOCTL_ASUSCMD, &wrq) < 0)
 	{
 		dbg("errors in getting STAINFO result\n");
 		return 0;
@@ -4164,9 +4794,9 @@ getstat(int band)
 	memset(data, 0x00, 4096);
 	wrq.u.data.length = 4096;
 	wrq.u.data.pointer = (caddr_t) data;
-	wrq.u.data.flags = 0;
+	wrq.u.data.flags = ASUS_SUBCMD_GSTAT;
 
-	if (wl_ioctl(get_wifname(band), RTPRIV_IOCTL_GSTAT, &wrq) < 0)
+	if (wl_ioctl(get_wifname(band), RTPRIV_IOCTL_ASUSCMD, &wrq) < 0)
 	{
 		dbg("errors in getting STAT result\n");
 		return 0;
@@ -4180,29 +4810,95 @@ getstat(int band)
 	return 0;
 }
 
+#if defined (RTCONFIG_WLMODULE_RT3352_INIC_MII)
+void getRSSI(const char *start, char **end, char *rssi)
+{
+	char *pS, *pV, *pN;
+
+	if(start == NULL || rssi == NULL)
+		return;
+
+	rssi[0] = '\0';
+	if((pS = strstr(start, "RSSI")) == NULL)
+		return;
+
+	if((pN = strchr(pS, '\n')) == NULL)
+		return;
+
+	if(end)
+		*end = pN;
+
+	if((pV = strchr(pS, '=')) == NULL || pV > pN)
+		return;
+
+	pV++;
+	while(pV[0] == ' ' || pV[0] == '\t')
+		pV++;
+
+	while(pN > pV && isspace(pN[-1]))
+		pN--;
+
+	if(pN-pV > 0)
+	{
+		memcpy(rssi, pV, pN-pV);
+		rssi[pN-pV] = '\0';
+	}
+}
+#endif	/* RTCONFIG_WLMODULE_RT3352_INIC_MII */
+
 int
 getrssi(int band)
 {
+#if defined (RTCONFIG_WLMODULE_RT3352_INIC_MII)
+#define RTPRIV_IOCTL_STATISTICS		(SIOCIWFIRSTPRIV + 0x09)
+	char data[1024];
+	struct iwreq wrq;
+
+	memset(data, 0x00, sizeof(data));
+	wrq.u.data.length = sizeof(data);
+	wrq.u.data.pointer = (caddr_t) data;
+	wrq.u.data.flags = 0;
+
+	if(wl_ioctl(get_wifname(band), RTPRIV_IOCTL_STATISTICS, &wrq) < 0)
+	{
+		dbg("errors in getting STATISTICS result\n");
+		return 0;
+	}
+
+	if(wrq.u.data.length > 0)
+	{
+		char *start;
+		char rssi1[8], rssi2[8], rssi3[8];
+		start = wrq.u.data.pointer;
+		getRSSI(start, &start, rssi1);
+		getRSSI(start, &start, rssi2);
+		getRSSI(start, &start, rssi3);
+		printf("%s,%s,%s\n", rssi1, rssi2, rssi3);
+	}
+
+	return 0;
+#else	/* !RTCONFIG_WLMODULE_RT3352_INIC_MII */
 	char data[32];
 	struct iwreq wrq;
 
 	memset(data, 0x00, 32);
 	wrq.u.data.length = 32;
 	wrq.u.data.pointer = (caddr_t) data;
-	wrq.u.data.flags = 0;
+	wrq.u.data.flags = ASUS_SUBCMD_GRSSI;
 
-	if (wl_ioctl(get_wifname(band), RTPRIV_IOCTL_GRSSI, &wrq) < 0)
+	if (wl_ioctl(get_wifname(band), RTPRIV_IOCTL_ASUSCMD, &wrq) < 0)
 	{
 		dbg("errors in getting RSSI result\n");
 		return 0;
 	}
 
-	if (wrq.u.data.length > 0)
+	if(wrq.u.data.length > 0)
 	{
 		puts(wrq.u.data.pointer);
 	}
 
 	return 0;
+#endif	/* RTCONFIG_WLMODULE_RT3352_INIC_MII */
 }
 
 void
@@ -4256,10 +4952,10 @@ wsc_user_commit()
 
 			doSystem("iwpriv %s set IEEE8021X=%d", WIF_2G, 0);
 
-			doSystem("iwpriv %s set SSID=%s", WIF_2G, nvram_safe_get("wl0_ssid"));
+			iwprivSet(WIF_2G, "SSID", nvram_safe_get("wl0_ssid"));
 
 			//WPAPSK
-			doSystem("iwpriv %s set WPAPSK=%s", WIF_2G, nvram_safe_get("wl0_wpa_psk"));
+			iwprivSet(WIF_2G, "WPAPSK", nvram_safe_get("wl0_wpa_psk"));
 
 			doSystem("iwpriv %s set DefaultKeyID=%s", WIF_2G, "2");
 		}
@@ -4274,19 +4970,19 @@ wsc_user_commit()
 		{
 			//KeyStr
 			if (strlen(nvram_safe_get("wl0_key1")))
-			doSystem("iwpriv %s set Key1=%s", WIF_2G, nvram_safe_get("wl0_key1"));
+				iwprivSet(WIF_2G, "Key1", nvram_safe_get("wl0_key1"));
 			if (strlen(nvram_safe_get("wl0_key2")))
-			doSystem("iwpriv %s set Key2=%s", WIF_2G, nvram_safe_get("wl0_key2"));
+				iwprivSet(WIF_2G, "Key2", nvram_safe_get("wl0_key2"));
 			if (strlen(nvram_safe_get("wl0_key3")))
-			doSystem("iwpriv %s set Key3=%s", WIF_2G, nvram_safe_get("wl0_key3"));
+				iwprivSet(WIF_2G, "Key3", nvram_safe_get("wl0_key3"));
 			if (strlen(nvram_safe_get("wl0_key4")))
-			doSystem("iwpriv %s set Key4=%s", WIF_2G, nvram_safe_get("wl0_key4"));
+				iwprivSet(WIF_2G, "Key4", nvram_safe_get("wl0_key4"));
 
 			//DefaultKeyID
 			doSystem("iwpriv %s set DefaultKeyID=%s", WIF_2G, nvram_safe_get("wl0_key"));
 		}
 
-		doSystem("iwpriv %s set SSID=%s", WIF_2G, nvram_safe_get("wl0_ssid"));
+		iwprivSet(WIF_2G, "SSID", nvram_safe_get("wl0_ssid"));
 
 		nvram_set("wl0_wsc_config_state", "1");
 		doSystem("iwpriv %s set WscConfStatus=%d", WIF_2G, 2);	// AP is configured
@@ -4338,10 +5034,10 @@ wsc_user_commit()
 
 			doSystem("iwpriv %s set IEEE8021X=%d", WIF_5G, 0);
 
-			doSystem("iwpriv %s set SSID=%s", WIF_5G, nvram_safe_get("wl1_ssid"));
+			iwprivSet(WIF_5G, "SSID", nvram_safe_get("wl1_ssid"));
 
 			//WPAPSK
-			doSystem("iwpriv %s set WPAPSK=%s", WIF_5G, nvram_safe_get("wl1_wpa_psk"));
+			iwprivSet(WIF_5G, "WPAPSK", nvram_safe_get("wl1_wpa_psk"));
 
 			doSystem("iwpriv %s set DefaultKeyID=%s", WIF_5G, "2");
 		}
@@ -4356,19 +5052,19 @@ wsc_user_commit()
 		{
 			//KeyStr
 			if (strlen(nvram_safe_get("wl1_key1")))
-			doSystem("iwpriv %s set Key1=%s", WIF_5G, nvram_safe_get("wl1_key1"));
+				iwprivSet(WIF_5G, "Key1", nvram_safe_get("wl1_key1"));
 			if (strlen(nvram_safe_get("wl1_key2")))
-			doSystem("iwpriv %s set Key2=%s", WIF_5G, nvram_safe_get("wl1_key2"));
+				iwprivSet(WIF_5G, "Key2", nvram_safe_get("wl1_key2"));
 			if (strlen(nvram_safe_get("wl1_key3")))
-			doSystem("iwpriv %s set Key3=%s", WIF_5G, nvram_safe_get("wl1_key3"));
+				iwprivSet(WIF_5G, "Key3", nvram_safe_get("wl1_key3"));
 			if (strlen(nvram_safe_get("wl1_key4")))
-			doSystem("iwpriv %s set Key4=%s", WIF_5G, nvram_safe_get("wl1_key4"));
+				iwprivSet(WIF_5G, "Key4", nvram_safe_get("wl1_key4"));
 
 			//DefaultKeyID
 			doSystem("iwpriv %s set DefaultKeyID=%s", WIF_5G, nvram_safe_get("wl1_key"));
 		}
 
-		doSystem("iwpriv %s set SSID=%s", WIF_5G, nvram_safe_get("wl1_ssid"));
+		iwprivSet(WIF_5G, "SSID", nvram_safe_get("wl1_ssid"));
 
 		nvram_set("wl1_wsc_config_state", "1");
 		doSystem("iwpriv %s set WscConfStatus=%d", WIF_5G, 2);	// AP is configured
@@ -4419,7 +5115,7 @@ Get_fail_log(char *buf, int size, unsigned int offset)
 	int x, y;
 
 	memset(buf, 0, size);
-	FRead(&fail_log, offset, sizeof(fail_log));
+	FRead((char*) &fail_log, offset, sizeof(fail_log));
 	if(log->num == 0 || log->num > FAIL_LOG_MAX)
 	{
 		return;
@@ -4439,7 +5135,8 @@ Get_fail_log(char *buf, int size, unsigned int offset)
 void
 Gen_fail_log(const char *logStr, int max, struct FAIL_LOG *log)
 {
-	char *p = logStr, *next;
+	const char *p = logStr;
+	char *next;
 	int num;
 	int x,y;
 
@@ -4506,14 +5203,147 @@ ate_commit_bootlog(char *err_code)
 	memset(fail_buffer, 0, sizeof(fail_buffer));
 	strncpy(fail_buffer, err_code, OFFSET_FAIL_BOOT_LOG - OFFSET_FAIL_RET -1);
 	Gen_fail_log(nvram_get("Ate_reboot_log"), nvram_get_int("Ate_boot_check"), (struct FAIL_LOG *) &fail_buffer[ OFFSET_FAIL_BOOT_LOG - OFFSET_FAIL_RET ]);
-	Gen_fail_log(nvram_get("Ate_dev_log"),    nvram_get_int("Ate_boot_check"), (struct FAIL_LOG *) &fail_buffer[ OFFSET_FAIL_DEV_LOG  - OFFSET_FAIL_RET ]);
+	Gen_fail_log(nvram_get("Ate_dev_log"), nvram_get_int("Ate_boot_check"), (struct FAIL_LOG *) &fail_buffer[ OFFSET_FAIL_DEV_LOG  - OFFSET_FAIL_RET ]);
 
 	FWrite(fail_buffer, OFFSET_FAIL_RET, sizeof(fail_buffer));
 }
 
-int Get_channel_list(int unit)
+#if defined(RTN65U)
+void
+ate_run_in(void)
 {
-	puts("ATE_ERROR"); //Need to implement
-	return 0;
+	unsigned char ateTxFreqOffset;
+	char tmpbuf[32];
+	char *wl_ifnames;
+	int rai0 = 0;
+	int ra0  = 0;
+
+	wl_ifnames = nvram_safe_get("wl_ifnames");
+	if(strstr(wl_ifnames, "rai0") != NULL)
+		rai0 = 1;
+	if(strstr(wl_ifnames, "ra0" ) != NULL)
+		ra0  = 1;
+
+	if(rai0)
+	{
+		eval("iwpriv", "rai0", "set", "ATE=ATESTART");
+		eval("iwpriv", "rai0", "set", "ATECHANNEL=6");
+		eval("iwpriv", "rai0", "set", "ATETXANT=0");
+		eval("iwpriv", "rai0", "set", "ATETXMODE=1");
+		eval("iwpriv", "rai0", "set", "ATETXMCS=7");
+		eval("iwpriv", "rai0", "set", "ATETXBW=0");
+		eval("iwpriv", "rai0", "set", "ATETXGI=0");
+		eval("iwpriv", "rai0", "set", "ATETXLEN=1024");
+		FRead(&ateTxFreqOffset, 0x4803A, 1);
+		sprintf(tmpbuf, "ATETXFREQOFFSET=%u", (unsigned char) ateTxFreqOffset);
+		eval("iwpriv", "rai0", "set", tmpbuf);
+		eval("iwpriv", "rai0", "set", "ATETXPOW0=0");
+		eval("iwpriv", "rai0", "set", "ATETXPOW1=0");
+		eval("iwpriv", "rai0", "set", "ATEAUTOALC=1");
+		eval("iwpriv", "rai0", "set", "ATEIPG=200");
+		eval("iwpriv", "rai0", "set", "ATETXCNT=1000000000000000");
+		eval("iwpriv", "rai0", "set", "ATE=TXFRAME");
+	}
+
+	if(ra0)
+	{
+		eval("iwpriv", "ra0", "set", "ATE=ATESTART");
+		eval("iwpriv", "ra0", "set", "ATECHANNEL=48");
+		eval("iwpriv", "ra0", "set", "ATETXANT=0");
+		eval("iwpriv", "ra0", "set", "ATETXMODE=1");
+		eval("iwpriv", "ra0", "set", "ATETXMCS=7");
+		eval("iwpriv", "ra0", "set", "ATETXBW=0");
+		eval("iwpriv", "ra0", "set", "ATETXGI=0");
+		eval("iwpriv", "ra0", "set", "ATETXLEN=1024");
+		FRead(&ateTxFreqOffset, 0x40044, 1);
+		sprintf(tmpbuf, "ATETXFREQOFFSET=%u", (unsigned char) ateTxFreqOffset);
+		eval("iwpriv", "ra0", "set", tmpbuf);
+		eval("iwpriv", "ra0", "set", "ATETXPOW0=0");
+		eval("iwpriv", "ra0", "set", "ATETXPOW1=0");
+		eval("iwpriv", "ra0", "set", "ATETXPOW2=0");
+		eval("iwpriv", "ra0", "set", "ATEAUTOALC=1");
+		eval("iwpriv", "ra0", "set", "ATEIPG=200");
+		eval("iwpriv", "ra0", "set", "ATETXCNT=1000000000000000");
+		eval("iwpriv", "ra0", "set", "ATE=TXFRAME");
+		eval("iwpriv", "ra0", "mac", "102C=40000000");	//set LED on
+	}
+
+	if(ra0 && rai0)
+	{ //stop and restart 2.4G after setting 5G
+		eval("iwpriv", "rai0", "set", "ATE=ATESTART");
+		eval("iwpriv", "rai0", "set", "ATE=TXFRAME");
+	}
+}
+#endif // RTN65U
+
+#if !defined(RTN14U) && !defined(RTAC52U)
+int Set_SwitchPort_LEDs(const char *group, const char *action)
+{
+	int groupNo;
+	int actionNo;
+
+	if((groupNo = strtol(group, NULL, 0)) < 0 || groupNo > 2)
+		return -1;
+
+	if (strcmp(action, "normal") == 0)
+		actionNo = 0;
+	else if (strcmp(action, "blink") == 0)
+		actionNo = 1;
+	else if (strcmp(action, "off") == 0)
+		actionNo = 2;
+	else if (strcmp(action, "on") == 0)
+		actionNo = 3;
+	else
+		return -1;
+
+	return rtkswitch_ioctl(100, (groupNo << 16) | (actionNo));
 }
 #endif
+
+#define DEV_FLAGS_MAGIC "FL"
+struct device_flags
+{
+	char magic[2];
+	union {
+		__u16 value;
+		__u16 reserve:15,
+		      has_thermal_pad:1;
+	} u;
+};
+
+int Get_Device_Flags(void)
+{
+	struct device_flags dev_flags;
+	int ret = -1;
+	if( FRead((char *)&dev_flags, OFFSET_DEV_FLAGS, 4) < 0)
+		dbg("READ DEV Flags: Out of scope\n");
+	else if (memcmp(&dev_flags.magic, DEV_FLAGS_MAGIC, sizeof(dev_flags.magic)) != 0)
+		dbg("READ DEV Flags: no contents !\n");
+	else
+	{
+		char buf[128];
+		char *p = buf;
+		if(dev_flags.u.has_thermal_pad)
+			p += sprintf(p, " Has Thermal Pad.");
+		printf("Flags: 0x%04x\n%s\n", (__u16)dev_flags.u.value, buf);
+		ret = 0;
+	}
+	return ret;
+}
+
+int Set_Device_Flags(const char *flags_str)
+{
+	struct device_flags dev_flags;
+
+	if(flags_str == NULL || strlen(flags_str) != 6 || strncmp(flags_str, "0x", 2) != 0)
+		return -1;
+
+	memset(&dev_flags, 0, sizeof(dev_flags));
+	memcpy(&dev_flags.magic, DEV_FLAGS_MAGIC, sizeof(dev_flags.magic));
+	dev_flags.u.value = strtoul(flags_str, NULL, 16);
+	FWrite((const char *)&dev_flags, OFFSET_DEV_FLAGS, 4);
+	return Get_Device_Flags();
+}
+
+#endif
+

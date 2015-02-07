@@ -8,13 +8,16 @@
  *
  *   The license which is distributed with this software in the file COPYRIGHT
  *   applies to this software. If your distribution is missing this file, you
- *   may request it from <pekkas@netcore.fi>.
+ *   may request it from <reubenhwk@gmail.com>.
  *
  */
 
 #include "config.h"
 #include "includes.h"
 #include "radvd.h"
+#ifdef BCMARM
+#include "ifaddrs.c"
+#endif
 
 void
 mdelay(double msecs)

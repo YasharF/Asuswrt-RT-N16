@@ -53,7 +53,7 @@ function initial(){
 	
 	document.aidiskForm.protocol.value = PROTOCOL;
 
-	if(WebDav_support == -1)
+	if(!WebDav_support)
 		$("clouddiskstr").style.display = "none";
 	
 	// show page's control
@@ -262,7 +262,7 @@ function showAccountMenu(){
 		account_menu_code += '<div class="noAccount" id="noAccount"><#Noaccount#></div>\n'
 	else
 		for(var i = 0; i < this.accounts.length; ++i){
-			account_menu_code += '<div class="accountName" id="';
+			account_menu_code += '<div class="userIcon" id="';
 			account_menu_code += "account"+i;
 			account_menu_code += '" onClick="setSelectAccount('+i+');">'
 			account_menu_code += decodeURIComponent(this.accounts[i]);
@@ -353,24 +353,29 @@ function show_permissions_of_account(account_order, protocol){
 	var poolName;
 	var permissions;
 	
-	for(var i = 0; i < pool_devices().length; ++i){
-		poolName = pool_devices()[i];
-		if(!this.clickedFolderBarCode[poolName])
-			continue;
-		
-		permissions = get_account_permissions_in_pool(accountName, poolName);
-		for(var j = 1; j < permissions.length; ++j){
-			var folderBarCode = get_folderBarCode_in_pool(poolName, permissions[j][0]);
+	try{
+		for(var i = 0; i < pool_devices().length; ++i){
+			poolName = pool_devices()[i];
+			if(!this.clickedFolderBarCode[poolName])
+				continue;
 			
-			if(protocol == "cifs")
-				showPermissionRadio(folderBarCode, permissions[j][1]);
-			else if(protocol == "ftp")
-				showPermissionRadio(folderBarCode, permissions[j][2]);
-			else{
-				alert("Wrong protocol when get permission!");	// system error msg. must not be translate
-				return;
+			permissions = get_account_permissions_in_pool(accountName, poolName);
+			for(var j = 1; j < permissions.length; ++j){
+				var folderBarCode = get_folderBarCode_in_pool(poolName, permissions[j][0]);
+				
+				if(protocol == "cifs")
+					showPermissionRadio(folderBarCode, permissions[j][1]);
+				else if(protocol == "ftp")
+					showPermissionRadio(folderBarCode, permissions[j][2]);
+				else{
+					alert("Wrong protocol when get permission!");	// system error msg. must not be translate
+					return;
+				}
 			}
 		}
+	}
+	catch(err){
+		return true;
 	}
 }
 
@@ -394,19 +399,12 @@ function get_permission_of_folder(accountName, poolName, folderName, protocol){
 
 function contrastSelectAccount(account_order){
 	if(this.lastClickedAccount != 0){
-		this.lastClickedAccount.style.marginRight = "0px";
-		this.lastClickedAccount.style.background = "url(/images/New_ui/advancesetting/user_icon0.png)left no-repeat";
-		this.lastClickedAccount.style.cursor = "pointer";
-		this.lastClickedAccount.style.fontWeight ="normal";
+		this.lastClickedAccount.className = "userIcon";
 	}
 	
 	var selectedObj = $("account"+account_order);
 	
-	selectedObj.style.marginRight = "-1px";
-	selectedObj.style.background = "url(/images/New_ui/advancesetting/user_icon.png) left no-repeat";
-	selectedObj.style.cursor = "default";
-	selectedObj.style.fontWeight ="bolder";
-	
+	selectedObj.className = "userIcon_click";
 	this.lastClickedAccount = selectedObj;
 }
 
@@ -487,10 +485,15 @@ function changeActionButton(selectedObj, type, action, flag){
 			if(action == "Del" || action == "Mod")
 				return;
 	
-	if(typeof(flag) == "number")
-		selectedObj.src = '/images/New_ui/advancesetting/'+type+action+'_'+flag+'.png';
-	else
-		selectedObj.src = '/images/New_ui/advancesetting/'+type+action+'.png';
+	if(typeof(flag) == "number"){
+		if(flag == 0)
+			selectedObj.className = selectedObj.id + '_add';
+		else 
+			selectedObj.className = selectedObj.id + '_hover';
+	}	
+	else{
+		selectedObj.className = selectedObj.id;
+	}	
 }
 
 function resultOfCreateAccount(){
@@ -526,7 +529,7 @@ function onEvent(){
 		
 		$("modifyAccountBtn").onclick = function(){
 				if(!selectedAccount){
-					alert("No chosen account!");
+					alert("<#AiDisk_unselected_account#>");
 					return;
 				}
 				
@@ -552,7 +555,7 @@ function onEvent(){
 		
 		$("deleteAccountBtn").onclick = function(){
 				if(!selectedAccount){
-					alert("No chosen account!");
+					alert("<#AiDisk_unselected_account#>");
 					return;
 				}
 				
@@ -579,11 +582,11 @@ function onEvent(){
 		
 		$("createFolderBtn").onclick = function(){
 				if(selectedDiskOrder < 0){
-					alert("No chosen Disk for creating the shared-folder!");
+					alert("<#AiDisk_unselected_disk#>");
 					return;
 				}
 				if(selectedPoolOrder < 0){
-					alert("No chosen Partition for creating the shared-folder!");
+					alert("<#AiDisk_unselected_partition#>");
 					return;
 				}
 				
@@ -610,7 +613,7 @@ function onEvent(){
 		
 		$("deleteFolderBtn").onclick = function(){
 				if(selectedFolderOrder < 0){
-					alert("No chosen folder!");
+					alert("<#AiDisk_unselected_folder#>");
 					return;
 				}
 				
@@ -625,7 +628,7 @@ function onEvent(){
 		
 		$("modifyFolderBtn").onclick = function(){
 				if(selectedFolderOrder < 0){
-					alert("No chosen folder!");
+					alert("<#AiDisk_unselected_folder#>");
 					return;
 				}
 				
@@ -771,17 +774,25 @@ function unload_body(){
 		    <tr>
 			  <!-- The action buttons of accounts. -->
     	      <!-- <td width="300" height="25" valign="bottom">	 -->
-    	          	  <td width="25%" style="border: 1px solid #222;">	
-		        		<img id="createAccountBtn" src="/images/New_ui/advancesetting/UserAdd.png" hspace="1" title="<#AddAccountTitle#>">
-					<img id="deleteAccountBtn" src="/images/New_ui/advancesetting/UserDel.png" hspace="1" title="<#DelAccountTitle#>">
-					<img id="modifyAccountBtn" src="/images/New_ui/advancesetting/UserMod.png" hspace="1" title="<#ModAccountTitle#>">						
-		  	  </td>
+    	        <td width="25%" style="border: 1px solid #222;">	
+		        	<table align="right">
+						<tr>
+							<td><div id="createAccountBtn" title="<#AddAccountTitle#>"></div></td>
+							<td><div id="deleteAccountBtn" title="<#DelAccountTitle#>"></div></td>
+							<td><div id="modifyAccountBtn" title="<#ModAccountTitle#>"></div></td>
+						</tr>
+					</table>						
+				</td>
 			  
 			  <!-- The action buttons of folders. -->
-    	  	  <td>
-					<img id="createFolderBtn" hspace="1" title="<#AddFolderTitle#>">
-					<img id="deleteFolderBtn" hspace="1" title="<#DelFolderTitle#>">
-					<img id="modifyFolderBtn" hspace="1" title="<#ModFolderTitle#>">						
+				<td>
+					<table align="right">
+						<tr>
+							<td><div id="createFolderBtn" title="<#AddFolderTitle#>"></div></td>
+							<td><div id="deleteFolderBtn" title="<#DelFolderTitle#>"></div></td>
+							<td><div id="modifyFolderBtn" title="<#ModFolderTitle#>"></div></td>
+						</tr>
+					</table>						
 		  		</td>
   			</tr>
 	  	  </table>

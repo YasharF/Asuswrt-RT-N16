@@ -42,7 +42,7 @@ var delay = 1000;
 function initial(){
 	show_menu();
 
-	if(band5g_support == -1){	//single band
+	if(!band5g_support){
 		$("wps_band_tr").style.display = "none";
 		
 	}else{										//Dual band
@@ -65,6 +65,10 @@ function initial(){
 	}
 
 	loadXML();
+	$('WPS_hideSSID_hint').innerHTML = "<#FW_note#> " + Untranslated.WPS_hideSSID_hint;
+	if("<% nvram_get("wl_closed"); %>" == 1){
+		$('WPS_hideSSID_hint').style.display = "";	
+	}	
 }
 
 function SwitchBand(){
@@ -75,7 +79,7 @@ function SwitchBand(){
 			document.form.wps_band.value = 1;
 	}
 	else{
-		$("wps_band_hint").innerHTML = "* Please turn off WPS first.";
+		$("wps_band_hint").innerHTML = "* <#WLANConfig11b_x_WPSband_hint#>";
 		return false;
 	}
 
@@ -99,10 +103,6 @@ function enableWPS(){
 	document.form.action_script.value = "restart_wireless";
 	document.form.action_mode.value = "apply";
 	document.form.action_wait.value = "3";
-
-	if(wl6_support != -1)
-		document.form.action_wait.value = parseInt(document.form.action_wait.value)+10;			// extend waiting time for BRCM new driver
-
 	applyRule();
 }
 
@@ -234,22 +234,6 @@ function refresh_wpsinfo(xmldoc){
 }
 
 function show_wsc_status(wps_infos){
-	if( (wps_infos[11].firstChild.nodeValue == "open" && document.form.wl_wep_x.value != "0")
-		  || wps_infos[11].firstChild.nodeValue == "shared"
-		  || wps_infos[11].firstChild.nodeValue == "psk"
-			|| wps_infos[11].firstChild.nodeValue == "wpa"
-			|| wps_infos[11].firstChild.nodeValue == "wpa2"
-			|| wps_infos[11].firstChild.nodeValue == "wpawpa2"
-			|| wps_infos[11].firstChild.nodeValue == "radius"){
-		$("wps_enable_hint").innerHTML = "<#WPS_weptkip_hint#><br><#wsc_mode_hint1#> <a style='color:#FC0; text-decoration: underline; font-family:Lucida Console;' href=\"Advanced_Wireless_Content.asp?af=wl_auth_mode_x\"><#menu5_1_1#></a> <#wsc_mode_hint2#>"
-		$("wps_state_tr").style.display = "none";
-		$("devicePIN_tr").style.display = "none";
-		$("wpsmethod_tr").style.display = "none";
-		$("wps_band_tr").style.display = "none";
-
-		return;
-	}
-	
 	// enable button
 	if(wps_enable_old == "1"){
 		$("wps_enable_word").innerHTML = "<#btn_Enabled#>";
@@ -268,6 +252,22 @@ function show_wsc_status(wps_infos){
 		}	
 		$("switchWPSbtn").style.display = "";
 	}
+
+	if( (wps_infos[11].firstChild.nodeValue == "open" && document.form.wl_wep_x.value != "0")
+		  || wps_infos[11].firstChild.nodeValue == "shared"
+		  || wps_infos[11].firstChild.nodeValue == "psk"
+			|| wps_infos[11].firstChild.nodeValue == "wpa"
+			|| wps_infos[11].firstChild.nodeValue == "wpa2"
+			|| wps_infos[11].firstChild.nodeValue == "wpawpa2"
+			|| wps_infos[11].firstChild.nodeValue == "radius"){
+		$("wps_enable_hint").innerHTML = "<#WPS_weptkip_hint#><br><#wsc_mode_hint1#> <a style='color:#FC0; text-decoration: underline; font-family:Lucida Console;' href=\"Advanced_Wireless_Content.asp?af=wl_auth_mode_x\"><#menu5_1_1#></a> <#wsc_mode_hint2#>"
+		$("wps_state_tr").style.display = "none";
+		$("devicePIN_tr").style.display = "none";
+		$("wpsmethod_tr").style.display = "none";
+
+		return;
+	}
+
 	//$("wps_enable_block").style.display = "";
 	
 	// WPS status
@@ -305,6 +305,15 @@ function show_wsc_status(wps_infos){
 	// show connecting btn
 	/*
 	if(wps_infos[0].firstChild.nodeValue == "Idle" || wps_infos[0].firstChild.nodeValue == "Configured"){
+		show_method = 1;
+	}
+	else if(Rawifi_support){ //ralink solutions
+		var wpsState = wps_infos[0].firstChild.nodeValue;
+		if(wpsState.search("Received M") != -1 || wpsState.search("Send M") != -1 || wpsState == "Success")
+			show_method = 1;
+	}
+
+	if(show_method == 1) {
 		$("addEnrolleebtn_client").style.display = "";
 		$("WPSConnTble").style.display = "";
 		$("wpsDesc").style.display = "";
@@ -387,6 +396,7 @@ function changemethod(wpsmethod){
 		  <div class="formfonttitle"><#menu5_1#> - <#menu5_1_2#></div>
 		  <div style="margin-left:5px;margin-top:10px;margin-bottom:10px"><img src="/images/New_ui/export/line_export.png"></div>
 		  <div class="formfontdesc"><#WLANConfig11b_display6_sectiondesc#></div>
+		  <div id="WPS_hideSSID_hint" class="formfontdesc" style="display:none;color:#FFCC00;"></div>		  
 
 		<table width="100%" border="1" align="center" cellpadding="4" cellspacing="0"  class="FormTable">
 			<tr>
@@ -404,11 +414,11 @@ function changemethod(wpsmethod){
 							$j('#radio_wps_enable').iphoneSwitch('<% nvram_get("wps_enable"); %>', 
 								 function() {
 									document.form.wps_enable.value = "1";
-									enableWPS(1);
+									enableWPS();
 								 },
 								 function() {
 									document.form.wps_enable.value = "0";
-									enableWPS(0);
+									enableWPS();
 								 },
 								 {
 									switch_on_container_path: '/switcherplugin/iphone_switch_container_off.png'
@@ -432,7 +442,7 @@ function changemethod(wpsmethod){
 			<tr id="wps_state_tr">
 				<th><#PPPConnection_x_WANLink_itemname#></th>
 				<td width="300">
-					<span id="wps_state_td"></span>
+					<span id="wps_state_td" style="margin-left:5px;"></span>
 					<img id="wps_pin_hint" style="display:none;" src="images/InternetScan.gif" />
 				</td>
 			</tr>
@@ -440,8 +450,16 @@ function changemethod(wpsmethod){
 			<tr>
 				<th>Configured</th>
 				<td>
-					<span class="devicepin" style="color:#FFF;" id="wps_config_td"></span>&nbsp;&nbsp;
-					<input class="button_gen" type="button" onClick="resetWPS();" id="Reset_OOB" name="Reset_OOB" value="<#CTL_Reset_OOB#>" style="padding:0 0.3em 0 0.3em;" >
+					<div style="margin-left:-10px">
+						<table ><tr>
+							<td style="border:0px;" >
+								<div class="devicepin" style="color:#FFF;" id="wps_config_td"></div>
+							</td>
+							<td style="border:0px">
+								<input class="button_gen" type="button" onClick="resetWPS();" id="Reset_OOB" name="Reset_OOB" value="<#CTL_Reset_OOB#>" style="padding:0 0.3em 0 0.3em;" >
+							</td>
+						</tr></table>
+					</div>
 				</td>
 			</tr>
 			

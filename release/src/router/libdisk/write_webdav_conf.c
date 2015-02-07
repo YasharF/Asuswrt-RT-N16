@@ -20,6 +20,7 @@
 #include <stdlib.h>
 #include <dirent.h>
 #include <unistd.h>
+#ifndef APP_IPKG
 #include <bcmnvram.h>
 #include <shutils.h>
 #include <rtconfig.h>
@@ -27,6 +28,45 @@
 #include "usb_info.h"
 #include "disk_initial.h"
 #include "disk_share.h"
+#else
+typedef unsigned char u8;
+typedef unsigned short u16;
+typedef unsigned int u32;
+typedef unsigned long long u64;
+typedef struct disk_info disk_info_t;
+typedef struct partition_info partition_info_t;
+
+#pragma pack(1) // let struct be neat by byte.
+struct disk_info{
+        char *tag;
+        char *vendor;
+        char *model;
+        char *device;
+        u32 major;
+        u32 minor;
+        char *port;
+        u32 partition_number;
+        u32 mounted_number;
+        u64 size_in_kilobytes;
+        partition_info_t *partitions;
+        disk_info_t *next;
+} ;
+
+struct partition_info{
+        char *device;
+        char *label;
+        u32 partition_order;
+        char *mount_point;
+        char *file_system;
+        char *permission;
+        u64 size_in_kilobytes;
+        u64 used_kilobytes;
+        disk_info_t *disk;
+        partition_info_t *next;
+} ;
+
+#endif
+
 
 #define WEBDAV_CONF "/tmp/lighttpd.conf"
 #if 0
@@ -40,21 +80,138 @@ char* get_productid()
    nvram_get(PRODUCTID);
 }
 #endif
-char* get_webdav_http_port()
+#ifdef APP_IPKG
+char *port_get(char *name);
+
+char *get_productid(void)
 {
-   nvram_get(WEBDAV_HTTP_PORT);
+        char *productid = port_get("productid");
+
+        char *odmpid = port_get("odmpid");
+    if(odmpid != NULL)
+    {
+        if (*odmpid)
+            productid = odmpid;
+    }
+        return productid;
 }
 
-char* get_webdav_https_port()
+char *port_get(char *name)
 {
-   nvram_get(WEBDAV_HTTPS_PORT);
+	char tmp_name[256]="/opt/etc/asus_script/aicloud_nvram_check.sh";
+        //char tmp_name[256]="/tmp/aicloud_nvram_check.sh";
+        char *cmd_name;
+        cmd_name=(char *)malloc(sizeof(char)*(strlen(tmp_name)+strlen(name)+2));
+        memset(cmd_name,0,sizeof(cmd_name));
+        sprintf(cmd_name,"%s %s",tmp_name,name);
+        system(cmd_name);
+        free(cmd_name);
+
+        while(-1!=access("/tmp/aicloud_check.control",F_OK))
+            usleep(50);
+    printf("name = %s\n",name);
+    FILE *fp;
+    if((fp=fopen("/tmp/webDAV.conf","r+"))==NULL)
+    {
+        return NULL;
+    }
+    char *value;
+    value=(char *)malloc(256);
+    memset(value,'\0',sizeof(value));
+    char tmp[256]={0};
+    while(!feof(fp)){
+        memset(tmp,0,sizeof(tmp));
+        fgets(tmp,sizeof(tmp),fp);
+        if(strncmp(tmp,name,strlen(name))==0)
+        {
+            char *p=NULL;
+            p=strchr(tmp,'=');
+            p++;
+            strcpy(value,p);
+            printf("name = %s,len =%d\n",value,strlen(value));
+            if(value[strlen(value)-1]=='\n')
+                value[strlen(value)-1]='\0';
+        }
+    }
+    fclose(fp);
+    return value;
+}
+
+int webdav_match(char *name,int id)
+{
+	char tmp_name[256]="/opt/etc/asus_script/aicloud_nvram_check.sh";
+        //char tmp_name[256]="/tmp/aicloud_nvram_check.sh";
+        char *cmd_name;
+        cmd_name=(char *)malloc(sizeof(char)*(strlen(tmp_name)+strlen(name)+2));
+        memset(cmd_name,0,sizeof(cmd_name));
+        sprintf(cmd_name,"%s %s",tmp_name,name);
+        system(cmd_name);
+        free(cmd_name);
+
+        while(-1!=access("/tmp/aicloud_check.control",F_OK))
+            usleep(50);
+
+    FILE *fp;
+    if((fp=fopen("/tmp/webDAV.conf","r+"))==NULL)
+    {
+        return 0;
+    }
+    printf("name = %s,id = %d\n",name,id);
+    char tmp[256]={0};
+    while(!feof(fp)){
+        memset(tmp,0,sizeof(tmp));
+        fgets(tmp,sizeof(tmp),fp);
+        if(strncmp(tmp,name,strlen(name))==0)
+        {
+            printf("tmp = %s\n",tmp);
+            int size;
+            char *p=NULL;
+            p=strchr(tmp,'=');
+            p++;
+            size=atoi(p);
+            if(size==id)
+            {
+                printf("return 1\n");
+                fclose(fp);
+                return 1;
+            }
+            else
+            {
+                fclose(fp);
+                return 0;
+            }
+        }
+    }
+    fclose(fp);
+    return 0;
+}
+#else	/* ! APP_IPKG */
+#include <shared.h>
+#endif
+
+char *get_webdav_http_port(void)
+{
+#ifndef APP_IPKG
+	return nvram_get(WEBDAV_HTTP_PORT);
+#else
+	return port_get(WEBDAV_HTTP_PORT);
+#endif
+}
+
+char *get_webdav_https_port(void)
+{
+#ifndef APP_IPKG
+	return nvram_get(WEBDAV_HTTPS_PORT);
+#else
+	return port_get(WEBDAV_HTTPS_PORT);
+#endif
 }
 
 int main(int argc, char *argv[]) {
 	FILE *fp;
-	int n=0, sh_num=0;
-	disk_info_t *follow_disk, *disks_info = NULL;
-	partition_info_t *follow_partition;
+//	int n=0, sh_num=0;
+	disk_info_t /**follow_disk,*/ *disks_info = NULL;
+//	partition_info_t *follow_partition;
 	
 	/* 
 		st_webdav_mpde = 1 => share mode (default)
@@ -68,9 +225,11 @@ int main(int argc, char *argv[]) {
 	}
 	
 	fp = fopen(WEBDAV_CONF, "w");
-	if (fp==NULL) return;
+	if (fp==NULL) return -1;
 	
 	/* Load modules */
+	fprintf(fp, "server.modules+=(\"mod_aicloud_auth\")\n");
+#ifndef APP_IPKG
 	fprintf(fp, "server.modules+=(\"mod_alias\")\n");
 	fprintf(fp, "server.modules+=(\"mod_userdir\")\n");
 	fprintf(fp, "server.modules+=(\"mod_aidisk_access\")\n");
@@ -87,18 +246,42 @@ int main(int argc, char *argv[]) {
 		fprintf(fp, "server.modules+=(\"mod_access\")\n");
 		fprintf(fp, "server.modules+=(\"mod_auth\")\n");
 	}
-
+#else
+	fprintf(fp, "server.modules+=(\"aicloud_mod_alias\")\n");
+        fprintf(fp, "server.modules+=(\"aicloud_mod_userdir\")\n");
+        fprintf(fp, "server.modules+=(\"aicloud_mod_aidisk_access\")\n");
+        fprintf(fp, "server.modules+=(\"aicloud_mod_sharelink\")\n");
+        fprintf(fp, "server.modules+=(\"aicloud_mod_create_captcha_image\")\n");
+        fprintf(fp, "server.modules+=(\"aicloud_mod_webdav\")\n");
+        fprintf(fp, "server.modules+=(\"aicloud_mod_smbdav\")\n");
+        fprintf(fp, "server.modules+=(\"aicloud_mod_redirect\")\n");
+        fprintf(fp, "server.modules+=(\"aicloud_mod_compress\")\n");
+        fprintf(fp, "server.modules+=(\"aicloud_mod_usertrack\")\n");
+        fprintf(fp, "server.modules+=(\"aicloud_mod_rewrite\")\n");
+	
+        if (webdav_match("st_webdav_mode", 2)){
+                fprintf(fp, "server.modules+=(\"aicloud_mod_access\")\n");
+                fprintf(fp, "server.modules+=(\"aicloud_mod_auth\")\n");
+	}
+#endif
 	/* Basic setting */
 	fprintf(fp, "server.port=%s\n",get_webdav_http_port()); // defult setting, but no use
 //	fprintf(fp, "server.port=8999\n"); // defult setting, but no use
 //	fprintf(fp, "server.document-root=\"/mnt/\"\n");
+#ifdef APP_IPKG
+	fprintf(fp, "server.event-handler = \"poll\"\n");
+#endif
 	fprintf(fp, "server.document-root=\"/tmp/lighttpd/www\"\n");
 	fprintf(fp, "server.upload-dirs=(\"/tmp/lighttpd/uploads\")\n");
 	fprintf(fp, "server.errorlog=\"/tmp/lighttpd/err.log\"\n");
 	fprintf(fp, "server.pid-file=\"/tmp/lighttpd/lighttpd.pid\"\n");
 	fprintf(fp, "server.arpping-interface=\"br0\"\n");
-	fprintf(fp, "server.errorfile-prefix=\"/usr/css/status-\"\n");
-	fprintf(fp, "dir-listing.activate=\"enable\"\n");
+#ifndef APP_IPKG
+	fprintf(fp, "server.errorfile-prefix=\"/usr/lighttpd/css/status-\"\n");
+#else
+	fprintf(fp, "server.errorfile-prefix=\"/opt/etc/aicloud_UI/css/status-\"\n");
+#endif
+	fprintf(fp, "dir-listing.activate=\"disable\"\n");
     fprintf(fp, "server.syslog=\"/tmp/lighttpd/syslog.log\"\n");
 
 	//	**** Minetype setting **** //	
@@ -153,7 +336,11 @@ int main(int argc, char *argv[]) {
     fprintf(fp, "   }\n");
 	fprintf(fp, "	else $HTTP[\"url\"]=~\"^/smb($|/)\"{\n");
 	fprintf(fp, "		server.document-root = \"/\"\n");
-	fprintf(fp, "		alias.url=(\"/smb\"=>\"/usr\")\n");
+#ifndef APP_IPKG
+	fprintf(fp, "		alias.url=(\"/smb\"=>\"/usr/lighttpd\")\n");
+#else
+	fprintf(fp, "		alias.url=(\"/smb\"=>\"/opt/etc/aicloud_UI\")\n");
+#endif
 	fprintf(fp, "		smbdav.auth_ntlm = (\"Microsoft-WebDAV\",\"xxBitKinex\",\"WebDrive\")\n");
 	fprintf(fp, "		webdav.activate=\"enable\"\n");
 	fprintf(fp, "		webdav.is-readonly=\"disable\"\n");
@@ -161,7 +348,11 @@ int main(int argc, char *argv[]) {
 	fprintf(fp, "	}\n");
 	fprintf(fp, "	else $HTTP[\"url\"] =~ \"^/favicon.ico$\"{\n");
     fprintf(fp, "		server.document-root = \"/\"\n");
-    fprintf(fp, "		alias.url = ( \"/favicon.ico\" => \"/usr/css/favicon.ico\" ) \n"); 
+#ifndef APP_IPKG
+    fprintf(fp, "		alias.url = ( \"/favicon.ico\" => \"/usr/lighttpd/css/favicon.ico\" ) \n");
+#else
+	fprintf(fp, "		alias.url = ( \"/favicon.ico\" => \"/opt/etc/aicloud_UI/css/favicon.ico\" ) \n");
+#endif
     fprintf(fp, "		webdav.activate = \"enable\" \n");
     fprintf(fp, "		webdav.is-readonly = \"enable\"\n");
 	fprintf(fp, "	}\n");
@@ -304,7 +495,11 @@ WEBDAV_SETTING:
 	fprintf(fp, "	}\n");
 	fprintf(fp, "	else $HTTP[\"url\"]=~\"^/smb($|/)\"{\n");
 	fprintf(fp, "		server.document-root = \"/\"\n");
-	fprintf(fp, "		alias.url=(\"/smb\"=>\"/usr\")\n");
+#ifndef APP_IPKG
+	fprintf(fp, "		alias.url=(\"/smb\"=>\"/usr/lighttpd\")\n");
+#else
+	fprintf(fp, "		alias.url=(\"/smb\"=>\"/opt/etc/aicloud_UI\")\n");
+#endif
 	fprintf(fp, "		smbdav.auth_ntlm = (\"Microsoft-WebDAV\",\"xxBitKinex\",\"WebDrive\")\n");
 	fprintf(fp, "		webdav.activate=\"enable\"\n");
 	fprintf(fp, "		webdav.is-readonly=\"disable\"\n");
@@ -312,7 +507,11 @@ WEBDAV_SETTING:
 	fprintf(fp, "	}\n");
 	fprintf(fp, "	else $HTTP[\"url\"] =~ \"^/favicon.ico$\"{\n");
     fprintf(fp, "		server.document-root = \"/\"\n");
-    fprintf(fp, "		alias.url = ( \"/favicon.ico\" => \"/usr/css/favicon.ico\" ) \n"); 
+#ifndef APP_IPKG
+    fprintf(fp, "		alias.url = ( \"/favicon.ico\" => \"/usr/lighttpd/css/favicon.ico\" ) \n");
+#else
+	 fprintf(fp, "		alias.url = ( \"/favicon.ico\" => \"/opt/etc/aicloud_UI/css/favicon.ico\" ) \n");
+#endif
     fprintf(fp, "		webdav.activate = \"enable\" \n");
     fprintf(fp, "		webdav.is-readonly = \"enable\"\n");
 	fprintf(fp, "	}\n");
@@ -428,6 +627,8 @@ confpage:
 	fprintf(fp, "debug.log-condition-handling=\"disable\"\n");
 
 	fclose(fp);
+#ifndef APP_IPKG
 	free_disk_data(&disks_info);
+#endif
 	return 0;
 }

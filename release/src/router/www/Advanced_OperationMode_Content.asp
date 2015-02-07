@@ -32,6 +32,7 @@
 	z-index:2000;
 	background-color:#2B373B;
 	display:none;
+	behavior: url(/PIE.htc);
 }
 .QISmain{
 	width:730px;
@@ -46,6 +47,7 @@
 	font-size:12px;
 	color:#FFFFFF;
 	margin-top:10px;
+	*margin-left:10px;
 }
 
 .QISform_wireless thead{
@@ -56,6 +58,7 @@
 
 .QISform_wireless th{
 	padding-left:10px;
+	*padding-left:30px;
 	font-size:12px;
 	font-weight:bolder;
 	color: #FFFFFF;
@@ -90,15 +93,20 @@ wan_proto = '<% nvram_get("wan_proto"); %>';
 
 <% login_state_hook(); %>
 var wireless = [<% wl_auth_list(); %>];	// [[MAC, associated, authorized], ...]
-window.onresize = cal_panel_block;
+var sw_mode_orig = '<% nvram_get("sw_mode"); %>';
+if(sw_mode_orig == 3 && '<% nvram_get("wlc_psta"); %>' == 1)
+	sw_mode_orig = 4;
 
 function initial(){
 	show_menu();
-	setScenerion(sw_mode);
+	setScenerion(sw_mode_orig);
 	Senario_shift();
-	if(repeater_support < 0)
-			$("repeaterMode").style.display = "none";
-		
+
+	if(!repeater_support)
+		$("repeaterMode").style.display = "none";
+
+	if(!psta_support)
+		$("mbMode").style.display = "none";
 }
 
 function Senario_shift(){
@@ -158,20 +166,21 @@ function close_guest_unit(_unit, _subunit){
 }
 
 function saveMode(){
-	if('<% nvram_get("sw_mode"); %>' == document.form.sw_mode.value){
+	if(sw_mode_orig == document.form.sw_mode.value){
 		alert("<#Web_Title2#> <#op_already_configured#>");
 		return false;
 	}
 
-	if(document.form.sw_mode.value == 3){
+  if(document.form.sw_mode.value == 2){
+		parent.location.href = '/QIS_wizard.htm?flag=sitesurvey';
+		return false;
+	}
+	else if(document.form.sw_mode.value == 3){
 		parent.location.href = '/QIS_wizard.htm?flag=lanip';
 		return false;
 	}
-	else if(document.form.sw_mode.value == 2){
-		if(sw_mode == 3)
-			parent.location.href = '/QIS_wizard.htm?flag=sitesurvey';
-		else
-			parent.location.href = 'http://www.asusnetwork.net/QIS_wizard.htm?flag=sitesurvey';
+	else if(document.form.sw_mode.value == 4){
+		parent.location.href = '/QIS_wizard.htm?flag=sitesurvey_mb';
 		return false;
 	}
 	else{ // default router
@@ -179,16 +188,20 @@ function saveMode(){
 		document.form.lan_ipaddr.value = document.form.lan_ipaddr_rt.value;
 		document.form.lan_netmask.value = document.form.lan_netmask_rt.value;
 		document.form.lan_gateway.value = document.form.lan_ipaddr_rt.value;
-		if('<% nvram_get("sw_mode"); %>' == '2'){
+		document.form.wlc_psta.value = 0;
+		document.form.wlc_psta.disabled = false;
+
+		if(sw_mode_orig == '2' || sw_mode_orig == '4'){
 			inputCtrl(document.form.wl0_ssid,1);	
 			inputCtrl(document.form.wl0_auth_mode_x,1);	
 			inputCtrl(document.form.wl0_crypto,1);	
 			inputCtrl(document.form.wl0_wpa_psk,1);
-			if(psta_support < 0){
+
+			if(sw_mode_orig == '2'){
 				restore_wl_config("wl0.1_");
 				restore_wl_config_wep("wl0_");
 				
-				if(band5g_support != -1){
+				if(band5g_support){
 					restore_wl_config_wep("wl1_");
 					restore_wl_config("wl1.1_");
 				}
@@ -196,7 +209,7 @@ function saveMode(){
 			}
 			
 			close_guest_unit(0,1);
-			if(band5g_support != -1){
+			if(band5g_support){
 				inputCtrl(document.form.wl1_ssid,1);
 				inputCtrl(document.form.wl1_crypto,1);
 				inputCtrl(document.form.wl1_wpa_psk,1);
@@ -204,7 +217,7 @@ function saveMode(){
 				close_guest_unit(1,1);
 			}
 			
-			if(band5g_support == -1){			
+			if(!band5g_support){			
 				$('wl_unit_field_1').style.display="none";
 				$('wl_unit_field_2').style.display="none";
 				$('wl_unit_field_3').style.display="none";	
@@ -221,8 +234,9 @@ function saveMode(){
 
 	applyRule();
 }
+
 function applyRule(){
-	if(document.form.sw_mode.value == 1 && '<% nvram_get("sw_mode"); %>' == '2'){
+	if(document.form.sw_mode.value == 1 && (sw_mode_orig == '2' || sw_mode_orig == '4')){
 		if(!validate_string_ssid(document.form.wl0_ssid)){ //validate 2.4G SSID
 			document.form.wl0_ssid.focus();
 			return false;
@@ -238,7 +252,7 @@ function applyRule(){
 		else
 			document.form.wl0_auth_mode_x.value = "open";
 
-		if(band5g_support >= 0){  // for Dualband 5G
+		if(band5g_support){
 			inputCtrl(document.form.wl1_ssid,1);
 			inputCtrl(document.form.wl1_crypto,1);
 			inputCtrl(document.form.wl1_wpa_psk,1);
@@ -266,7 +280,6 @@ function applyRule(){
 	document.form.submit();	
 }
 
-
 function done_validating(action){
 	refreshpage();
 }
@@ -275,19 +288,11 @@ var $j = jQuery.noConflict();
 var id_WANunplungHint;
 
 function setScenerion(mode){
-	if(mode == '1'){
-		document.form.sw_mode.value = 1;
-		$j("#Senario").css("background","url(/images/New_ui/rt.jpg) center");
-		$j("#radio2").hide();
-		$j("#Internet_span").hide();
-		$j("#ap-line").css("display", "none");	
-		$j("#AP").html("<#Internet#>");
-		$j("#mode_desc").html("<#OP_GW_desc#>");
-		$j("#nextButton").attr("value","<#CTL_next#>");
-	}	
-	else if(mode == '2'){
+	if(mode == '2'){
 		document.form.sw_mode.value = 2;
-		$j("#Senario").css("background", "url(/images/New_ui/re.jpg) center");
+		$j("#Senario").css("height", "");
+		$j("#Senario").css("background","url(/images/New_ui/re.jpg) center no-repeat");
+		$j("#Senario").css("margin-bottom", "60px");
 		$j("#radio2").css("display", "none");
 		$j("#Internet_span").css("display", "block");
 		$j("#ap-line").css("display", "none");
@@ -296,10 +301,13 @@ function setScenerion(mode){
 		$j("#nextButton").attr("value","<#CTL_next#>");
 		clearTimeout(id_WANunplungHint);
 		$j("#Unplug-hint").css("display", "none");
+		document.form.sw_mode_radio[1].checked = true;
 	}
 	else if(mode == '3'){
 		document.form.sw_mode.value = 3;
-		$j("#Senario").css("background", "url(/images/New_ui/ap.jpg) center");
+		$j("#Senario").css("height", "");
+		$j("#Senario").css("background","url(/images/New_ui/ap.jpg) center no-repeat");
+		$j("#Senario").css("margin-bottom", "60px");
 		$j("#radio2").css("display", "none");
 		$j("#Internet_span").css("display", "block");
 		$j("#ap-line").css("display", "none");
@@ -308,35 +316,45 @@ function setScenerion(mode){
 		$j("#nextButton").attr("value","<#CTL_next#>");
 		clearTimeout(id_WANunplungHint);
 		$j("#Unplug-hint").css("display", "none");
+		document.form.sw_mode_radio[2].checked = true;
 	}
-	else{
+	else if(mode == '4'){
+		document.form.sw_mode.value = 4;
+		var pstaDesc =  "<#OP_MB_desc1#>";
+				pstaDesc += "<#OP_MB_desc2#>";
+				pstaDesc += "<#OP_MB_desc3#>";
+				pstaDesc += "<#OP_MB_desc4#>";
+				pstaDesc += "<#OP_MB_desc5#>";
+				pstaDesc += "<br/><span style=\"color:#FC0\"><#use_DevDiscoveryUtil#></span>";
+
+		$j("#Senario").css("height", "300px");
+		$j("#Senario").css("background", "url(/images/New_ui/mb.jpg) center no-repeat");
+		$j("#Senario").css("margin-bottom", "-20px");
+		$j("#radio2").css("display", "none");
+		$j("#Internet_span").css("display", "block");
+		$j("#ap-line").css("display", "none");
+		$j("#AP").html("<#Device_type_02_RT#>");
+		$j("#mode_desc").html(pstaDesc);
+		$j("#nextButton").attr("value","<#CTL_next#>");
+		clearTimeout(id_WANunplungHint);
+		$j("#Unplug-hint").css("display", "none");
+		document.form.sw_mode_radio[3].checked = true;
+	}
+	else{ // Default: Router
 		document.form.sw_mode.value = 1;
-		$j("#Senario").css("background","url(/images/New_ui/gw.png) center");
+		$j("#Senario").css("height", "");
+		$j("#Senario").css("background","url(/images/New_ui/rt.jpg) center no-repeat");
+		$j("#Senario").css("margin-bottom", "60px");
 		$j("#radio2").hide();
 		$j("#Internet_span").hide();
 		$j("#ap-line").css("display", "none");	
 		$j("#AP").html("<#Internet#>");
 		$j("#mode_desc").html("<#OP_GW_desc#>");
 		$j("#nextButton").attr("value","<#CTL_next#>");
+		document.form.sw_mode_radio[0].checked = true;
 	}
 }
 
-/* change password type depend on browser for fix IE issue*/
-function replace_pass_type(obj, _Type){
-	if(navigator.userAgent.indexOf("MSIE") != -1){ // fix IE issue
-		var input2 = document.createElement('<input class="input_25_table" autocapitalization="off">');  // create input element
-		with (input2){ 
-			id = obj.id; 
-			value = obj.value; 
-			type = _Type; // change input type
-			name = obj.name;
-		} 
-		obj.parentNode.replaceChild(input2,obj);
-	}
-	else{	
-		obj.type= _Type;
-	}
-}
 function Sync_2ghz(band){
 	if(band == 2){
 		if(document.form.sync_with_2ghz.checked == true){
@@ -364,7 +382,17 @@ function cal_panel_block(){
 		blockmarginLeft= (winWidth*0.25)+winPadding;
 	}
 	else if(winWidth <=1050){
-		blockmarginLeft= (winWidth)*0.25+document.body.scrollLeft;	
+		if(isMobile()){
+			if(document.body.scrollLeft < 50)
+				blockmarginLeft= (winWidth)*0.25+document.body.scrollLeft;
+			else if(document.body.scrollLeft >320)
+				blockmarginLeft= 320;			
+			else
+				blockmarginLeft= document.body.scrollLeft;		
+		}
+		else{
+			blockmarginLeft= (winWidth)*0.25+document.body.scrollLeft;	
+		}
 	}
 
 	$("routerSSID").style.marginLeft = blockmarginLeft+"px";
@@ -404,7 +432,7 @@ function cancel_SSID_Block(){
 <input type="hidden" name="modified" value="0">
 <input type="hidden" name="action_mode" value="apply">
 <input type="hidden" name="action_script" value="restart_all">
-<input type="hidden" name="action_wait" value="60">
+<input type="hidden" name="action_wait" value="<% get_default_reboot_time(); %>">
 <input type="hidden" name="prev_page" value="Advanced_OperationMode_Content.asp">
 <input type="hidden" name="current_page" value="Advanced_OperationMode_Content.asp">
 <input type="hidden" name="next_page" value="">
@@ -423,6 +451,8 @@ function cancel_SSID_Block(){
 <input type="hidden" name="wl1_auth_mode_x" value="<% nvram_get("wl1_auth_mode_x"); %>" disabled="disabled">
 <input type="hidden" name="wl1_crypto" value="<% nvram_get("wl1_crypto"); %>" disabled="disabled">
 <input type="hidden" name="w_Setting" value="1">
+<!-- AC66U's repeater mode -->
+<input type="hidden" name="wlc_psta" value="<% nvram_get("wlc_psta"); %>" disabled>
 
 <!-- Input SSID and Password block for switching Repeater to Router mode -->
 <div id="routerSSID" class="contentM_qis" style="box-shadow: 3px 3px 10px #000;">
@@ -434,7 +464,7 @@ function cancel_SSID_Block(){
 			<div class="QISGeneralFont" align="left"><#qis_wireless_setting#></div>
 		</tr>
 		<tr>
-			<div style="margin:5px;"><img style="width: 640px; *width: 640px; height: 2px;" src="/images/New_ui/export/line_export.png"></div>
+			<div style="margin:5px;*margin-left:-5px;"><img style="width: 640px; *width: 640px; height: 2px;" src="/images/New_ui/export/line_export.png"></div>
 		</tr>
 		<tr>
 			<th width="180">2.4GHz - <#Security#></th>
@@ -453,7 +483,7 @@ function cancel_SSID_Block(){
 				<span onmouseout="return nd();" onclick="openHint(0, 23);" style="cursor:help;"><#Network_key#><img align="right" style="cursor:pointer;margin-top:-14px\9;" src="/images/New_ui/helpicon.png"></span>		
 			</th>
 			<td class="QISformtd">
-				<input id="wl0_wpa_psk" name="wl0_wpa_psk" type="password" autocapitalization="off" onBlur="replace_pass_type(this, 'password');" onFocus="replace_pass_type(this,'text');" value="" onkeyup="Sync_2ghz(2);" style="height:25px;" class="input_32_table" maxlength="65" disabled="disabled">
+				<input id="wl0_wpa_psk" name="wl0_wpa_psk" type="password" autocapitalization="off" onBlur="switchType(this,false);" onFocus="switchType(this,true);" value="" onkeyup="Sync_2ghz(2);" style="height:25px;" class="input_32_table" maxlength="65" disabled="disabled">
 			</td>
 		</tr>
 		<tr id="wl_unit_field_1">
@@ -475,7 +505,7 @@ function cancel_SSID_Block(){
 				<span onmouseout="return nd();" onclick="openHint(0, 23);" style="cursor:help;"><#Network_key#><img align="right" style="cursor:pointer;margin-top:-14px\9;" src="/images/New_ui/helpicon.png"></span>
 			</th>
 			<td class="QISformtd">
-				<input id="wl1_wpa_psk" name="wl1_wpa_psk" type="password" autocapitalization="off" onBlur="replace_pass_type(this, 'password');" onFocus="replace_pass_type(this,'text');" value="" onkeyup="Sync_2ghz(5);" style="height:25px;" class="input_32_table" maxlength="65" disabled="disabled">
+				<input id="wl1_wpa_psk" name="wl1_wpa_psk" type="password" autocapitalization="off" onBlur="switchType(this,false);" onFocus="switchType(this,true);" value="" onkeyup="Sync_2ghz(5);" style="height:25px;" class="input_32_table" maxlength="65" disabled="disabled">
 			</td>
 		</tr>
 		<tr>
@@ -525,6 +555,8 @@ function cancel_SSID_Block(){
 			<span id="repeaterMode"><input type="radio" name="sw_mode_radio" class="input" value="2" onclick="setScenerion(2);" <% nvram_match("sw_mode", "2", "checked"); %>><#OP_RE_item#></span>
 			&nbsp;&nbsp;
 			<input type="radio" name="sw_mode_radio" class="input" value="3" onclick="setScenerion(3);" <% nvram_match("sw_mode", "3", "checked"); %>><#OP_AP_item#>
+			&nbsp;&nbsp;
+			<span id="mbMode"><input type="radio" name="sw_mode_radio" class="input" value="4" onclick="setScenerion(4);" <% nvram_match("sw_mode", "4", "checked"); %>>Media bridge</span>
 		</span>
 	<div id="mode_desc" style="position:relative;display:block;margin-top:10px;margin-left:5px;height:60px;z-index:75;">
 		<#OP_GW_desc#>

@@ -11,6 +11,21 @@
 <title><#Web_Title#> - Performance tuning</title>
 <link rel="stylesheet" type="text/css" href="index_style.css"> 
 <link rel="stylesheet" type="text/css" href="form_style.css">
+<style type="text/css">
+.btnDesc{
+	font-size: 14px;
+	font-family: Segoe UI;
+}
+.btnTitle{
+	text-align:left;
+	font-size: 18px;
+	font-weight: bold;
+	color: #5AD;
+	line-height: 35px;
+	font-family: Segoe UI;
+	text-shadow: 1px 1px 0px #000;
+}
+</style>
 <script src='svg.js' data-path="/svghtc/" data-debug="false"></script>	
 <script language="JavaScript" type="text/javascript" src="/state.js"></script>
 <script language="JavaScript" type="text/javascript" src="/help.js"></script>
@@ -22,7 +37,10 @@
 wan_route_x = '<% nvram_get("wan_route_x"); %>';
 wan_nat_x = '<% nvram_get("wan_nat_x"); %>';
 wan_proto = '<% nvram_get("wan_proto"); %>';
-var fanctrl_info = <% get_fanctrl_info(); %>;
+var fanctrl_info = [<% get_fanctrl_info(); %>];
+var cpuTemp = [<% get_cpu_temperature(); %>];
+if(typeof cpuTemp[0] != "undefined")
+	fanctrl_info = ["0", cpuTemp[0], cpuTemp[0], "0"];
 var curr_rxData = fanctrl_info[3];
 var curr_coreTmp_2 = convertTemp(fanctrl_info[1], fanctrl_info[2], 0);
 //var curr_coreTmp_2 = fanctrl_info[1];
@@ -44,10 +62,12 @@ var fanctrl_fullspeed_temp_orig = convertTemp('<% nvram_get("fanctrl_fullspeed_t
 var fanctrl_period_temp_orig = convertTemp('<% nvram_get("fanctrl_period_temp"); %>', 0, 0);
 var fanctrl_fullspeed_temp_orig_F = Math.round(fanctrl_fullspeed_temp_orig*9/5+32);
 var fanctrl_period_temp_orig_F = Math.round(fanctrl_period_temp_orig*9/5+32);
-
+						
 function initial(){
 	show_menu();
-	update_coretmp();
+
+	if(fanctrl_info.length != 0)
+		update_coretmp();
 
 	if(getCookie("CoreTmpUnit") == 1){
 		$("unitDisplay1").innerHTML = "°F";
@@ -63,9 +83,37 @@ function initial(){
 	}
 	document.form.fanctrl_fullspeed_temp_unit.selectedIndex = getCookie("CoreTmpUnit");
 
-	if(power_support < 0){
+	if(!power_support){
 		inputHideCtrl(document.form.wl0_TxPower, 0);
 		inputHideCtrl(document.form.wl1_TxPower, 0);
+	}
+
+	if(based_modelid == "RT-AC68U"){
+		document.form.selLED.onchange = function(){
+			document.form.btn_led_mode.value = 0;
+			document.form.selCLK.checked = false;
+			$j("#btnDescTr").fadeOut(100);
+		}
+	
+		document.form.selCLK.onchange = function(){
+			document.form.btn_led_mode.value = 1;
+			document.form.selLED.checked = false;
+			$j("#btnDescTr").fadeIn(300);
+			scrollTo(1000, 1000);
+			setTimeout('$("alertHint").style.visibility="hidden"', 500);
+			setTimeout('$("alertHint").style.visibility=""', 1000);
+			setTimeout('$("alertHint").style.visibility="hidden"', 1500);
+			setTimeout('$("alertHint").style.visibility=""', 2000);
+			setTimeout('$("alertHint").style.visibility="hidden"', 2500);
+			setTimeout('$("alertHint").style.visibility=""', 3000);
+		}
+	
+		$("btnCtrlTr").style.display = "";
+		$("btnDescTr").style.display = "";
+		if(document.form.btn_led_mode.value == 1)
+			document.form.selCLK.click();
+		else
+			document.form.selLED.click();
 	}
 }
 
@@ -78,7 +126,8 @@ function update_coretmp(e){
       update_coretmp();
     },
     success: function(response){
-			updateNum(curr_coreTmp_2, curr_coreTmp_5);
+			if(fanctrl_info.length != 0)
+				updateNum(curr_coreTmp_2, curr_coreTmp_5);
 			setTimeout("update_coretmp();", 5000);
 		}    
   });
@@ -223,6 +272,24 @@ function getCookie(c_name)
 <div id="Loading" class="popup_bg"></div>
 <iframe name="hidden_frame" id="hidden_frame" src="" width="0" height="0" frameborder="0"></iframe>
 <form method="post" name="form" id="ruleForm" action="/start_apply.htm" target="hidden_frame">
+<input type="hidden" name="current_page" value="Advanced_PerformanceTuning_Content.asp">
+<input type="hidden" name="next_page" value="Advanced_PerformanceTuning_Content.asp">
+<input type="hidden" name="next_host" value="">
+<input type="hidden" name="modified" value="0">
+<input type="hidden" name="action_mode" value="apply">
+<input type="hidden" name="action_wait" value="5">
+<input type="hidden" name="action_script" value="">
+<input type="hidden" name="preferred_lang" id="preferred_lang" value="<% nvram_get("preferred_lang"); %>">
+<input type="hidden" name="firmver" value="<% nvram_get("firmver"); %>">
+<input type="hidden" name="wl_ssid" value="<% nvram_get("wl_ssid"); %>">
+<input type="hidden" name="wl0_TxPower_orig" value="<% nvram_get("wl0_TxPower"); %>" disabled>
+<input type="hidden" name="wl1_TxPower_orig" value="<% nvram_get("wl1_TxPower"); %>" disabled>
+<input type="hidden" name="fanctrl_mode_orig" value="<% nvram_get("fanctrl_mode"); %>" disabled>
+<input type="hidden" name="fanctrl_fullspeed_temp_orig" value="<% nvram_get("fanctrl_fullspeed_temp"); %>" disabled>
+<input type="hidden" name="fanctrl_period_temp_orig" value="<% nvram_get("fanctrl_period_temp"); %>" disabled>
+<input type="hidden" name="fanctrl_dutycycle_orig" value="<% nvram_get("fanctrl_dutycycle"); %>" disabled>
+<input type="hidden" name="btn_led_mode" value="<% nvram_get("btn_led_mode"); %>">
+
 <table class="content" align="center" cellpadding="0" cellspacing="0">
 	<tr>
 		<td width="17">&nbsp;</td>		
@@ -231,43 +298,24 @@ function getCookie(c_name)
 			<div id="subMenu"></div>		
 		</td>						
     <td valign="top">
-			<div id="tabMenu" class="submenuBlock"></div>
-			
+			<div id="tabMenu" class="submenuBlock"></div>			
 			<!--===================================Beginning of Main Content===========================================-->
-			<input type="hidden" name="current_page" value="Advanced_PerformanceTuning_Content.asp">
-			<input type="hidden" name="next_page" value="Advanced_PerformanceTuning_Content.asp">
-			<input type="hidden" name="next_host" value="">
-			<input type="hidden" name="modified" value="0">
-			<input type="hidden" name="action_mode" value="apply">
-			<input type="hidden" name="action_wait" value="5">
-			<input type="hidden" name="action_script" value="">
-			<input type="hidden" name="preferred_lang" id="preferred_lang" value="<% nvram_get("preferred_lang"); %>">
-			<input type="hidden" name="firmver" value="<% nvram_get("firmver"); %>">
-			<input type="hidden" name="wl_ssid" value="<% nvram_get("wl_ssid"); %>">
-			<input type="hidden" name="wl0_TxPower_orig" value="<% nvram_get("wl0_TxPower"); %>" disabled>
-			<input type="hidden" name="wl1_TxPower_orig" value="<% nvram_get("wl1_TxPower"); %>" disabled>
-			<input type="hidden" name="fanctrl_mode_orig" value="<% nvram_get("fanctrl_mode"); %>" disabled>
-			<input type="hidden" name="fanctrl_fullspeed_temp_orig" value="<% nvram_get("fanctrl_fullspeed_temp"); %>" disabled>
-			<input type="hidden" name="fanctrl_period_temp_orig" value="<% nvram_get("fanctrl_period_temp"); %>" disabled>
-			<input type="hidden" name="fanctrl_dutycycle_orig" value="<% nvram_get("fanctrl_dutycycle"); %>" disabled>
-
 			<table width="98%" border="0" align="left" cellpadding="0" cellspacing="0">
 				<tr>
-					<td valign="top" >
+					<td valign="top">
 						<table width="760px" border="0" cellpadding="4" cellspacing="0" class="FormTitle" id="FormTitle">
 							<tbody>
-								<tr>
-								  <td bgcolor="#4D595D" valign="top">
+                <tr bgcolor="#4D595D" style="height:10px">
+	                <td valign="top">
 									  <div>&nbsp;</div>
 									  <div class="formfonttitle"><#menu5_6_adv#> - Performance tuning</div>
 									  <div style="margin-left:5px;margin-top:10px;margin-bottom:10px"><img src="/images/New_ui/export/line_export.png"></div>
-									  <!--div class="formfontdesc"><#PerformaceTuning_desc#></div-->
 									  <div class="formfontdesc">Fine tune the radio power to enhance/decrease the coverage and change the cooler spin mode.Please note: If the output power is increased for long distance signal transmission, the client also need to use high power card to get the best performance.</div>
 									</td>
-								</tr>
+					  		</tr>
 
-								<tr>
-									<td bgcolor="#4D595D">
+								<tr style="height:10px">
+									<td bgcolor="#4D595D" valign="top">
 										<table width="99%" border="0" align="center" cellpadding="0" cellspacing="0" bordercolor="#6b8fa3" class="FormTable">
 											<thead>
 											<tr>
@@ -276,7 +324,7 @@ function getCookie(c_name)
 											</thead>
 											
 											<tr>
-												<td>
+												<td valign="top">
 													<div style="margin-left:-10px;">
 														<!--========= svg =========-->
 														<!--[if IE]>
@@ -296,8 +344,8 @@ function getCookie(c_name)
 									</td>
 					  		</tr>
 
-								<tr style="display:none;">
-									<td bgcolor="#4D595D">
+								<tr style="display:none;" style="height:10px">
+									<td bgcolor="#4D595D" valign="top">
 						    	 	<table width="735px" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3" class="FormTable_NWM">
 								  		<tr>
 								  			<th style="text-align:center; width:35%;height:25px;">2.4GHz</th>
@@ -319,8 +367,8 @@ function getCookie(c_name)
 									</td>
 					  		</tr>
 
-								<tr>
-									<td bgcolor="#4D595D">
+								<tr style="height:10px">
+									<td bgcolor="#4D595D" valign="top">
 										<table width="99%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3" class="FormTable">
 											<thead>
 											<tr>
@@ -380,24 +428,6 @@ function getCookie(c_name)
 												</td>
 											</tr>
 				            
-											<!--tr>
-												<th>Spin duty cycle</th>
-												<td> 
-													<select name="fanctrl_dutycycle" class="input_option">
-														<option class="content_input_fd" value="0" <% nvram_match("fanctrl_dutycycle", "1", "selected"); %>>Auto</option>
-														<option class="content_input_fd" value="1" <% nvram_match("fanctrl_dutycycle", "1", "selected"); %>>10%</option>
-														<option class="content_input_fd" value="2" <% nvram_match("fanctrl_dutycycle", "2", "selected"); %>>20%</option>
-														<option class="content_input_fd" value="3" <% nvram_match("fanctrl_dutycycle", "3", "selected"); %>>30%</option>
-														<option class="content_input_fd" value="4" <% nvram_match("fanctrl_dutycycle", "4", "selected"); %>>40%</option>
-														<option class="content_input_fd" value="5" <% nvram_match("fanctrl_dutycycle", "5", "selected"); %>>50%</option>
-														<option class="content_input_fd" value="6" <% nvram_match("fanctrl_dutycycle", "6", "selected"); %>>60%</option>
-														<option class="content_input_fd" value="7" <% nvram_match("fanctrl_dutycycle", "7", "selected"); %>>70%</option>
-														<option class="content_input_fd" value="8" <% nvram_match("fanctrl_dutycycle", "8", "selected"); %>>80%</option>
-														<option class="content_input_fd" value="9" <% nvram_match("fanctrl_dutycycle", "9", "selected"); %>>90%</option>
-														<option class="content_input_fd" value="10" <% nvram_match("fanctrl_dutycycle", "10", "selected"); %>>100%</option>
-													</select>										
-												</td> 
-											</tr-->
 											<tr>
 												<th>Spin duty cycle</th>
 												<td> 
@@ -410,9 +440,103 @@ function getCookie(c_name)
 													</select>										
 												</td> 
 											</tr>
+
 										</table>
+									</td>
+					  		</tr>
+
+								<tr valign="top" style="height:10px;display:none;" id="btnCtrlTr">
+									<td bgcolor="#4D595D" valign="top">
+										<table width="99%" border="1" align="center" cellpadding="4" cellspacing="0" bordercolor="#6b8fa3" class="FormTable">
+											<thead>
+											<tr>
+												<td colspan="2">LED button Behavior</td>
+											</tr>
+											</thead>
+											
+											<tr>
+												<th style="height:120px"><div align="center"><img src="/images/position.png"></div></th>
+												<td>
+													<div style="cursor:pointer;" onclick="document.form.selLED.click();"><input type="radio" name="selLED" class="input" <% nvram_match("wl_ap_isolate", "1", "checked"); %>>
+														LED: <span style="color:#FC0">Press to turn on and off the LED.</span>
+													</div>
+													<br>
+													<div style="cursor:pointer;" onclick="document.form.selCLK.click();"><input type="radio" name="selCLK" class="input" <% nvram_match("wl_ap_isolate", "0", "checked"); %>>
+														OverClock: <span style="color:#FC0">Press the button to turn on overclock, release the button to turn off.</span>
+													</div>
+												</td>
+											</tr>
+										</table>
+
+									</td>
+					  		</tr>
+
+								<tr valign="top" style="height:1px;display:none;" id="btnDescTr">
+									<td bgcolor="#4D595D" valign="top" align="center">
+										<br/>
+										<table style="width:90%">
+											<tr height="10px">
+												<td width="20%" valign="center" align="right">
+													<img src="/images/btnReleased.png">
+												</td>
+												<td width="5%"></td>
+												<td align="left" width="75%" valign="center">
+													<table>
+														<tr height="30px">
+															<td valign="middle">
+																<div class="btnTitle">Released</div>
+															</td>
+														</tr>	
+														<tr height="50px">
+															<td valign="top">
+																<div id="btnReleased" class="btnDesc">Release the button to turn off overclock, RT-AC68U will reboot automatically.</div>		
+															</td>
+														</tr>	
+													</table>
+												</td>
+											</tr>
+
+											<tr height="10px"></tr>
+
+											<tr height="10px">
+												<td width="20%" valign="center" align="right">
+													<img src="/images/btnPressed.png">
+												</td>
+												<td width="5%"></td>
+												<td align="left" width="75%" valign="center">
+													<table>
+														<tr height="30px">
+															<td valign="middle">
+																<div class="btnTitle">Pressed</div>		
+															</td>
+														</tr>	
+														<tr height="90px">
+															<td valign="top">
+																<div id="btnPressed" class="btnDesc">
+																	Press the button to turn on overclock, this process will increase the clock frequency of your RT-AC68U to 1000Mhz and reboot automatically.
+																	<div id='alertHint' style='color: #FF1F00;'>If RT-AC68U does not respond when you turn on overclock, please turn off overclock, power off and on to reboot RT-AC68U.</div>
+																</div>		
+															</td>
+														</tr>	
+													</table>
+												</td>
+											</tr>
+
+										</table>
+									</td>
+					  		</tr>
+
+								<tr valign="top" style="height:10px">
+									<td bgcolor="#4D595D" valign="top">
 										<div class="apply_gen">
 											<input class="button_gen" onclick="applyRule();" type="button" value="<#CTL_apply#>"/>
+										</div>
+									</td>
+					  		</tr>
+
+								<tr valign="top">
+									<td bgcolor="#4D595D" valign="top">
+										<div>
 										</div>
 									</td>
 					  		</tr>

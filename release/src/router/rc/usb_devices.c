@@ -13,6 +13,9 @@
 #include "dongles.h"
 
 #include <bcmnvram.h>
+#ifdef RTCONFIG_BCMARM
+#include <bcmgpio.h>
+#endif
 #include <notify_rc.h>
 #include <usb_info.h>
 
@@ -59,7 +62,8 @@ int is_beceem_dongle(const int mode, const char *vid, const char *pid){
 	return 0;
 }
 
-int is_samsung_dongle(const int mode, const char *vid, const char *pid){
+int is_samsung_dongle(const int mode, const char *vid, const char *pid)
+{
 	if(mode){ // modem mode.
 		if(!strcmp(vid, "04e8") && !strcmp(pid, "6761")
 				)
@@ -74,7 +78,8 @@ int is_samsung_dongle(const int mode, const char *vid, const char *pid){
 	return 0;
 }
 
-int is_gct_dongle(const int mode, const char *vid, const char *pid){
+int is_gct_dongle(const int mode, const char *vid, const char *pid)
+{
 	if(mode){ // modem mode.
 		if(!strcmp(vid, "1076") && !strcmp(pid, "7f00")
 				)
@@ -91,7 +96,8 @@ int is_gct_dongle(const int mode, const char *vid, const char *pid){
 #endif
 
 // if the MTP mode of the phone will hang the DUT, need add the VID/PID in this function.
-int is_android_phone(const int mode, const char *vid, const char *pid){
+int is_android_phone(const int mode, const char *vid, const char *pid)
+{
 	if(nvram_match("modem_android", "1"))
 		return 1;
 	else if(mode){ // modem mode.
@@ -106,7 +112,16 @@ int is_android_phone(const int mode, const char *vid, const char *pid){
 	return 0;
 }
 
-int write_3g_conf(FILE *fp, int dno, int aut, char *vid, char *pid){
+int is_storage_cd(const int mode, const char *vid, const char *pid)
+{
+	if(!strcmp(vid, "0781") && !strcmp(pid, "540e")) // SanDisk cruzer
+			return 1;
+
+	return 0;
+}
+
+int write_3g_conf(FILE *fp, int dno, int aut, char *vid, char *pid)
+{
 	switch(dno){
 		case SN_MU_Q101:
 			fprintf(fp, "DefaultVendor=  0x0408\n");
@@ -1519,7 +1534,11 @@ int init_3g_param(char *vid, char *pid, int port_num)
 	if((fp = fopen(conf_file, "r")) != NULL){
 		fclose(fp);
 		usb_dbg("%s:%s Already had the usb_modeswitch file.\n", vid, pid);
+#ifdef LINUX30
+		return 0;
+#else
 		return 1;
+#endif
 	}
 
 	fp = fopen(conf_file, "w+");
@@ -2056,10 +2075,10 @@ usb_dbg("3G: manaul setting.\n");
 			write_3g_conf(fp, SN_Vodafone_MD950, 0, vid, pid);
 		} else if (strcmp(nvram_safe_get("Dev3G"), "Siptune-LM-75") == 0){
 			write_3g_conf(fp, SN_Siptune_LM75, 0, vid, pid);
-                } else if (strcmp(nvram_safe_get("Dev3G"), "Celot_CT-680") == 0){               // 0703 add 
-                        write_3g_conf(fp, SN_Celot_CT680, 0, vid, pid);
-                } else if (strcmp(nvram_safe_get("Dev3G"), "Celot_CT-K300") == 0){              // 0703 add 
-                        write_3g_conf(fp, SN_Celot_K300, 0, vid, pid);
+		} else if (strcmp(nvram_safe_get("Dev3G"), "Celot_CT-680") == 0){               // 0703 add 
+			write_3g_conf(fp, SN_Celot_CT680, 0, vid, pid);
+		} else if (strcmp(nvram_safe_get("Dev3G"), "Celot_CT-K300") == 0){              // 0703 add 
+			write_3g_conf(fp, SN_Celot_K300, 0, vid, pid);
 		} else if (strncmp(nvram_safe_get("Dev3G"), "Huawei-", 7) == 0 && !strcmp(vid, "12d1")){
 			write_3g_conf(fp, UNKNOWNDEV, 0, vid, pid);
 		} else{
@@ -2244,7 +2263,7 @@ int write_beceem_conf(const char *eth_node){
 	fprintf(fp, "AuthEnabled                       Yes\n");
 	fprintf(fp, "CACertPath                        '/lib/firmware'\n");
 	fprintf(fp, "NetEntryIPRefreshEnabled          Yes\n");
-	fprintf(fp, "IPRefreshCommand                  'udhcpc -i %s -p /var/run/udhcpc%d.pid -s /tmp/udhcpc &'\n", eth_node, get_wan_unit(eth_node));
+	fprintf(fp, "IPRefreshCommand                  'udhcpc -i %s -p /var/run/udhcpc%d.pid -s /tmp/udhcpc &'\n", eth_node, get_wan_unit((char*)eth_node));
 	fprintf(fp, "FirmwareFileName                  '/lib/firmware/macxvi200.bin'\n");
 	fprintf(fp, "ConfigFileName                    '/lib/firmware/macxvi.cfg'\n");
 	fprintf(fp, "BandwidthMHz                      10\n");
@@ -2306,7 +2325,8 @@ int write_beceem_conf(const char *eth_node){
 	return 1;
 }
 
-int write_gct_conf(){
+int write_gct_conf(void)
+{
 	FILE *fp;
 	int retry, lock;
 
@@ -2381,6 +2401,179 @@ int write_gct_conf(){
 #endif // RTCONFIG_USB_MODEM
 
 #ifdef RTCONFIG_USB
+
+#ifdef RTCONFIG_BCMARM
+
+int hotplug_pid = -1;
+FILE *fp = NULL;
+#define hotplug_dbg(fmt, args...) (\
+{ \
+	char err_str[100] = {0}; \
+	char err_str2[100] = {0}; \
+	if (hotplug_pid == -1) hotplug_pid = getpid(); \
+	if (!fp) fp = fopen("/tmp/usb_err", "a+"); \
+	sprintf(err_str, fmt, ##args); \
+	sprintf(err_str2, "PID:%d %s", hotplug_pid, err_str); \
+	fwrite(err_str2, strlen(err_str2), 1,  fp); \
+	fflush(fp); \
+} \
+)
+
+#define LOCK_FILE      "/tmp/hotplug_block_lock"
+
+#define MAX_USB_PORTS                   2
+
+int hotplug_usb_power(int port, int boolOn)
+{
+        char name[] = "usbport%d"; /* 1 ~ 99 ports */
+        unsigned long gpiomap;
+        int usb_gpio;
+
+        if (port > MAX_USB_PORTS)
+                return -1;
+
+        sprintf(name, "usbport%d", port);
+        usb_gpio = bcmgpio_getpin(name, BCMGPIO_UNDEFINED);
+        if (usb_gpio == BCMGPIO_UNDEFINED)
+                return 0;
+        if (bcmgpio_connect(usb_gpio, BCMGPIO_DIRN_OUT))
+                return 0;
+
+        gpiomap = (1 << usb_gpio);
+        bcmgpio_out(gpiomap, boolOn? gpiomap: 0);
+        bcmgpio_disconnect(usb_gpio);
+        return 1;
+}
+
+/* Return number of usbports enabled */
+int hotplug_usb_init(void)
+{
+        /* Enable VBUS via GPIOs for port1 and port2 */
+        int i, count;
+
+        for (count = 0, i = 1; i <= MAX_USB_PORTS; i++) {
+                if (hotplug_usb_power(i, TRUE) > 0)
+                        count++;
+        }
+        return count;
+}
+
+#define PHYSDEVPATH_DEPTH_USB_LPORT     4       /* Depth is from 0 */
+
+static void
+hotplug_usb_power_recover(void)
+{
+        char *physdevpath;
+        char *tok = NULL;
+        int depth = 0, root_hub_num = -1, usb_lport = -1, nv_port = -1;
+
+        if ((physdevpath = getenv("PHYSDEVPATH")) == NULL)
+                return;
+
+	/* Get root_hub and logical port number.
+	 * PHYSDEVPATH in sysfs is /devices/pci/hcd/root_hub/root_hub_num-lport/.....
+	 */
+        tok = strtok(physdevpath, "/");
+
+        while (tok != NULL) {
+                if (PHYSDEVPATH_DEPTH_USB_LPORT == depth) {
+                        sscanf(tok, "%d-%d", &root_hub_num, &usb_lport);
+                        break;
+                }
+                depth++;
+                tok = strtok(NULL, "/");
+        }
+
+        if (tok && (root_hub_num != -1) && (usb_lport != -1)) {
+                /* Translate logical port to nvram setting port */
+                nv_port = (usb_lport == 1) ? 2 : 1;
+
+                hotplug_usb_power(nv_port, FALSE);
+                sleep(1);
+                hotplug_usb_power(nv_port, TRUE);
+        }
+}
+
+/* Optimize performance */
+#define READ_AHEAD_KB_BUF       1024
+#define READ_AHEAD_CONF "/sys/block/%s/queue/read_ahead_kb"
+
+static void
+optimize_block_device(char *devname)
+{
+        char blkdev[8] = {0};
+        char read_ahead_conf[64] = {0};
+        char cmdbuf[64] = {0};
+        int err;
+
+        memset(blkdev, 0, sizeof(blkdev));
+        strncpy(blkdev, devname, 3);
+        sprintf(read_ahead_conf, READ_AHEAD_CONF, blkdev);
+        sprintf(cmdbuf, "echo %d > %s", READ_AHEAD_KB_BUF, read_ahead_conf);
+        err = system(cmdbuf);
+        hotplug_dbg("err = %d\n", err);
+
+        if (err) {
+                hotplug_dbg("read ahead: unsuccess %d!\n", err);
+        }
+}
+
+int
+hotplug_block(void)
+{
+        char *action = NULL, *minor = NULL;
+        char *major = NULL, *driver = NULL;
+        int retry = 3, lock_fd = -1;
+        struct flock lk_info = {0};
+
+        if (!(action = getenv("ACTION")) ||
+            !(minor = getenv("MINOR")) ||
+            !(driver = getenv("PHYSDEVDRIVER")) ||
+            !(major = getenv("MAJOR")))
+        {
+                return EINVAL;
+        }
+
+        hotplug_dbg("env %s %s!\n", action, driver);
+        if (strncmp(driver, "sd", 2))
+        {
+                return EINVAL;
+        }
+
+        if ((lock_fd = open(LOCK_FILE, O_RDWR|O_CREAT, 0666)) < 0) {
+                hotplug_dbg("Failed opening lock file LOCK_FILE: %s\n", strerror(errno));
+                return -1;
+        }
+
+        while (--retry) {
+                lk_info.l_type = F_WRLCK;
+                lk_info.l_whence = SEEK_SET;
+                lk_info.l_start = 0;
+                lk_info.l_len = 0;
+                if (!fcntl(lock_fd, F_SETLKW, &lk_info)) break;
+        }
+
+        if (!retry) {
+                hotplug_dbg("Failed locking LOCK_FILE: %s\n", strerror(errno));
+                return -1;
+        }
+
+        if (!strcmp(action, "add")) {
+                hotplug_dbg("add block!\n");
+
+        } else if (!strcmp(action, "remove")) {
+                hotplug_dbg("usb power recover!\n");
+		//hotplug_usb_power_recover(); // Mark off this. It will let the modem can't be switched.
+        } else {
+                hotplug_dbg("unsupported action!\n");
+        }
+
+        close(lock_fd);
+        unlink(LOCK_FILE);
+        return 0;
+}
+#endif  /* RTCONFIG_BCMARM */
+
 // 201102. James. Move the Jiahao's code from rc/service_ex.c. {
 int
 check_dev_sb_block_count(const char *dev_sd)
@@ -2420,11 +2613,15 @@ int check_hotplug_action(const char *action){
 }
 
 int set_usb_common_nvram(const char *action, const char *usb_node, const char *known_type){
-	char nvram_name[32], usb_port[8];
+	char nvram_name[32], usb_port[8], nvram_name2[32];
 	char type[16], vid[8], pid[8], manufacturer[256], product[256], serial[256];
 	char been_type[16];
 	int partition_order;
 	int port_num;
+#if defined (RTCONFIG_USB_XHCI) || defined (RTCONFIG_USB_2XHCI2)
+	char speed[256];
+#endif
+	char prefix[] = "usb_pathXXXXXXXXXXXXXXXXX_", tmp[100];
 
 	// Get USB port.
 	if(get_usb_port_by_string(usb_node, usb_port, sizeof(usb_port)) == NULL){
@@ -2438,56 +2635,57 @@ int set_usb_common_nvram(const char *action, const char *usb_node, const char *k
 		return 0;
 	}
 
+	snprintf(prefix, sizeof(prefix), "usb_path%d", port_num);
+
 	if(!check_hotplug_action(action)){
-		memset(nvram_name, 0, 32);
-		sprintf(nvram_name, "usb_path%d", port_num);
-		nvram_set(nvram_name, "");
+		nvram_set(prefix, "");
 
 		// Jerry5Chang added for unmount case. 2012.12.03
-                memset(nvram_name, 0, 32);
-                sprintf(nvram_name, "usb_path%d_removed", port_num);
-                nvram_set(nvram_name, "0");
+		nvram_set(strcat_r(prefix, "_removed", tmp), "0");
 
-		memset(nvram_name, 0, 32);
-		sprintf(nvram_name, "usb_path%d_vid", port_num);
-		nvram_set(nvram_name, "");
+#ifdef RTCONFIG_DISK_MONITOR
+		nvram_set(strcat_r(prefix, "_pool_error", tmp), "0");
+#endif
 
-		memset(nvram_name, 0, 32);
-		sprintf(nvram_name, "usb_path%d_pid", port_num);
-		nvram_set(nvram_name, "");
-
-		memset(nvram_name, 0, 32);
-		sprintf(nvram_name, "usb_path%d_manufacturer", port_num);
-		nvram_set(nvram_name, "");
-
-		memset(nvram_name, 0, 32);
-		sprintf(nvram_name, "usb_path%d_product", port_num);
-		nvram_set(nvram_name, "");
-
-		memset(nvram_name, 0, 32);
-		sprintf(nvram_name, "usb_path%d_serial", port_num);
-		nvram_set(nvram_name, "");
+		nvram_set(strcat_r(prefix, "_vid", tmp), "");
+		nvram_set(strcat_r(prefix, "_pid", tmp), "");
+		nvram_set(strcat_r(prefix, "_manufacturer", tmp), "");
+		nvram_set(strcat_r(prefix, "_product", tmp), "");
+		nvram_set(strcat_r(prefix, "_serial", tmp), "");
+		nvram_set(strcat_r(prefix, "_host", tmp), "");
+#if defined (RTCONFIG_USB_XHCI) || defined (RTCONFIG_USB_2XHCI2)
+		nvram_set(strcat_r(prefix, "_speed", tmp), "");
+#endif
 
 		partition_order = 0;
 		memset(nvram_name, 0, 32);
-		sprintf(nvram_name, "usb_path%d_fs_path%d", port_num, partition_order);
+		sprintf(nvram_name, "%s_fs_path%d", prefix, partition_order);
 		if(strlen(nvram_safe_get(nvram_name)) > 0){
 			nvram_unset(nvram_name);
 
-#if 0
+			memset(nvram_name2, 0, 32);
+			sprintf(nvram_name2, "%s_label%d", prefix, partition_order);
+			if(strlen(nvram_safe_get(nvram_name2)) > 0)
+				nvram_unset(nvram_name2);
+
 			for(partition_order = 1; partition_order < 16 ; ++partition_order){
+#if 0
 				memset(nvram_name, 0, 32);
-				sprintf(nvram_name, "usb_path%d_fs_path%d", port_num, partition_order);
-				nvram_unset(nvram_name);
-			}
+				sprintf(nvram_name, "%s_fs_path%d", prefix, partition_order);
+				if(strlen(nvram_safe_get(nvram_name)) > 0)
+					nvram_unset(nvram_name);
 #endif
+
+				memset(nvram_name2, 0, 32);
+				sprintf(nvram_name2, "%s_label%d", prefix, partition_order);
+				if(strlen(nvram_safe_get(nvram_name2)) > 0)
+					nvram_unset(nvram_name2);
+			}
 		}
 	}
 	else{
-		memset(nvram_name, 0, 32);
-		sprintf(nvram_name, "usb_path%d", port_num);
 		memset(been_type, 0, 16);
-		strcpy(been_type, nvram_safe_get(nvram_name));
+		strcpy(been_type, nvram_safe_get(prefix));
 		if(strlen(been_type) > 0){
 #ifdef RTCONFIG_USB_PRINTER
 			if(!strcmp(been_type, "printer")){ // Top priority
@@ -2530,46 +2728,65 @@ int set_usb_common_nvram(const char *action, const char *usb_node, const char *k
 			}
 		}
 		if(known_type != NULL)
-			nvram_set(nvram_name, known_type);
+			nvram_set(prefix, known_type);
 		else if(get_device_type_by_node(usb_node, type, 16) != NULL)
-			nvram_set(nvram_name, type);
+			nvram_set(prefix, type);
 		else // unknown device.
 			return 0;
 
-		memset(nvram_name, 0, 32);
-		sprintf(nvram_name, "usb_path%d_vid", port_num);
+		strcat_r(prefix, "_vid", tmp);
 		if(get_usb_vid(usb_node, vid, 8) == NULL)
-			nvram_set(nvram_name, "");
+			nvram_set(tmp, "");
 		else
-			nvram_set(nvram_name, vid);
+			nvram_set(tmp, vid);
 
-		memset(nvram_name, 0, 32);
-		sprintf(nvram_name, "usb_path%d_pid", port_num);
+		strcat_r(prefix, "_pid", tmp);
 		if(get_usb_pid(usb_node, pid, 8) == NULL)
-			nvram_set(nvram_name, "");
+			nvram_set(tmp, "");
 		else
-			nvram_set(nvram_name, pid);
+			nvram_set(tmp, pid);
 
-		memset(nvram_name, 0, 32);
-		sprintf(nvram_name, "usb_path%d_manufacturer", port_num);
+		strcat_r(prefix, "_manufacturer", tmp);
 		if(get_usb_manufacturer(usb_node, manufacturer, 256) == NULL)
-			nvram_set(nvram_name, "");
+			nvram_set(tmp, "");
 		else
-			nvram_set(nvram_name, manufacturer);
+			nvram_set(tmp, manufacturer);
 
-		memset(nvram_name, 0, 32);
-		sprintf(nvram_name, "usb_path%d_product", port_num);
+		strcat_r(prefix, "_product", tmp);
 		if(get_usb_product(usb_node, product, 256) == NULL)
-			nvram_set(nvram_name, "");
+			nvram_set(tmp, "");
 		else
-			nvram_set(nvram_name, product);
+			nvram_set(tmp, product);
 
-		memset(nvram_name, 0, 32);
-		sprintf(nvram_name, "usb_path%d_serial", port_num);
+		strcat_r(prefix, "_serial", tmp);
 		if(get_usb_serial(usb_node, serial, 256) == NULL)
-			nvram_set(nvram_name, "");
+			nvram_set(tmp, "");
 		else
-			nvram_set(nvram_name, serial);
+			nvram_set(tmp, serial);
+
+		strcat_r(prefix, "_host", tmp);
+		switch(get_usb_port_host(usb_port)){
+			case USB_HOST_OHCI:
+				nvram_set(tmp, "1");
+				break;
+			case USB_HOST_EHCI:
+				nvram_set(tmp, "2");
+				break;
+			case USB_HOST_XHCI:
+				nvram_set(tmp, "3");
+				break;
+			default:
+				nvram_set(tmp, "");
+				break;
+		}
+
+#if defined (RTCONFIG_USB_XHCI) || defined (RTCONFIG_USB_2XHCI2)
+		strcat_r(prefix, "_speed", tmp);
+		if(get_usb_speed(usb_port, speed, 256) == NULL)
+			nvram_set(tmp, "");
+		else
+			nvram_set(tmp, speed);
+#endif
 	}
 
 	return 0;
@@ -2583,6 +2800,7 @@ int asus_sd(const char *device_name, const char *action){
 	int partition_order;
 	int port_num;
 	char env_dev[64], env_port[64];
+	char prefix[] = "usb_pathXXXXXXXXXXXXXXXXX_", tmp[100];
 	usb_dbg("(%s): action=%s.\n", device_name, action);
 
 	if(!strcmp(nvram_safe_get("stop_sd"), "1")){
@@ -2692,10 +2910,9 @@ int asus_sd(const char *device_name, const char *action){
 	}
 #endif
 
-	memset(nvram_name, 0, 32);
-	sprintf(nvram_name, "usb_path%d", port_num);
+	snprintf(prefix, sizeof(prefix), "usb_path%d", port_num);
 	memset(nvram_value, 0, 32);
-	strcpy(nvram_value, nvram_safe_get(nvram_name));
+	strcpy(nvram_value, nvram_safe_get(prefix));
 	if(strcmp(nvram_value, "") && strcmp(nvram_value, "storage")){
 		usb_dbg("(%s): Had other interfaces(%s) on Port %s.\n", device_name, nvram_value, usb_port);
 		file_unlock(isLock);
@@ -2709,23 +2926,20 @@ int asus_sd(const char *device_name, const char *action){
 
 // 201102. James. Move the Jiahao's code from mdev. {
 	if(strlen(device_name) == 3){ // sda, sdb, sdc...
-		memset(nvram_name, 0, 32);
-		sprintf(nvram_name, "usb_path%d_fs_path0", port_num);
-		if(strlen(nvram_safe_get(nvram_name)) <= 0)
-			nvram_set(nvram_name, device_name);
+		strcat_r(prefix, "_fs_path0", tmp);
+		if(strlen(nvram_safe_get(tmp)) <= 0)
+			nvram_set(tmp, device_name);
 
-		memset(nvram_name, 0, 32);
-		sprintf(nvram_name, "usb_path%d", port_num);
-		if(!strcmp(nvram_safe_get(nvram_name), "storage")){
-			memset(nvram_name, 0, 32);
-			sprintf(nvram_name, "usb_path%d_act", port_num);
-			nvram_set(nvram_name, device_name);
+		if(!strcmp(nvram_safe_get(prefix), "storage")){
+			strcat_r(prefix, "_act", tmp);
+			nvram_set(tmp, device_name);
 		}
 	}
 	else if(check_dev_sb_block_count(device_name)){
 		partition_order = atoi(device_name+3);
 		if((partition_order-1) == 0){ // for ATE test.
-			sprintf(nvram_name, "usb_path%d_fs_path%d", port_num, partition_order-1);
+			memset(nvram_name, 0, 32);
+			sprintf(nvram_name, "%s_fs_path%d", prefix, partition_order-1);
 			nvram_set(nvram_name, device_name);
 		}
 	}
@@ -2753,6 +2967,11 @@ int asus_sd(const char *device_name, const char *action){
 	unsetenv("DEVICENAME");
 	unsetenv("SUBSYSTEM");
 	unsetenv("USBPORT");
+
+#ifdef RTCONFIG_BCMARM
+        /* Optimize performance */
+        optimize_block_device(device_name);
+#endif
 
 	usb_dbg("(%s): Success!\n", device_name);
 	file_unlock(isLock);
@@ -2869,7 +3088,7 @@ int asus_sg(const char *device_name, const char *action){
 #ifdef RTCONFIG_USB_MODEM
 	char usb_port[8], usb_node[8], vid[8], pid[8];
 	int isLock;
-	char eject_cmd[32];
+	char switch_file[32];
 	int port_num;
 	char nvram_name[32], nvram_value[32];
 	usb_dbg("(%s): action=%s.\n", device_name, action);
@@ -2927,7 +3146,9 @@ int asus_sg(const char *device_name, const char *action){
 	memset(nvram_value, 0, 32);
 	strcpy(nvram_value, nvram_safe_get(nvram_name));
 	//if(!strcmp(nvram_value, "printer") || !strcmp(nvram_value, "modem")){
-	if(strcmp(nvram_value, "")){
+	memset(switch_file, 0, 32);
+	sprintf(switch_file, "%s.%d", USB_MODESWITCH_CONF, port_num);
+	if(strcmp(nvram_value, "") && check_if_file_exist(switch_file)){
 		usb_dbg("(%s): Already there was a other interface(%s).\n", usb_port, nvram_value);
 		file_unlock(isLock);
 		return 0;
@@ -2974,22 +3195,24 @@ int asus_sg(const char *device_name, const char *action){
 #endif
 	if(!strcmp(vid, "1199"))
 		; // had do usb_modeswitch before.
+	else if(!strcmp(vid, "19d2") && !strcmp(pid, "0167")) // MF821's modem mode.
+		; // do nothing.
 	else if(init_3g_param(vid, pid, port_num)){
-		memset(eject_cmd, 0, 32);
-		sprintf(eject_cmd, "%s.%d", USB_MODESWITCH_CONF, port_num);
-
 		if(strcmp(nvram_safe_get("stop_sg_remove"), "1")){
 			usb_dbg("(%s): Running usb_modeswitch...\n", device_name);
-			xstart("usb_modeswitch", "-c", eject_cmd);
+			xstart("usb_modeswitch", "-c", switch_file);
 		}
 	}
 	else if(port_num != 3 // usb_path3 is worked for the built-in card reader.
 			&& !is_create_file_dongle(vid, pid)
 			){
-		usb_dbg("(%s): insmod cdrom!\n", device_name);
-		modprobe("cdrom");
-		modprobe("sr_mod");
-		sleep(1); // wait the module be ready.
+		if(strcmp(nvram_safe_get("stop_sg_remove"), "1"))
+		{
+			usb_dbg("(%s): insmod cdrom!\n", device_name);
+			modprobe("cdrom");
+			modprobe("sr_mod");
+			sleep(1); // wait the module be ready.
+		}
 	}
 
 	usb_dbg("(%s): Success!\n", device_name);
@@ -3085,7 +3308,10 @@ int asus_sr(const char *device_name, const char *action){
 	}
 	else
 #endif
-	if(strcmp(nvram_safe_get("stop_cd_remove"), "1")){
+	if(is_storage_cd(0, vid, pid)){
+		usb_dbg("(%s): skip to eject CD...\n", device_name);
+	}
+	else if(strcmp(nvram_safe_get("stop_cd_remove"), "1")){
 		usb_dbg("(%s): Running sdparm...\n", device_name);
 
 		memset(eject_cmd, 0, 32);
@@ -3117,8 +3343,6 @@ int asus_tty(const char *device_name, const char *action){
 	int isLock;
 	char nvram_name[32], current_value[16];
 	int cur_val, tmp_val;
-	char pid_file[256], *value;
-	int pppd_pid;
 	int retry;
 #ifndef RTCONFIG_USB_MODEM_PIN
 	char cmd[32];
@@ -3161,6 +3385,16 @@ int asus_tty(const char *device_name, const char *action){
 		}
 
 		if(strlen(usb_port) > 0){
+			// TODO: for the bad CTF. After updating CTF, need to mark these codes.
+			if(nvram_match("ctf_disable_modem", "1")){
+				nvram_set("ctf_disable_modem", "0");
+				nvram_commit();
+				notify_rc_and_wait("reboot");
+				file_unlock(isLock);
+
+				return 0;
+			}
+
 			// Modem remove action.
 			unlink(PPP_CONF_FOR_3G);
 
@@ -3177,28 +3411,9 @@ int asus_tty(const char *device_name, const char *action){
 			wan_unit = WAN_UNIT_SECOND;
 #endif
 
-			memset(pid_file, 0, 256);
-			snprintf(pid_file, 256, "/var/run/ppp-wan%d.pid", wan_unit);
+			/* Stop pppd */
+			stop_pppd(wan_unit);
 
-			retry = 0;
-			if((value = file2str(pid_file)) != NULL && (pppd_pid = atoi(value)) > 1){
-usb_dbg("%s: kill pppd(%d).\n", __FUNCTION__, pppd_pid);
-				kill(pppd_pid, SIGHUP);
-				sleep(1);
-				while(check_process_exist(pppd_pid) && retry < MAX_WAIT_FILE){
-usb_dbg("%s: kill pppd(%d).\n", __FUNCTION__, pppd_pid);
-					++retry;
-					kill(pppd_pid, SIGTERM);
-					sleep(1);
-				}
-
-				if(check_process_exist(pppd_pid)){
-					kill(pppd_pid, SIGKILL);
-					sleep(1);
-				}
-			}
-			if(value != NULL)
-				free(value);
 			killall_tk("usb_modeswitch");
 			killall_tk("sdparm");
 
@@ -3208,6 +3423,15 @@ usb_dbg("%s: kill pppd(%d).\n", __FUNCTION__, pppd_pid);
 				modprobe_r("option");
 				++retry;
 			}
+
+#if LINUX_KERNEL_VERSION >= KERNEL_VERSION(2,6,36)
+			retry = 0;
+			while(hadWWANModule() && retry < 3){
+				usb_dbg("(%s): Remove the USB WWAN module.\n", device_name);
+				modprobe_r("usb_wwan");
+				++retry;
+			}
+#endif
 
 			retry = 0;
 			while(hadSerialModule() && retry < 3){
@@ -3301,10 +3525,10 @@ usb_dbg("%s: kill pppd(%d).\n", __FUNCTION__, pppd_pid);
 	sprintf(nvram_def, "usb_path%d_act_def", port_num);
 	memset(current_def, 0, 16);
 	strcpy(current_def, nvram_safe_get(nvram_def));
+	usb_dbg("(%s): interface_name=%s, current_value=%s.\n", device_name, interface_name, current_value);
 
 	if(isSerialNode(device_name)){
 		// Find the endpoint: 03(Int).
-		usb_dbg("(%s): interface_name=%s.\n", device_name, interface_name);
 		got_Int_endpoint = get_interface_Int_endpoint(interface_name);
 		if(!got_Int_endpoint){
 			// Set the default node be ttyUSB0, because there is no Int endpoint in some dongles.
@@ -3403,6 +3627,18 @@ usb_dbg("(%s): cur_val=%d, tmp_val=%d.\n", device_name, cur_val, tmp_val);
 		if(wan_unit != WAN_UNIT_MAX){
 #else
 			wan_unit = WAN_UNIT_SECOND;
+#endif
+
+#if 0
+	// TODO: for the bad CTF. After updating CTF, need to mark these codes.
+	if(nvram_invmatch("ctf_disable", "1") && nvram_invmatch("ctf_disable_modem", "1")){
+		nvram_set("ctf_disable_modem", "1");
+		nvram_commit();
+		notify_rc_and_wait("reboot");
+		file_unlock(isLock);
+
+		return 0;
+	}
 #endif
 
 #ifndef RTCONFIG_USB_MODEM_PIN
@@ -3587,6 +3823,9 @@ int asus_usb_interface(const char *device_name, const char *action){
 
 			// remove the device between adding interface and adding tty.
 			modprobe_r("option");
+#if LINUX_KERNEL_VERSION >= KERNEL_VERSION(2,6,36)
+			modprobe_r("usb_wwan");
+#endif
 			modprobe_r("usbserial");
 			modprobe_r("cdc-acm");
 #ifdef RTCONFIG_USB_BECEEM
@@ -3646,7 +3885,7 @@ int asus_usb_interface(const char *device_name, const char *action){
 	// there is no any bounded drivers with Some Sierra dongles in the default state.
 	if(!strcmp(vid, "1199") && isStorageInterface(device_name)){
 		if(init_3g_param(vid, pid, port_num)){
-			memset(modem_cmd, 0, 32);
+			memset(modem_cmd, 0, sizeof(modem_cmd));
 			sprintf(modem_cmd, "%s.%d", USB_MODESWITCH_CONF, port_num);
 
 			if(strcmp(nvram_safe_get("stop_ui_remove"), "1")){
@@ -3661,7 +3900,8 @@ int asus_usb_interface(const char *device_name, const char *action){
 
 	if(!isSerialInterface(device_name)
 			&& !isACMInterface(device_name)
-			&& !isRNDISInterface(device_name)
+			&& !isRNDISInterface(device_name, vid, pid)
+			&& !isCDCETHInterface(device_name)
 #ifdef RTCONFIG_USB_BECEEM
 			&& !isGCTInterface(device_name)
 #endif
@@ -3795,14 +4035,23 @@ int asus_usb_interface(const char *device_name, const char *action){
 	if(is_android_phone(0, vid, pid)){
 		usb_dbg("(%s): do nothing with the MTP mode.\n", device_name);
 	}
-	else if(isRNDISInterface(device_name)){
+	else if(isRNDISInterface(device_name, vid, pid)){
 		usb_dbg("(%s): Runing RNDIS...\n", device_name);
+	}
+	else if(isCDCETHInterface(device_name)){
+		usb_dbg("(%s): Runing cdc_ether...\n", device_name);
+	}
+	else if(!strcmp(nvram_safe_get("stop_ui_insmod"), "1")){
+		usb_dbg("(%s): Don't insmod the serial modules.\n", device_name);
 	}
 	else if(isSerialInterface(device_name)){
 		usb_dbg("(%s): Runing USB serial with (0x%s/0x%s)...\n", device_name, vid, pid);
 		sleep(1);
 		modprobe("usbserial");
-		memset(modem_cmd, 0, 64);
+#if LINUX_KERNEL_VERSION >= KERNEL_VERSION(2,6,36)
+		modprobe("usb_wwan");
+#endif
+		memset(modem_cmd, 0, sizeof(modem_cmd));
 		sprintf(modem_cmd, "vendor=0x%s", vid);
 		memset(buf, 0, sizeof(buf));
 		sprintf(buf, "product=0x%s", pid);

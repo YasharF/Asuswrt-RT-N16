@@ -41,12 +41,21 @@
 #define USBLED_NORMAL_PERIOD		1		/* second */
 #define USBLED_URGENT_PERIOD		100 * 1000	/* microsecond */	
 
+static int model = MODEL_UNKNOWN;
+
 static int usb_busy, count = 0;
 static struct itimerval itv;
 static char *usb_path1 = NULL;
 static char *usb_path2 = NULL;
 static int status_usb = 0;
 static int status_usb_old = 0;
+
+static int got_usb2 = 0;
+static int got_usb2_old = 0;
+#ifdef LED_USB3
+static int got_usb3 = 0;
+static int got_usb3_old = 0;
+#endif
 
 static void
 alarmtimer(unsigned long sec, unsigned long usec)
@@ -68,20 +77,60 @@ usb_status()
 		return 0;
 }
 
+static int
+check_usb2()
+{
+        if (usb_busy)
+                return 0;
+        else if ((model==MODEL_RTAC56U||model==MODEL_RTAC68U) && nvram_invmatch("usb_path2", ""))
+                return 1;
+        else
+                return 0;
+}
+#ifdef LED_USB3
+static int
+check_usb3()
+{
+	if (usb_busy)
+		return 0;
+#ifndef RTCONFIG_BCMARM
+	else if (nvram_match("usb_path1_host", "3") || nvram_match("usb_path2_host", "3"))
+#else
+	else if ((model==MODEL_RTAC56U||model==MODEL_RTAC68U) && nvram_invmatch("usb_path1", ""))
+#endif
+		return 1;
+	else
+		return 0;
+}
+#endif
+
 static void no_blink(int sig)
 {
 //	dbG("\n\n\nreceive SIGUSR2 in usbled\n\n\n");
 
 	alarmtimer(USBLED_NORMAL_PERIOD, 0);
 	status_usb = -1;
+#ifdef LED_USB3
+	if(model==MODEL_RTAC56U || model==MODEL_RTAC68U)
+	{
+		got_usb2 = -1;
+		got_usb3 = -1;
+	}
+#endif
 	usb_busy = 0;
 }
-#if 0
-static void wps_pbc(int sig)
+
+#ifdef RTCONFIG_USBEJECT
+static void reset_status(int sig)
 {
-	start_wps_pbc(0);
+        status_usb_old = -1;
+        got_usb2_old = -1;
+#ifdef LED_USB3
+        got_usb3_old = -1;
+#endif
 }
 #endif
+
 static void blink(int sig)
 {
 //	dbG("\n\n\nreceive SIGUSR1 to usbled\n\n\n");
@@ -94,11 +143,23 @@ static void usbled_exit(int sig)
 {
 	alarmtimer(0, 0);
 	status_usb = 0;
-        usb_busy = 0;
-	led_control(LED_USB, LED_OFF);
+#ifdef LED_USB3
+	if(model==MODEL_RTAC56U || model==MODEL_RTAC68U)
+	{
+		got_usb2 = 0;
+		got_usb3 = 0;
+	}
+#endif
+	usb_busy = 0;
 
-        remove("/var/run/usbled.pid");
-        exit(0);
+	led_control(LED_USB, LED_OFF);
+#ifdef LED_USB3
+	if(model==MODEL_RTAC56U || model==MODEL_RTAC68U)
+		led_control(LED_USB3, LED_OFF);
+#endif
+
+	remove("/var/run/usbled.pid");
+	exit(0);
 }
 
 static void usbled(int sig)
@@ -108,11 +169,44 @@ static void usbled(int sig)
 	status_usb_old = status_usb;
 	status_usb = usb_status();
 
-	if(nvram_match("asus_mfg", "1"))
+#ifdef LED_USB3
+	if(model==MODEL_RTAC56U || model==MODEL_RTAC68U){
+                got_usb2_old = got_usb2;
+                got_usb2 = check_usb2();
+                got_usb3_old = got_usb3;
+                got_usb3 = check_usb3();
+	}
+#endif
+
+	if(nvram_match("asus_mfg", "1")
+#ifdef RTCONFIG_USBEJECT
+                || !nvram_get_int("AllLED")
+#endif
+        )
 		no_blink(sig);
-	else if (!usb_busy)
+	else if (!usb_busy
+#ifdef RTCONFIG_USBEJECT
+                && nvram_get_int("AllLED")
+#endif
+	)
 	{
-		if (status_usb != status_usb_old)
+                if(model==MODEL_RTAC56U || model==MODEL_RTAC68U){
+                        if(got_usb2 != got_usb2_old){
+                                if(got_usb2)
+                                        led_control(LED_USB, LED_ON);
+                                else
+                                        led_control(LED_USB, LED_OFF);
+                        }
+#ifdef LED_USB3
+                        if(got_usb3 != got_usb3_old){
+                                if(got_usb3)
+                                        led_control(LED_USB3, LED_ON);
+                                else
+                                        led_control(LED_USB3, LED_OFF);
+                        }
+#endif
+                }
+		else if (status_usb != status_usb_old)
 		{
 			if (status_usb)
 				led_control(LED_USB, LED_ON);
@@ -121,6 +215,9 @@ static void usbled(int sig)
 		}
 	}
 	else
+#ifdef RTCONFIG_USBEJECT
+                if (nvram_get_int("AllLED"))
+#endif
 	{
 		if (strcmp(usb_path1, "storage") && strcmp(usb_path2, "storage"))
 		{
@@ -128,7 +225,7 @@ static void usbled(int sig)
 		}
 		else
 		{
-			count = (++count % 20);
+			count = (count+1) % 20;
 
 			/* 0123456710 */
 			/* 1010101010 */
@@ -146,6 +243,7 @@ usbled_main(int argc, char *argv[])
 {
 	FILE *fp;
 	sigset_t sigs_to_catch;
+	model = get_model();
 
 	/* write pid */
 	if ((fp = fopen("/var/run/usbled.pid", "w")) != NULL)
@@ -162,7 +260,7 @@ usbled_main(int argc, char *argv[])
 	sigaddset(&sigs_to_catch, SIGTERM);
 	sigaddset(&sigs_to_catch, SIGUSR1);
 	sigaddset(&sigs_to_catch, SIGUSR2);
-#if 0
+#ifdef RTCONFIG_USBEJECT
 	sigaddset(&sigs_to_catch, SIGTSTP);
 #endif
 	sigprocmask(SIG_UNBLOCK, &sigs_to_catch, NULL);
@@ -171,8 +269,8 @@ usbled_main(int argc, char *argv[])
 	signal(SIGTERM, usbled_exit);
 	signal(SIGUSR1, blink);
 	signal(SIGUSR2, no_blink);
-#if 0
-	signal(SIGTSTP, wps_pbc);
+#ifdef RTCONFIG_USBEJECT
+	signal(SIGTSTP, reset_status);
 #endif
 	alarmtimer(USBLED_NORMAL_PERIOD, 0);
 

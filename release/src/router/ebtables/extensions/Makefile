@@ -4,10 +4,9 @@
 #          pkttype stp among limit ulog nflog
 #EXT_TABLES+=filter nat broute
 
-EXT_FUNC+=nat arp arpreply ip standard log redirect vlan mark \
-          pkttype stp limit
+EXT_FUNC+=standard redirect mark
 ifeq ($(DO_IPV6), 1)
-EXT_FUNC+=ip6
+#EXT_FUNC+=ip6
 endif
 EXT_TABLES+=filter nat broute
 

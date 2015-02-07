@@ -34,6 +34,11 @@
 #define IPTC_HANDLE		iptc_handle_t
 #endif
 
+/* IPT_ALIGN was renamed XT_ALIGN in iptables-1.4.11 */
+#ifndef IPT_ALIGN
+#define IPT_ALIGN XT_ALIGN
+#endif
+
 #include "iptcrdr.h"
 #include "../upnpglobalvars.h"
 

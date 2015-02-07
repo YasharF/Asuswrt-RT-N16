@@ -86,15 +86,20 @@ function initial(){
 }
 
 function setText(e, text){
-	if(e.firstChild)
-		e.removeChild(e.firstChild);
-	e.appendChild(document.createTextNode(text));
+	try{
+		if(e.firstChild)
+			e.removeChild(e.firstChild);
+		e.appendChild(document.createTextNode(text));
+	}
+	catch(err){
+		return false;
+	}
 }
 
 function xps(n){
 	if(n<4){
 		var currUnit;
-		x = n*10+40;
+		x = n*10+60;
 		if(top.getCookie("CoreTmpUnit") == "1"){
 			currUnit = " \'F";
 			x = x*9/5+32;
@@ -112,11 +117,17 @@ function xps(n){
 }
 
 function xpsfan(n){
+	if(typeof top.curr_rxData != "undefined")
 		return (parseInt(1700+n*1000) + " RPM");
+	else
+		return "";
 }
 
 function xpsslash(n){
+	if(typeof top.curr_rxData != "undefined")
 		return ("/");
+	else
+		return "";
 }
 
 function E(id){
@@ -135,7 +146,7 @@ function drawData(poly, data, mode, color){
 	advX = vWidth / maxL;
 	dataDiv = 2;
 
-	if (data.length == 0) return;
+	if(top.fanctrl_info.length == 0) return;
 
 	x = 0;
 	if (mode == 0) {
@@ -157,6 +168,9 @@ function drawData(poly, data, mode, color){
 		}
 
 		y = vHeight - d;
+		if(isNaN(y))
+			y = 300;
+
 		pt += ' ' + Math.floor(x) + ',' + y;
 		x += advX;
 	}

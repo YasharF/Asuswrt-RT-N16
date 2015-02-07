@@ -95,7 +95,7 @@ function gen_part_option(){
 		else
 			Beselected = 0;
 
-		if(per_pane_pool_usage_kilobytes(i, disk_num) > 0)
+		if(per_pane_pool_usage_kilobytes(i, disk_num)[0] > 0)
 			add_option(document.form.diskmon_part, pool_names()[i], pool_devices()[i], Beselected);
 	}
 }
@@ -151,6 +151,19 @@ function stop_diskmon(){
 	document.form.diskmon_part.disabled = true;
 
 	document.form.diskmon_force_stop.value = "1";
+
+	document.form.submit();
+}
+
+function scan_manually(){
+	document.form.diskmon_freq.disabled = true;
+	document.form.diskmon_freq_time.disabled = true;
+	document.form.diskmon_policy.disabled = true;
+	document.form.diskmon_usbport.disabled = true;
+	document.form.diskmon_part.disabled = true;
+	document.form.diskmon_force_stop.disabled = true;
+
+	document.form.action_script.value = "start_diskscan";
 
 	document.form.submit();
 }
@@ -312,6 +325,7 @@ function restart_needed_time(reload_sec){
 </table>
 
 <input type="button" name="force_stop" value="Stop forcely!" onclick="stop_diskmon();">
+<input type="button" name="manually_scan" value="Scan manually!" onclick="scan_manually();">
 <input type="hidden" name="diskmon_force_stop" value="<% nvram_get("diskmon_force_stop"); %>">
 <input type="submit" onclick="set_time();">
 </form>
@@ -320,5 +334,8 @@ function restart_needed_time(reload_sec){
 <% convert_asus_variables(); %>
 <% asus_nvram_commit(); %>
 
+<div style="margin-top:8px">
+	<textarea cols="63" rows="27" wrap="off" readonly="readonly" id="textarea" style="width:99%; font-family:'Courier New', Courier, mono; font-size:11px;background:#475A5F;color:#FFFFFF;"><% apps_fsck_log(); %></textarea>
+</div>
 </body>
 </html>

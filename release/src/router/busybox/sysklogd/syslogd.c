@@ -359,21 +359,14 @@ static void log_locally(time_t now, char *msg)
 
 #if ENABLE_FEATURE_ROTATE_LOGFILE
 	if (G.logFileSize && G.isRegular && G.curFileSize > G.logFileSize) {
-		if (G.logFileRotate) { /* always 0..99 */
+		if (G.logFileRotate) { /* always 0..1 */
 			int i = strlen(G.logFilePath) + 3 + 1;
 			char oldFile[i];
-			char newFile[i];
-			i = G.logFileRotate - 1;
-			/* rename: f.8 -> f.9; f.7 -> f.8; ... */
-			while (1) {
-				sprintf(newFile, "%s.%d", G.logFilePath, i);
-				if (i == 0) break;
-				sprintf(oldFile, "%s.%d", G.logFilePath, --i);
-				/* ignore errors - file might be missing */
-				rename(oldFile, newFile);
-			}
-			/* newFile == "f.0" now */
-			rename(G.logFilePath, newFile);
+
+			sprintf(oldFile, "%s-1", G.logFilePath);
+			unlink(oldFile);
+			rename(G.logFilePath, oldFile);
+
 #ifdef SYSLOGD_WRLOCK
 			fl.l_type = F_UNLCK;
 			fcntl(G.logFD, F_SETLKW, &fl);
@@ -713,11 +706,12 @@ int syslogd_main(int argc UNUSED_PARAM, char **argv)
 	if (opts & OPT_loglevel) // -l
 		G.logLevel = xatou_range(opt_l, 1, 8);
 	//if (opts & OPT_small) // -S
+	option_mask32 |= OPT_small;     // make syslog smaller.
 #if ENABLE_FEATURE_ROTATE_LOGFILE
 	if (opts & OPT_filesize) // -s
 		G.logFileSize = xatou_range(opt_s, 0, INT_MAX/1024) * 1024;
 	if (opts & OPT_rotatecnt) // -b
-		G.logFileRotate = xatou_range(opt_b, 0, 99);
+		G.logFileRotate = xatou_range(opt_b, 0, 1);
 #endif
 #if ENABLE_FEATURE_IPC_SYSLOG
 	if (opt_C) // -Cn

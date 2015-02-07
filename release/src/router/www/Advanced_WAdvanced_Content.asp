@@ -20,9 +20,7 @@
 wan_route_x = '<% nvram_get("wan_route_x"); %>';
 wan_nat_x = '<% nvram_get("wan_nat_x"); %>';
 wan_proto = '<% nvram_get("wan_proto"); %>';
-var flag = 0;
-var based_modelid = '<% nvram_get("productid"); %>';
-var hw_modelid = '<% nvram_get("hardware_version"); %>';
+//var flag = 0;
 
 <% login_state_hook(); %>
 <% wl_get_parameter(); %>
@@ -49,6 +47,10 @@ var mcast_rates = [
 	["CCK 11",	 "6",  1, 0]
 ];
 
+var flag_week = 0;
+var flag_weekend = 0;
+var flag_initial =0;
+
 function initial(){
 	show_menu();
 	load_body();
@@ -59,39 +61,68 @@ function initial(){
 	}
 
 	$("wl_rate").style.display = "none";
-	if(wifi_hw_sw_support != -1) {
-		$("wl_rf_enable").style.display = "none";	
-	}
-	
-	if(band5g_support == -1){	
+
+	if(!band5g_support){	
 		$("wl_unit_field").style.display = "none";
 	}	
 
-	if(Rawifi_support == -1){ // BRCM == without rawifi
+	if(!Rawifi_support){ // BRCM == without rawifi
 		$("DLSCapable").style.display = "none";	
 		$("PktAggregate").style.display = "none";
-		$("enable_wl_multicast_forward").style.display = "";
-		if('<% nvram_get("wl_unit"); %>' == '1'){
+		
+		if('<% nvram_get("wl_unit"); %>' == '1' || based_modelid == "RT-AC66U" || based_modelid == "RT-AC68U" || based_modelid == "RT-AC56U" || based_modelid == "RT-N66U"){	// MODELDEP: RT-AC*U and RT-N66U
 			inputCtrl(document.form.wl_noisemitigation, 0);
 		}
-	}else{
+	}
+	else{
 		inputCtrl(document.form.wl_noisemitigation, 0);
-	}	
+	}
+
+	if(wifi_hw_sw_support){ //For N55U
+		if(document.form.wl_HW_switch.value == "1"){
+			document.form.wl_radio[0].disabled = true;
+		}
+	}
+	
+	// MODELDEP: for AC ser
+	inputCtrl(document.form.wl_ampdu_mpdu, 0);
+	inputCtrl(document.form.wl_ack_ratio, 0);
+	inputCtrl(document.form.wl_turbo_qam, 0);
+	inputCtrl(document.form.wl_txbf, 0);
+	inputCtrl(document.form.wl_itxbf, 0);
+	inputCtrl(document.form.usb_usb3, 0);
+
+	if((based_modelid == "RT-AC56U" || based_modelid == "RT-AC68U" || based_modelid == "RT-AC66U" || based_modelid == "RT-N65U")){
+		inputCtrl(document.form.wl_ampdu_mpdu, 1);
+		inputCtrl(document.form.wl_ack_ratio, 1);
+
+		if('<% nvram_get("wl_unit"); %>' == '1'){ // 5GHz
+			inputCtrl(document.form.wl_txbf, 1);
+		}
+		else{ // 2.4GHz
+			if(based_modelid == "RT-AC68U"){
+				inputCtrl(document.form.wl_turbo_qam, 1);
+				inputCtrl(document.form.usb_usb3, 1);
+			}
+			else if(based_modelid == "RT-AC56U" || based_modelid == "RT-N65U"){
+				inputCtrl(document.form.usb_usb3, 1);
+			}
+		}
+	}
 
 	var mcast_rate = '<% nvram_get("wl_mrate_x"); %>';
 	var mcast_unit = '<% nvram_get("wl_unit"); %>';
-	//free_options(document.form.wl_mrate_x);
 	for (var i = 0; i < mcast_rates.length; i++) {
 		if (mcast_unit == '1' && mcast_rates[i][2]) // 5Ghz && CCK
 			continue;
-		if (Rawifi_support == -1 && mcast_rates[i][3]) // BCM && HTMIX
+		if (!Rawifi_support && mcast_rates[i][3]) // BCM && HTMIX
 			continue;
 		add_option(document.form.wl_mrate_x,
 			mcast_rates[i][0], mcast_rates[i][1],
 			(mcast_rate == mcast_rates[i][1]) ? 1 : 0);
 	}
 
-	if(repeater_support != -1){		//with RE mode
+	if(repeater_support || psta_support){		//with RE mode
 		$("DLSCapable").style.display = "none";	
 	}	
 
@@ -110,19 +141,44 @@ function initial(){
 		
 	loadDateTime();
 	
-	if(power_support < 0)
+	if(!power_support){
 		inputHideCtrl(document.form.wl_TxPower, 0);
+		inputHideCtrl(document.form.wl_TxPower_ra, 0);
+		
+	}else if(!Rawifi_support){
+		inputHideCtrl(document.form.wl_TxPower_ra, 0);
+		if(document.form.wl0_country_code.value == "EU" && document.form.wl_unit.value == 0){
+				$("maxTxPower").innerHTML = "100";
+		}		
+		
+	}else
+		inputHideCtrl(document.form.wl_TxPower, 0);		
 
+	setFlag_TimeFiled();	
 	check_Timefield_checkbox();
-	control_TimeField();
-
-	if(document.form.wl0_country_code.value == "EU" && document.form.wl_unit.value == 0){
-		$("maxTxPower").innerHTML = "100";
-	}
+	control_TimeField();		
+	
+	if(svc_ready == "0")
+		$('svc_hint_div').style.display = "";	
+	corrected_timezone();	
 }
 
 function applyRule(){
 	if(validForm()){
+		if(wifi_hw_sw_support) { //For N55U
+			document.form.wl_HW_switch.value = "0";
+			document.form.wl_HW_switch.disabled = false;
+		}
+		
+		if(power_support && Rawifi_support){
+			document.form.wl_TxPower.disabled = false;
+			document.form.wl_TxPower.value = document.form.wl_TxPower_ra.value;
+		}		
+
+		if(document.form.usb_usb3.disabled == false && document.form.usb_usb3.value != '<% nvram_get("usb_usb3"); %>'){
+			FormActions("start_apply.htm", "apply", "reboot", "<% get_default_reboot_time(); %>");
+		}
+
 		showLoading();
 		document.form.submit();
 	}
@@ -147,7 +203,7 @@ function validForm(){
 			)
 		return false;
 	
-	if(document.form.wl_radio[0].checked == true 
+	/*if(document.form.wl_radio[0].checked == true 
 			&& document.form.wl_radio_date_x_Sun.checked == false
 			&& document.form.wl_radio_date_x_Mon.checked == false
 			&& document.form.wl_radio_date_x_Tue.checked == false
@@ -158,13 +214,13 @@ function validForm(){
 				document.form.wl_radio_date_x_Sun.focus();
 				$('blank_warn').style.display = "";
 				return false;
-	}
+	}*/
 		
-	if(power_support != -1){		
+	if(power_support && !Rawifi_support){
 		// CE@2.4GHz
 		if(document.form.wl0_country_code.value == "EU" && document.form.wl_unit.value == 0){
 			if(document.form.wl_TxPower.value > 100 && errFlag < 2){
-				alert("Due to CE regulation, the value of TxPower cannot over 100.")
+				alert("<#WLANConfig11b_TxPower_alert#>")
 				document.form.wl_TxPower.focus();
 				errFlag++;
 				return false;
@@ -181,15 +237,23 @@ function validForm(){
 		}
 
 		// MODELDEP
-		if(based_modelid == "RT-N12HP" || (based_modelid == "RT-N12" && hw_modelid == "RTN12HP-1.0.1.2")){
+		if(hw_ver.search("RTN12HP") != -1){
 		  FormActions("start_apply.htm", "apply", "set_wltxpower;reboot", "<% get_default_reboot_time(); %>");
 		}
 		else if(based_modelid == "RT-AC66U" || based_modelid == "RT-N66U"){
 			FormActions("start_apply.htm", "apply", "set_wltxpower;restart_wireless", "15");
 		}
-  }		
+		
+  }else if(power_support && Rawifi_support){
+		if(!validate_range(document.form.wl_TxPower_ra, 1, 100)){
+			document.form.wl_TxPower_ra.value = 100;
+			document.form.wl_TxPower_ra.focus();
+			document.form.wl_TxPower_ra.select();
+			return false;
+		}  	
+  }
 	
-	updateDateTime(document.form.current_page.value);	
+	updateDateTime();	
 	return true;
 }
 
@@ -221,54 +285,118 @@ function loadDateTime(){
 }
 function control_TimeField(){		//control time of week & weekend field when wireless radio is down , Jieming added 2012/08/22
 	if(!document.form.wl_radio[0].checked){
+		$("wl_sched_enable").style.display = "none";
 		$('enable_date_week_tr').style.display="none";
 		$('enable_time_week_tr').style.display="none";
 		$('enable_date_weekend_tr').style.display="none";
 		$('enable_time_weekend_tr').style.display="none";
 	}
 	else{
-		$('enable_date_week_tr').style.display="";
-		$('enable_time_week_tr').style.display="";
-		$('enable_date_weekend_tr').style.display="";
-		$('enable_time_weekend_tr').style.display="";	
+		$("wl_sched_enable").style.display = "";
+		if(!document.form.wl_timesched[0].checked){
+			$('enable_date_week_tr').style.display="none";
+			$('enable_time_week_tr').style.display="none";
+			$('enable_date_weekend_tr').style.display="none";
+			$('enable_time_weekend_tr').style.display="none";
+		}
+		else{
+			$('enable_date_week_tr').style.display="";
+			$('enable_time_week_tr').style.display="";
+			$('enable_date_weekend_tr').style.display="";
+			$('enable_time_weekend_tr').style.display="";	
+		}
 	}
 }
-function check_Timefield_checkbox(){	// To check Date checkbox checked or not and control Time field disabled or not, Jieming add at 2012/10/05
+function check_Timefield_checkbox(){			// To check the checkbox od Date is checked or not and control Time field disabled or not, Jieming add at 2012/10/05
 	if(document.form.wl_radio_date_x_Mon.checked == true 
 		|| document.form.wl_radio_date_x_Tue.checked == true
 		|| document.form.wl_radio_date_x_Wed.checked == true
 		|| document.form.wl_radio_date_x_Thu.checked == true
-		|| document.form.wl_radio_date_x_Fri.checked == true	){		
-			inputCtrl(document.form.wl_radio_time_x_starthour,1);
-			inputCtrl(document.form.wl_radio_time_x_startmin,1);
-			inputCtrl(document.form.wl_radio_time_x_endhour,1);
-			inputCtrl(document.form.wl_radio_time_x_endmin,1);
-			document.form.wl_radio_time_x.disabled = false;
+		|| document.form.wl_radio_date_x_Fri.checked == true){
+			if(flag_week != 1 || flag_initial == 0){
+				inputCtrl(document.form.wl_radio_time_x_starthour,1);
+				inputCtrl(document.form.wl_radio_time_x_startmin,1);
+				inputCtrl(document.form.wl_radio_time_x_endhour,1);
+				inputCtrl(document.form.wl_radio_time_x_endmin,1);
+				document.form.wl_radio_time_x.disabled = false;
+				flag_week =1;
+			}
 	}
 	else{
-			inputCtrl(document.form.wl_radio_time_x_starthour,0);
-			inputCtrl(document.form.wl_radio_time_x_startmin,0);
-			inputCtrl(document.form.wl_radio_time_x_endhour,0);
-			inputCtrl(document.form.wl_radio_time_x_endmin,0);
-			document.form.wl_radio_time_x.disabled = true;
-			$('enable_time_week_tr').style.display ="";
+			if(flag_week != 0 || flag_initial == 0){
+				inputCtrl(document.form.wl_radio_time_x_starthour,0);
+				inputCtrl(document.form.wl_radio_time_x_startmin,0);
+				inputCtrl(document.form.wl_radio_time_x_endhour,0);
+				inputCtrl(document.form.wl_radio_time_x_endmin,0);
+				document.form.wl_radio_time_x.disabled = true;
+				$('enable_time_week_tr').style.display ="";
+				flag_week = 0;
+			}
 	}
 		
 	if(document.form.wl_radio_date_x_Sun.checked == true || document.form.wl_radio_date_x_Sat.checked == true){
-		inputCtrl(document.form.wl_radio_time2_x_starthour,1);
-		inputCtrl(document.form.wl_radio_time2_x_startmin,1);
-		inputCtrl(document.form.wl_radio_time2_x_endhour,1);
-		inputCtrl(document.form.wl_radio_time2_x_endmin,1);
-		document.form.wl_radio_time2_x.disabled = false;
+		if(flag_weekend != 1 || flag_initial == 0){
+			inputCtrl(document.form.wl_radio_time2_x_starthour,1);
+			inputCtrl(document.form.wl_radio_time2_x_startmin,1);
+			inputCtrl(document.form.wl_radio_time2_x_endhour,1);
+			inputCtrl(document.form.wl_radio_time2_x_endmin,1);
+			document.form.wl_radio_time2_x.disabled = false;
+			flag_weekend =1;
+		}
 	}
 	else{
-		inputCtrl(document.form.wl_radio_time2_x_starthour,0);
-		inputCtrl(document.form.wl_radio_time2_x_startmin,0);
-		inputCtrl(document.form.wl_radio_time2_x_endhour,0);
-		inputCtrl(document.form.wl_radio_time2_x_endmin,0);
-		document.form.wl_radio_time2_x.disabled = true;
-		$("enable_time_weekend_tr").style.display = ""; 
+		if(flag_weekend != 0 || flag_initial == 0){
+			inputCtrl(document.form.wl_radio_time2_x_starthour,0);
+			inputCtrl(document.form.wl_radio_time2_x_startmin,0);
+			inputCtrl(document.form.wl_radio_time2_x_endhour,0);
+			inputCtrl(document.form.wl_radio_time2_x_endmin,0);
+			document.form.wl_radio_time2_x.disabled = true;
+			$("enable_time_weekend_tr").style.display = "";
+			flag_weekend =0;
+		}
 	}
+	flag_initial = 1;
+}
+
+function updateDateTime(){
+	document.form.wl_radio_date_x.value = setDateCheck(
+		document.form.wl_radio_date_x_Sun,
+		document.form.wl_radio_date_x_Mon,
+		document.form.wl_radio_date_x_Tue,
+		document.form.wl_radio_date_x_Wed,
+		document.form.wl_radio_date_x_Thu,
+		document.form.wl_radio_date_x_Fri,
+		document.form.wl_radio_date_x_Sat);
+	document.form.wl_radio_time_x.value = setTimeRange(
+		document.form.wl_radio_time_x_starthour,
+		document.form.wl_radio_time_x_startmin,
+		document.form.wl_radio_time_x_endhour,
+		document.form.wl_radio_time_x_endmin);
+	document.form.wl_radio_time2_x.value = setTimeRange(
+		document.form.wl_radio_time2_x_starthour,
+		document.form.wl_radio_time2_x_startmin,
+		document.form.wl_radio_time2_x_endhour,
+		document.form.wl_radio_time2_x_endmin);
+}
+function setFlag_TimeFiled(){
+	if(document.form.wl_radio_date_x_Mon.checked == true 
+		|| document.form.wl_radio_date_x_Tue.checked == true
+		|| document.form.wl_radio_date_x_Wed.checked == true
+		|| document.form.wl_radio_date_x_Thu.checked == true
+		|| document.form.wl_radio_date_x_Fri.checked == true){
+			flag_week = 1;
+		}
+	else{
+			flag_week = 0;
+	}
+
+	if(document.form.wl_radio_date_x_Sun.checked == true || document.form.wl_radio_date_x_Sat.checked == true){
+		flag_weekend = 1;
+	}
+	else{
+		flag_weekend = 0;
+	}
+
 }
 </script>
 </head>
@@ -288,7 +416,7 @@ function check_Timefield_checkbox(){	// To check Date checkbox checked or not an
 <input type="hidden" name="wl_gmode_protection_x" value="<% nvram_get("wl_gmode_protection_x"); %>">
 
 <input type="hidden" name="current_page" value="Advanced_WAdvanced_Content.asp">
-<input type="hidden" name="next_page" value="SaveRestart.asp">
+<input type="hidden" name="next_page" value="Advanced_WAdvanced_Content.asp">
 <input type="hidden" name="next_host" value="">
 <input type="hidden" name="group_id" value="">
 <input type="hidden" name="modified" value="0">
@@ -305,7 +433,7 @@ function check_Timefield_checkbox(){	// To check Date checkbox checked or not an
 <input type="hidden" name="wl_amsdu" value="<% nvram_get("wl_amsdu"); %>">
 <input type="hidden" name="wl_TxPower_orig" value="<% nvram_get("wl_TxPower"); %>" disabled>
 <input type="hidden" name="wl0_country_code" value="<% nvram_get("wl0_country_code"); %>" disabled>
-
+<input type="hidden" name="wl_HW_switch" value="<% nvram_get("wl_HW_switch"); %>" disabled>
 <table class="content" align="center" cellpadding="0" cellspacing="0">
 	<tr>
 		<td width="17">&nbsp;</td>
@@ -331,6 +459,8 @@ function check_Timefield_checkbox(){	// To check Date checkbox checked or not an
 		  			<div class="formfonttitle"><#menu5_1#> - <#menu5_1_6#></div>
 		  			<div style="margin-left:5px;margin-top:10px;margin-bottom:10px"><img src="/images/New_ui/export/line_export.png"></div>
 		 				<div class="formfontdesc"><#WLANConfig11b_display5_sectiondesc#></div>
+		 				<div id="svc_hint_div" style="display:none;"><span onClick="location.href='Advanced_System_Content.asp?af=ntp_server0'" style="color:#FFCC00;text-decoration:underline;cursor:pointer;">* Remind: Did not synchronize your system time with NTP server yet.</span></div>
+		  			<div id="timezone_hint_div" style="display:none;"><span id="timezone_hint" onclick="location.href='Advanced_System_Content.asp?af=time_zone_select'" style="color:#FFCC00;text-decoration:underline;cursor:pointer;"></span></div>	
 
 					<table width="100%" border="1" align="center" cellpadding="4" cellspacing="0" class="FormTable" id="WAdvTable">	
 
@@ -346,14 +476,23 @@ function check_Timefield_checkbox(){	// To check Date checkbox checked or not an
 					<tr id="wl_rf_enable">
 			  			<th><a class="hintstyle" href="javascript:void(0);" onClick="openHint(3, 1);"><#WLANConfig11b_x_RadioEnable_itemname#></a></th>
 			  			<td>
-			  				<input type="radio" value="1" name="wl_radio" class="input" onClick="control_TimeField();return change_common_radio(this, 'WLANConfig11b', 'wl_radio', '1');" <% nvram_match("wl_radio", "1", "checked"); %>><#checkbox_Yes#>
-			    			<input type="radio" value="0" name="wl_radio" class="input" onClick="control_TimeField();return change_common_radio(this, 'WLANConfig11b', 'wl_radio', '0')" <% nvram_match("wl_radio", "0", "checked"); %>><#checkbox_No#>
+			  				<input type="radio" value="1" name="wl_radio" class="input" onClick="control_TimeField(1);" <% nvram_match("wl_radio", "1", "checked"); %>><#checkbox_Yes#>
+			    			<input type="radio" value="0" name="wl_radio" class="input" onClick="control_TimeField(0);" <% nvram_match("wl_radio", "0", "checked"); %>><#checkbox_No#>
+			  			</td>
+					</tr>
+
+					<tr id="wl_sched_enable">
+			  			<th><a class="hintstyle" href="javascript:void(0);" onClick="openHint(3, 23);"><#WLANConfig11b_x_SchedEnable_itemname#></a></th>
+			  			<td>
+			  				<input type="radio" value="1" name="wl_timesched" class="input" onClick="control_TimeField();return change_common_radio(this, 'WLANConfig11b', 'wl_timesched', '1');" <% nvram_match("wl_timesched", "1", "checked"); %>><#checkbox_Yes#>
+			    			<input type="radio" value="0" name="wl_timesched" class="input" onClick="control_TimeField();return change_common_radio(this, 'WLANConfig11b', 'wl_timesched', '0')" <% nvram_match("wl_timesched", "0", "checked"); %>><#checkbox_No#>
 			  			</td>
 					</tr>
 
 					<tr id="enable_date_week_tr">
 			  			<th><a class="hintstyle" href="javascript:void(0);" onClick="openHint(3, 2);"><#WLANConfig11b_x_RadioEnableDate_itemname#> (week days)</a></th>
 			  			<td>
+								
 							<input type="checkbox" class="input" name="wl_radio_date_x_Mon" onChange="return changeDate();" onclick="check_Timefield_checkbox()"><#date_Mon_itemdesc#>
 							<input type="checkbox" class="input" name="wl_radio_date_x_Tue" onChange="return changeDate();" onclick="check_Timefield_checkbox()"><#date_Tue_itemdesc#>
 							<input type="checkbox" class="input" name="wl_radio_date_x_Wed" onChange="return changeDate();" onclick="check_Timefield_checkbox()"><#date_Wed_itemdesc#>
@@ -417,11 +556,20 @@ function check_Timefield_checkbox(){	// To check Date checkbox checked or not an
 							</div>
 			  			</td>
 					</tr>
+					<tr>
+						<th><a class="hintstyle" href="javascript:void(0);" onClick="openHint(3, 22);"><#WLANConfig11b_x_IgmpSnEnable_itemname#></a></th>
+						<td>
+							<select name="wl_igs" class="input_option" onChange="return change_common(this, 'WLANConfig11b', 'wl_igs')">
+								<option value="1" <% nvram_match("wl_igs", "1","selected"); %>><#WLANConfig11b_WirelessCtrl_button1name#></option>
+								<option value="0" <% nvram_match("wl_igs", "0","selected"); %>><#WLANConfig11b_WirelessCtrl_buttonname#></option>
+							</select>
+						</td>
+					</tr>
 					<tr id="wl_mrate_select">
 						<th><a class="hintstyle" href="javascript:void(0);" onClick="openHint(3, 7);"><#WLANConfig11b_MultiRateAll_itemname#></a></th>
 						<td>
 							<select name="wl_mrate_x" class="input_option" onChange="return change_common(this, 'WLANConfig11b', 'wl_mrate_x')">
-								<option value="0" <% nvram_match("wl_mrate_x", "0", "selected"); %>><#WLANConfig11b_WirelessCtrl_buttonname#></option>
+								<option value="0" <% nvram_match("wl_mrate_x", "0", "selected"); %>><#Auto#></option>
 							</select>
 						</td>
 					</tr>
@@ -520,17 +668,6 @@ function check_Timefield_checkbox(){	// To check Date checkbox checked or not an
 							</select>
 			  			</td>
 					</tr>
-
-					<tr id="enable_wl_multicast_forward" style="display:none;">
-						<th>Wireless Multicast Forwarding</th>
-						<td>
-                  				<select name="wl_wmf_bss_enable" class="input_option">
-                    					<option value="0" <% nvram_match("wl_wmf_bss_enable", "0","selected"); %> ><#WLANConfig11b_WirelessCtrl_buttonname#></option>
-                    					<option value="1" <% nvram_match("wl_wmf_bss_enable", "1","selected"); %> ><#WLANConfig11b_WirelessCtrl_button1name#></option>
-                  				</select>
-						</td>
-					</tr>
-
 					<tr>
 						<th><a class="hintstyle" href="javascript:void(0);" onClick="openHint(3,17);"><#WLANConfig11b_x_APSD_itemname#></a></th>
 						<td>
@@ -552,8 +689,8 @@ function check_Timefield_checkbox(){	// To check Date checkbox checked or not an
 						</td>
 					</tr>
 
-					<tr id="noiseReduction"> <!-- BRCM Only  -->
-						<th><a class="hintstyle" href="javascript:void(0);" onClick="openHint(3,21);">Enhanced interference management</a></th>
+					<tr> <!-- BRCM Only  -->
+						<th><a class="hintstyle" href="javascript:void(0);" onClick="openHint(3,21);"><#WLANConfig11b_x_EnhanInter_itemname#></a></th>
 						<td>
 							<select name="wl_noisemitigation" class="input_option" onChange="">
 								<option value="0" <% nvram_match("wl_noisemitigation", "0","selected"); %>><#WLANConfig11b_WirelessCtrl_buttonname#></option>
@@ -562,14 +699,81 @@ function check_Timefield_checkbox(){	// To check Date checkbox checked or not an
 						</td>
 					</tr>
 
-					<!-- RaLink Only : Original at wireless-General page By Viz 2011.08 -->
+					<tr> <!-- MODELDEP: RT-AC68U Only  -->
+						<th><a class="hintstyle" href="javascript:void(0);" onClick="openHint(3,29);">Reduce USB 3.0 interference</a></th>
+						<td>
+							<select name="usb_usb3" class="input_option">
+								<option value="1" <% nvram_match("usb_usb3", "1","selected"); %>><#WLANConfig11b_WirelessCtrl_buttonname#></option>
+								<option value="0" <% nvram_match("usb_usb3", "0","selected"); %>><#WLANConfig11b_WirelessCtrl_button1name#></option>
+							</select>
+						</td>
+					</tr>
+					
+					<!-- [MODELDEP] for RT-AC68U and RT-AC56U -->
+					<tr>
+						<th><a class="hintstyle" href="javascript:void(0);" onClick="openHint(3,26);">Optimize AMPDU aggregation</a></th>
+						<td>
+							<select name="wl_ampdu_mpdu" class="input_option">
+									<option value="0" <% nvram_match("wl_ampdu_mpdu", "0","selected"); %> ><#WLANConfig11b_WirelessCtrl_buttonname#></option>
+									<option value="1" <% nvram_match("wl_ampdu_mpdu", "1","selected"); %> ><#WLANConfig11b_WirelessCtrl_button1name#></option>
+							</select>
+						</td>
+					</tr>					
+					<tr>
+						<th><a class="hintstyle" href="javascript:void(0);" onClick="openHint(3,27);">Optimize ack suppression</a></th>
+						<td>
+							<select name="wl_ack_ratio" class="input_option">
+									<option value="0" <% nvram_match("wl_ack_ratio", "0","selected"); %> ><#WLANConfig11b_WirelessCtrl_buttonname#></option>
+									<option value="1" <% nvram_match("wl_ack_ratio", "1","selected"); %> ><#WLANConfig11b_WirelessCtrl_button1name#></option>
+							</select>
+						</td>
+					</tr>
+					<tr>
+						<th><a class="hintstyle" href="javascript:void(0);" onClick="openHint(3,28);">Turbo QAM</a></th>
+						<td>
+							<select name="wl_turbo_qam" class="input_option">
+									<option value="0" <% nvram_match("wl_turbo_qam", "0","selected"); %> ><#WLANConfig11b_WirelessCtrl_buttonname#></option>
+									<option value="1" <% nvram_match("wl_turbo_qam", "1","selected"); %> ><#WLANConfig11b_WirelessCtrl_button1name#></option>
+							</select>
+						</td>
+					</tr>
+					<!-- [MODELDEP] end -->
+
+					<tr>
+						<th><a class="hintstyle" href="javascript:void(0);" onClick="openHint(3,24);">Explicit beamforming</a></th>
+						<td>
+							<select name="wl_txbf" class="input_option">
+									<option value="0" <% nvram_match("wl_txbf", "0","selected"); %> ><#WLANConfig11b_WirelessCtrl_buttonname#></option>
+									<option value="1" <% nvram_match("wl_txbf", "1","selected"); %> ><#WLANConfig11b_WirelessCtrl_button1name#></option>
+							</select>
+						</td>
+					</tr>					
+					<tr>
+						<th><a class="hintstyle" href="javascript:void(0);" onClick="openHint(3,25);">Implicit beamforming</a></th>
+						<td>
+							<select name="wl_itxbf" class="input_option" disabled>
+									<option value="0" <% nvram_match("wl_itxbf", "0","selected"); %> ><#WLANConfig11b_WirelessCtrl_buttonname#></option>
+									<option value="1" <% nvram_match("wl_itxbf", "1","selected"); %> ><#WLANConfig11b_WirelessCtrl_button1name#></option>
+							</select>
+						</td>
+					</tr>					
+
+					<!-- BRCM Only : By Viz 2013.05 -->
 					<tr>
 						<th><a class="hintstyle" href="javascript:void(0);" onClick="openHint(0, 17);"><#WLANConfig11b_TxPower_itemname#></a></th>
 						<td>
 		  				<input type="text" maxlength="3" name="wl_TxPower" class="input_3_table" value="<% nvram_get("wl_TxPower"); %>" onKeyPress="return is_number(this, event);"> mW
-							<br><span style="">Set the capability for transmission power. The maximum value is <span id="maxTxPower">200</span>mW and the real transmission power  will be dynamically adjusted to meet regional regulations</span>
+							<br><span>Set the capability for transmission power. The maximum value is <span id="maxTxPower">200</span>mW and the real transmission power will be dynamically adjusted to meet regional regulations.</span>
 						</td>
 					</tr>
+					
+					<!-- RaLink Only : By Viz 2013.05 -->
+					<tr>
+						<th><a class="hintstyle" href="javascript:void(0);" onClick="openHint(0, 16);"><#WLANConfig11b_TxPower_itemname#></a></th>
+						<td>
+		  				<input type="text" maxlength="3" name="wl_TxPower_ra" class="input_3_table" value="<% nvram_get("wl_TxPower"); %>" onKeyPress="return is_number(this, event);"> %
+						</td>
+					</tr>					
 
 				</table>
 					

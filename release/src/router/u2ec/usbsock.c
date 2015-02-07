@@ -24,7 +24,6 @@
 #include <ctype.h>
 
 #ifdef	SUPPORT_LPRng
-#include <bin_sem_asus.h>
 #endif
 #if __BYTE_ORDER == __LITTLE_ENDIAN
 #include <bcmnvram.h>
@@ -423,7 +422,7 @@ PDEBUG("URB_FUNCTION_SELECT_INTERFACE:: config, int, alt, ep: %x %x %x %x\n", tm
 							purb->UrbControlVendorClassRequest.Index, (char*)pbuf,
 							purb->UrbControlVendorClassRequest.TransferBufferLength,
 							timeout_control_msg);
-//					PDEBUG("usb_control_msg(), direction: out, return: %d\n", ret);
+					PDEBUG_RET("usb_control_msg(), direction: out, return: %d\n", ret);
 				} else {
 					tmpReqType = (USB_TYPE_CLASS | USB_DIR_IN | USB_RECIP_OTHER);
 					pbuf = pirp_saverw->Buffer + purb->UrbHeader.Length;
@@ -434,7 +433,7 @@ PDEBUG("URB_FUNCTION_SELECT_INTERFACE:: config, int, alt, ep: %x %x %x %x\n", tm
 							purb->UrbControlVendorClassRequest.Index, (char*)pbuf,
 							purb->UrbControlVendorClassRequest.TransferBufferLength,
 							timeout_control_msg);
-//					PDEBUG("usb_control_msg(), direction: in, return: %d\n", ret);
+					PDEBUG_RET("usb_control_msg(), direction: in, return: %d\n", ret);
 				}
 				usb_close(udev);
 				if (ret < 0)
@@ -509,7 +508,7 @@ PDEBUG("URB_FUNCTION_SELECT_INTERFACE:: config, int, alt, ep: %x %x %x %x\n", tm
 							purb->UrbControlVendorClassRequest.Index, (char*)pbuf,
 							purb->UrbControlVendorClassRequest.TransferBufferLength,
 							timeout_control_msg);
-//					PDEBUG("usb_control_msg() out return: %d\n", ret);
+					PDEBUG_RET("usb_control_msg() out return: %d\n", ret);
 					((PCONNECTION_INFO)curt_pos)->count_class_int_in = 0;
 				} else {
 
@@ -576,7 +575,7 @@ PDEBUG("URB_FUNCTION_SELECT_INTERFACE:: config, int, alt, ep: %x %x %x %x\n", tm
 					}
 */
 
-//					PDEBUG("usb_control_msg() in return: %d\n", ret);
+					PDEBUG_RET("usb_control_msg() in return: %d\n", ret);
 				}
 				usb_close(udev);
 				if (ret < 0)
@@ -722,7 +721,7 @@ PDEBUG("URB_FUNCTION_SELECT_INTERFACE:: config, int, alt, ep: %x %x %x %x\n", tm
 							}
 						}
 
-						PDEBUG("usb_bulk_write() return: %d\n", ret);
+						PDEBUG_RET("usb_bulk_write() return: %d\n", ret);
 
 						count_bulk_write ++;
 						count_bulk_read_ret0_1 = 0;
@@ -830,7 +829,7 @@ PDEBUG("URB_FUNCTION_SELECT_INTERFACE:: config, int, alt, ep: %x %x %x %x\n", tm
 							((PCONNECTION_INFO)curt_pos)->count_class_int_in = 0;
 						}
 
-						PDEBUG("usb_bulk_read() return: %d\n", ret);
+						PDEBUG_RET("usb_bulk_read() return: %d\n", ret);
 
 						if (Is_HP) {	// HP, if this connection only includes HP ToolBox
 							if (ret == 0) {
@@ -906,9 +905,9 @@ PDEBUG("URB_FUNCTION_SELECT_INTERFACE:: config, int, alt, ep: %x %x %x %x\n", tm
 							ret = usb_interrupt_write(udev, dev->config[tmp_config].interface[tmp_int].altsetting[tmp_alt].endpoint[tmp_ep].bEndpointAddress, (char*)pbuf, purb->UrbBulkOrInterruptTransfer.TransferBufferLength, timeout_bulk_write_msg_tmp);
 							alarm(1);
 							gettimeofday(&tv_now, NULL);
-
-							PDEBUG("usb_interrupt_write() return: %d\n", ret);
-
+	
+							PDEBUG_RET("usb_interrupt_write() return: %d\n", ret);
+	
 							if (ret < 0) {
 								if ((tv_now.tv_usec - tv_ref.tv_usec) >= 0)
 									PDEBUG("sec: %ld, msec: %ld\n", tv_now.tv_sec-tv_ref.tv_sec, (tv_now.tv_usec-tv_ref.tv_usec)/1000);
@@ -932,7 +931,7 @@ PDEBUG("URB_FUNCTION_SELECT_INTERFACE:: config, int, alt, ep: %x %x %x %x\n", tm
 							alarm(1);
 							gettimeofday(&tv_now, NULL);
 
-							PDEBUG("usb_interrupt_read() return: %d\n", ret);
+							PDEBUG_RET("usb_interrupt_read() return: %d\n", ret);
 
 							if (ret < 0) {
 								if ((tv_now.tv_usec - tv_ref.tv_usec) >= 0)
@@ -1371,7 +1370,7 @@ int handleURB_64(PIRP_SAVE pirp_saverw, struct u2ec_list_head *curt_pos)
 							purb->UrbControlVendorClassRequest.Index, (char*)pbuf,
 							purb->UrbControlVendorClassRequest.TransferBufferLength,
 							timeout_control_msg);
-//					PDEBUG("usb_control_msg(), direction: out, return: %d\n", ret);
+					PDEBUG_RET("usb_control_msg(), direction: out, return: %d\n", ret);
 				} else {
 					tmpReqType = (USB_TYPE_CLASS | USB_DIR_IN | USB_RECIP_OTHER);
 					pbuf = pirp_saverw->Buffer + purb->UrbHeader.Length;
@@ -1382,7 +1381,7 @@ int handleURB_64(PIRP_SAVE pirp_saverw, struct u2ec_list_head *curt_pos)
 							purb->UrbControlVendorClassRequest.Index, (char*)pbuf,
 							purb->UrbControlVendorClassRequest.TransferBufferLength,
 							timeout_control_msg);
-//					PDEBUG("usb_control_msg(), direction: in, return: %d\n", ret);
+					PDEBUG_RET("usb_control_msg(), direction: in, return: %d\n", ret);
 				}
 				usb_close(udev);
 				if (ret < 0)
@@ -1457,7 +1456,7 @@ int handleURB_64(PIRP_SAVE pirp_saverw, struct u2ec_list_head *curt_pos)
 							purb->UrbControlVendorClassRequest.Index, (char*)pbuf,
 							purb->UrbControlVendorClassRequest.TransferBufferLength,
 							timeout_control_msg);
-//					PDEBUG("usb_control_msg() out return: %d\n", ret);
+					PDEBUG_RET("usb_control_msg() out return: %d\n", ret);
 					((PCONNECTION_INFO)curt_pos)->count_class_int_in = 0;
 				} else {
 
@@ -1490,7 +1489,7 @@ int handleURB_64(PIRP_SAVE pirp_saverw, struct u2ec_list_head *curt_pos)
 					else if (Is_HP && ((PCONNECTION_INFO)curt_pos)->count_class_int_in < 3)	// HP Deskjet 3920 
 						((PCONNECTION_INFO)curt_pos)->count_class_int_in++;
 
-//					PDEBUG("usb_control_msg() in return: %d\n", ret);
+					PDEBUG_RET("usb_control_msg() in return: %d\n", ret);
 				}
 				usb_close(udev);
 				if (ret < 0)
@@ -1646,7 +1645,7 @@ int handleURB_64(PIRP_SAVE pirp_saverw, struct u2ec_list_head *curt_pos)
 							}
 						}
 
-						PDEBUG("usb_bulk_write() return: %d\n", ret);
+						PDEBUG_RET("usb_bulk_write() return: %d\n", ret);
 
 						count_bulk_write ++;
 						count_bulk_read_ret0_1 = 0;
@@ -1754,7 +1753,7 @@ int handleURB_64(PIRP_SAVE pirp_saverw, struct u2ec_list_head *curt_pos)
 							((PCONNECTION_INFO)curt_pos)->count_class_int_in = 0;
 						}
 
-						PDEBUG("usb_bulk_read() return: %d\n", ret);
+						PDEBUG_RET("usb_bulk_read() return: %d\n", ret);
 
 						if (Is_HP) {	// HP, if this connection only includes HP ToolBox
 							if (ret == 0) {
@@ -1830,9 +1829,9 @@ int handleURB_64(PIRP_SAVE pirp_saverw, struct u2ec_list_head *curt_pos)
 							ret = usb_interrupt_write(udev, dev->config[tmp_config].interface[tmp_int].altsetting[tmp_alt].endpoint[tmp_ep].bEndpointAddress, (char*)pbuf, purb->UrbBulkOrInterruptTransfer.TransferBufferLength, timeout_bulk_write_msg_tmp);
 							alarm(1);
 							gettimeofday(&tv_now, NULL);
-
-							PDEBUG("usb_interrupt_write() return: %d\n", ret);
-
+	
+							PDEBUG_RET("usb_interrupt_write() return: %d\n", ret);
+	
 							if (ret < 0) {
 								if ((tv_now.tv_usec - tv_ref.tv_usec) >= 0)
 									PDEBUG("sec: %ld, msec: %ld\n", tv_now.tv_sec-tv_ref.tv_sec, (tv_now.tv_usec-tv_ref.tv_usec)/1000);
@@ -1856,7 +1855,7 @@ int handleURB_64(PIRP_SAVE pirp_saverw, struct u2ec_list_head *curt_pos)
 							alarm(1);
 							gettimeofday(&tv_now, NULL);
 
-							PDEBUG("usb_interrupt_read() return: %d\n", ret);
+							PDEBUG_RET("usb_interrupt_read() return: %d\n", ret);
 
 							if (ret < 0) {
 								if ((tv_now.tv_usec - tv_ref.tv_usec) >= 0)
@@ -2823,6 +2822,7 @@ int usb_connection(int sockfd)
 	char *tmp;
 	int tmp_len;
 #endif
+	int lock;
 
 	if (!sockfd || !fd_in_use[sockfd])
 	{
@@ -3200,9 +3200,9 @@ int usb_connection(int sockfd)
 
 		conn_curt->time = time((time_t*)NULL);
 		if (conn_busy != conn_curt) {
-			bin_sem_wait();
+			lock = file_lock("printer");
 			if ((i = MFP_state(MFP_GET_STATE))) {
-				bin_sem_post();
+				file_unlock(lock);
 				if (i == MFP_IN_LPRNG)
 					alarm(1);
 				if (except_flag == 2) {
@@ -3215,30 +3215,30 @@ int usb_connection(int sockfd)
 				return 0;
 			} else {
 				nvram_set("u2ec_busyip", inet_ntoa(conn_curt->ip));
-				bin_sem_post();
+				file_unlock(lock);
 				last_busy_conn = conn_curt;
 				conn_curt->busy = CONN_IS_BUSY;
 				if ((struct u2ec_list_head*)conn_busy != &conn_info_list)
 					conn_busy->busy = CONN_IS_IDLE;
 			}
 		}
-		bin_sem_wait();
+		lock = file_lock("printer");
 		if (!MFP_state(MFP_GET_STATE) && pirp_save->Irp > 0) {
 			if (!except_flag_1client)
 			{
 				MFP_state(MFP_IN_U2EC);
 				nvram_set("u2ec_busyip", inet_ntoa(conn_curt->ip));
-				bin_sem_post();
+				file_unlock(lock);
 			}
 			else
-				bin_sem_post();
+				file_unlock(lock);
 			alarm(1);
 		} else if (MFP_state(MFP_GET_STATE) == MFP_IN_U2EC && except_flag_1client) {
 			MFP_state(MFP_IS_IDLE);
 			nvram_set("u2ec_busyip", "");
-			bin_sem_post();
+			file_unlock(lock);
 		} else
-			bin_sem_post();
+			file_unlock(lock);
 EXCHANGE_IRP:
 		/* Fill pirp_save depend on mj & mn function in IRP. */
 		pirp_saverw = (PIRP_SAVE)data_bufrw;
@@ -3713,13 +3713,14 @@ static int handle_fifo(int *fd, fd_set *pfds, int *pfdm, int conn_fd)
 	char			c;
 	int			rtvl = 0;
 	int			need_to_udpate_device = 0;
+	int 			lock;
 
 	/* Read & reset fifo. */
 	read(*fd, &c, 1);
 	close(*fd);
 	FD_CLR(*fd, pfds);
 
-	bin_sem_wait();
+	lock = file_lock("printer");
 	/* Handle hotplug usb. */
 	if (c == 'a') {		// add usb device.
 		if (time((time_t*)NULL) - time_add_device < 1)
@@ -3734,7 +3735,7 @@ static int handle_fifo(int *fd, fd_set *pfds, int *pfdm, int conn_fd)
 		MFP_state(MFP_IS_IDLE);
 		nvram_set("u2ec_busyip", "");
 		update_device();
-		bin_sem_post();
+		file_unlock(lock);
 		FD_SET(conn_fd, pfds);
 		*pfdm = conn_fd > *pfdm ? conn_fd : *pfdm;
 		rtvl = 1;
@@ -3753,7 +3754,7 @@ static int handle_fifo(int *fd, fd_set *pfds, int *pfdm, int conn_fd)
 		MFP_state(MFP_IS_IDLE);
 		nvram_set("u2ec_busyip", "");
 		update_device();
-		bin_sem_post();
+		file_unlock(lock);
 
 		PDEBUG("\nReset connection for removing\n");
 		u2ec_list_for_each_safe(pos, tmp, &conn_info_list) {
@@ -3790,13 +3791,13 @@ static int handle_fifo(int *fd, fd_set *pfds, int *pfdm, int conn_fd)
 	else if (c == 'c') {	// connect reset.
 		switch(MFP_state(MFP_GET_STATE)) {
 		case MFP_IN_LPRNG:
-			bin_sem_post();
+			file_unlock(lock);
 			alarm(1);
 			break;
 		case MFP_IN_U2EC:
 			MFP_state(MFP_IS_IDLE);
 			nvram_set("u2ec_busyip", "");
-			bin_sem_post();
+			file_unlock(lock);
 			u2ec_list_for_each(pos, &conn_info_list) {
 				if (((PCONNECTION_INFO)pos)->busy == CONN_IS_BUSY)
 					((PCONNECTION_INFO)pos)->busy = CONN_IS_IDLE;
@@ -3805,13 +3806,13 @@ static int handle_fifo(int *fd, fd_set *pfds, int *pfdm, int conn_fd)
 			u2ec_list_for_each_safe(pos, tmp, &conn_info_list) {
 				if (((PCONNECTION_INFO)pos)->busy == CONN_IS_RETRY) {
 					nvram_set("u2ec_busyip", inet_ntoa(((PCONNECTION_INFO)pos)->ip));
-					bin_sem_post();
+					file_unlock(lock);
 					last_busy_conn = (PCONNECTION_INFO)pos;
 					((PCONNECTION_INFO)pos)->busy = CONN_IS_BUSY;
 					break;
 				}
 				else if (((PCONNECTION_INFO)pos)->busy == CONN_IS_WAITING) {
-					bin_sem_post();
+					file_unlock(lock);
 					PDEBUG("\nReset connection.\n");
 					count_bulk_read = 0;
 					count_bulk_write = 0;
@@ -3833,7 +3834,7 @@ static int handle_fifo(int *fd, fd_set *pfds, int *pfdm, int conn_fd)
 					break;
 				}
 			}
-			bin_sem_post();
+			file_unlock(lock);
 		}
 
 		u2ec_list_for_each_safe(pos, tmp, &conn_info_list) {
@@ -3935,7 +3936,7 @@ static int handle_fifo(int *fd, fd_set *pfds, int *pfdm, int conn_fd)
 			MFP_state(MFP_IS_IDLE);
 			nvram_set("u2ec_busyip", "");
 		}
-		bin_sem_post();
+		file_unlock(lock);
 		alarm(0);
 
 		u2ec_list_for_each_safe(pos, tmp, &conn_info_list) 
@@ -3981,6 +3982,7 @@ int main(int argc, char *argv[])
 	int		index, rtvl;
 	FILE		*fp;
 	sigset_t sigs_to_catch;
+	int		lock;
 
 #if defined(U2EC_DEBUG) && defined(U2EC_ONPC)
 	/* Decode packets. */
@@ -4001,16 +4003,15 @@ int main(int argc, char *argv[])
 
 	printf("U2EC starting ...\n");
 
-	bin_sem_init();
 #ifdef	SUPPORT_LPRng
-	bin_sem_wait();
+	lock = file_lock("printer");
 	nvram_set("MFP_busy", "0");
 	nvram_set("u2ec_device", "");
 	nvram_set("u2ec_busyip", "");
 #if __BYTE_ORDER == __BIG_ENDIAN
 	nvram_commit();
 #endif
-	bin_sem_post();
+	file_unlock(lock);
 #endif
 	FD_ZERO(&master_fds);
 	FD_ZERO(&read_fds);

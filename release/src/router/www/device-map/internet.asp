@@ -51,6 +51,9 @@ var loadBalance_Ratio = '<%nvram_get("wans_lb_ratio");%>';
 
 <% wan_get_parameter(); %>
 
+var yadns_enable = '<% nvram_get("yadns_enable_x"); %>';
+var yadns_mode = '<% nvram_get("yadns_mode"); %>';
+
 function add_lanport_number(if_name)
 {
 	if (if_name == "lan") {
@@ -90,9 +93,8 @@ function showtext2(obj, str, visible)
 
 function initial(){
 	flash_button();
-	
 	// if dualwan enabled , show dualwan status
-	if(dualWAN_support != -1){
+	if(dualWAN_support){
 		var pri_if = wans_dualwan.split(" ")[0];
 		var sec_if = wans_dualwan.split(" ")[1];	
 		pri_if = add_lanport_number(pri_if);
@@ -116,47 +118,47 @@ function initial(){
 					}
 					else {
 						showtext($j("#dualwan_current")[0], sec_if);		
-					}
-					
+					}				
 					showtext($("dualwan_mode"), "Load Balance");
-					loadBalance_form(0);
-										
-					$("t0").style.display = "";
-					$("t1").style.display = "";
-					$("t0").className ="tabclick_NW" ;
-					$("t1").className ="tab_NW";			
-			
+					loadBalance_form(parent.document.form.dual_wan_flag.value);  // 0: Priamry WAN, 1: Secondary WAN		
 				}
 				else if(wans_mode == "fo"){
-					showtext($("dualwan_mode"), "Fail Over");
-			
-					if (wan0_primary == '1') {
-						showtext($j("#dualwan_current")[0], pri_if);
-					}
-					else {
-						showtext($j("#dualwan_current")[0], sec_if);		
-					}			
+					showtext($("dualwan_mode"), "Fail Over");		
+					failover_form(parent.document.form.dual_wan_flag.value, pri_if, sec_if);
 				}		
-			}			
+			}
+	}
+	else{
+		if (wanlink_type() == "dhcp" || wanlink_xtype() == "dhcp") {
+		$('primary_lease_ctrl').style.display = "";
+		$('primary_expires_ctrl').style.display = "";
+		}
+		
 	}
 
 	if(sw_mode == 1){
 		setTimeout("update_wanip();", 1);
+		$('goSetting').style.display = "";
 	}
 	else{
 		$("rt_table").style.display = "none";
 		$("ap_table").style.display = "";
-		if((sw_mode == 2 || sw_mode == 3 ) && decodeURIComponent("<% nvram_char_to_ascii("WLANConfig11b", "wlc_ssid"); %>").length >= 28){
+		if(sw_mode == 3)
+			$('RemoteAPtd').style.display = "none";
+		
+		if((sw_mode == 2 || sw_mode == 3 || sw_mode == 4) && decodeURIComponent("<% nvram_char_to_ascii("WLANConfig11b", "wlc_ssid"); %>").length >= 28){
 			showtext($("RemoteAP"), decodeURIComponent("<% nvram_char_to_ascii("WLANConfig11b", "wlc_ssid"); %>").substring(0, 26)+"...");
 			$("RemoteAPtd").title = decodeURIComponent("<% nvram_char_to_ascii("WLANConfig11b", "wlc_ssid"); %>");
 		}else				
 			showtext($("RemoteAP"), decodeURIComponent("<% nvram_char_to_ascii("WLANConfig11b", "wlc_ssid"); %>"));
 				
-
 		if(lan_proto == "static")
 			showtext($("LanProto"), "<#BOP_ctype_title5#>");
 		else
 			showtext($("LanProto"), "<#BOP_ctype_title1#>");
+
+		if(sw_mode == 2 || sw_mode == 4)
+			$('sitesurvey_tr').style.display = "";
 	}
 
 	if(wanlink_type() == "dhcp")
@@ -172,7 +174,7 @@ function initial(){
 	else
 		var wanlink_type_conv = wanlink_type();
 		
-	if (parent.dsl_support != -1) {
+	if (parent.dsl_support) {
 		if (wanproto == "pppoe") {
 			if (dslproto == "pppoa") wanlink_type_conv = "PPPoA";
 		}
@@ -181,12 +183,19 @@ function initial(){
 		}		
 	}
 
-	showtext($j("#connectionType")[0], wanlink_type_conv);
-	if (wanlink_type() == "dhcp" || wanlink_xtype() == "dhcp") {
-		$('primary_lease_ctrl').style.display = "";
-		$('primary_expires_ctrl').style.display = "";
+	if (yadns_support) {
+		if (yadns_enable != 0) {
+			if (yadns_mode == 1)
+				showtext($("yadns_mode"), "<#YandexDNS_mode1#>");
+			else if (yadns_mode == 2)
+				showtext($("yadns_mode"), "<#YandexDNS_mode2#>");
+			else
+				showtext($("yadns_mode"), "<#YandexDNS_mode0#>");
+			$('yadns_ctrl').style.display = "";
+		}
 	}
 
+	showtext($j("#connectionType")[0], wanlink_type_conv);
 	update_all_ip(wanip, wandns, wangateway , 0);
 	update_all_xip(wanxip, wanxdns, wanxgateway, 0);
 }
@@ -223,7 +232,7 @@ function update_connection_type(dualwan_unit){
 }
 
 function loadBalance_form(lb_unit){
-	if(dualWAN_support == -1)
+	if(!dualWAN_support)
 		return 0;
 
 	var pri_if = wans_dualwan.split(" ")[0];
@@ -235,8 +244,6 @@ function loadBalance_form(lb_unit){
 
 	if(lb_unit == 0){
 		have_lease = (wanlink_type() == "dhcp" || wanlink_xtype() == "dhcp");
-		$("t0").className ="tabclick_NW" ;
-		$("t1").className ="tab_NW";	
 		$("dualwan_row_primary").style.display = "";			
 		showtext($j("#dualwan_primary_if")[0], pri_if);
 		$("dualwan_row_secondary").style.display = "none";	
@@ -251,11 +258,8 @@ function loadBalance_form(lb_unit){
 		$('primary_expires_ctrl').style.display = (have_lease) ? "" : "none";
 		$('secondary_lease_ctrl').style.display = "none";
 		$('secondary_expires_ctrl').style.display = "none";
-		//update_all_ip(wanip, wandns, wangateway, 1);
 	}else{
 		have_lease = (secondary_wanlink_type() == "dhcp" || secondary_wanlink_xtype() == "dhcp");
-		$("t0").className ="tab_NW" ;
-		$("t1").className ="tabclick_NW";	
 		$("dualwan_row_primary").style.display = "none";
 		$("dualwan_row_secondary").style.display = "";	
 		showtext($j("#dualwan_secondary_if")[0], sec_if);
@@ -270,9 +274,40 @@ function loadBalance_form(lb_unit){
 		$('primary_expires_ctrl').style.display = "none";
 		$('secondary_lease_ctrl').style.display = (have_lease) ? "" : "none";
 		$('secondary_expires_ctrl').style.display = (have_lease) ? "" : "none";
-		//update_all_ip(secondary_wanip, secondary_wandns, secondary_wangateway, 0);
 	}
 }
+
+function failover_form(fo_unit, primary_if, secondary_if){
+	if(fo_unit == 0){
+		have_lease = (wanlink_type() == "dhcp" || wanlink_xtype() == "dhcp");
+		showtext($j("#dualwan_current")[0], primary_if);
+		$('primary_WANIP_ctrl').style.display = "";
+		$('secondary_WANIP_ctrl').style.display = "none";
+		$('primary_DNS_ctrl').style.display = "";
+		$('secondary_DNS_ctrl').style.display = "none";
+		$('primary_gateway_ctrl').style.display = "";
+		$('secondary_gateway_ctrl').style.display = "none";
+		$('primary_lease_ctrl').style.display = (have_lease) ? "" : "none";
+		$('primary_expires_ctrl').style.display = (have_lease) ? "" : "none";
+		$('secondary_lease_ctrl').style.display = "none";
+		$('secondary_expires_ctrl').style.display = "none";		
+	}
+	else{
+		have_lease = (secondary_wanlink_type() == "dhcp" || secondary_wanlink_xtype() == "dhcp");
+		showtext($j("#dualwan_current")[0], secondary_if);
+		$('primary_WANIP_ctrl').style.display = "none";
+		$('secondary_WANIP_ctrl').style.display = "";
+		$('primary_DNS_ctrl').style.display = "none";
+		$('secondary_DNS_ctrl').style.display = "";
+		$('primary_gateway_ctrl').style.display = "none";
+		$('secondary_gateway_ctrl').style.display = "";
+		$('primary_lease_ctrl').style.display = "none";
+		$('primary_expires_ctrl').style.display = "none";
+		$('secondary_lease_ctrl').style.display = (have_lease) ? "" : "none";
+		$('secondary_expires_ctrl').style.display = (have_lease) ? "" : "none";
+	}
+}
+
 function update_all_ip(wanip, wandns, wangateway, unit){
 	var dnsArray = wandns.split(" ");
 	if(unit == 0){		
@@ -301,9 +336,10 @@ function update_all_ip(wanip, wandns, wangateway, unit){
 	}
 }
 function update_all_xip(wanxip, wanxdns, wanxgateway, unit) {
+	var dnsArray = wandns.split(" ");
+	var have_dns = !(dnsArray[0] || dnsArray[1]);
 	var dnsArray = wanxdns.split(" ");
 	var have_ip = false;
-	var have_dns = false;
 	var have_gateway = false;
 	var have_lease = false;
 	var lease = 0;
@@ -312,7 +348,6 @@ function update_all_xip(wanxip, wanxdns, wanxgateway, unit) {
 	var type = (unit == 0) ? wanlink_xtype() : secondary_wanlink_xtype();
 	if (type == "dhcp" || type == "static") {
 		have_ip = true;
-		have_dns = ((dnsArray[0] || dnsArray[1]) && wanxdns != wandns);
 		have_gateway = !(wanxgateway == "" || wanxgateway == "0.0.0.0");
 		if (type == "dhcp") {
 			have_lease = true;
@@ -344,6 +379,7 @@ function update_wan_state(state, auxstate){
 		link_internet = 1;
 	else
 		link_internet = 0;
+		
 	return link_internet;
 }
 
@@ -362,13 +398,14 @@ function update_wanip(e) {
 		wanxip = wanlink_xipaddr();
 		wanxdns = wanlink_xdns();
 		wanxgateway = wanlink_xgateway();
-		secondary_wanip = secondary_wanlink_ipaddr();
-		secondary_wandns = secondary_wanlink_dns();
-		secondary_wangateway = secondary_wanlink_gateway();
-		secondary_wanxip = secondary_wanlink_xipaddr();
-		secondary_wanxdns = secondary_wanlink_xdns();
-		secondary_wanxgateway = secondary_wanlink_xgateway();
-
+		if(dualWAN_support){
+			secondary_wanip = secondary_wanlink_ipaddr();
+			secondary_wandns = secondary_wanlink_dns();
+			secondary_wangateway = secondary_wanlink_gateway();
+			secondary_wanxip = secondary_wanlink_xipaddr();
+			secondary_wanxdns = secondary_wanlink_xdns();
+			secondary_wanxgateway = secondary_wanlink_xgateway();
+		}
 		if(old_link_internet == -1)
 			old_link_internet = update_wan_state(wanstate, wanauxstate);
 
@@ -378,7 +415,7 @@ function update_wanip(e) {
 		else{
 			update_all_ip(wanip, wandns, wangateway, 0);
 			update_all_xip(wanxip, wanxdns, wanxgateway, 0);
-			if(wans_mode == "lb" && dualWAN_support != -1){
+			if(dualWAN_support){
 				update_all_ip(secondary_wanip, secondary_wandns, secondary_wangateway, 1);
 				update_all_xip(secondary_wanxip, secondary_wanxdns, secondary_wanxgateway, 1);
 			}
@@ -405,6 +442,24 @@ function submitWANAction(status){
 
 function goQIS(){
 	parent.location.href = '/QIS_wizard.htm';
+}
+
+function goToWAN(){
+	if(dualWAN_support)
+		parent.location.href = '/Advanced_WANPort_Content.asp';
+	else	
+		parent.location.href = '/Advanced_WAN_Content.asp';
+}
+
+function gotoSiteSurvey(){
+	if(sw_mode == 2)
+		parent.location.href = '/QIS_wizard.htm?flag=sitesurvey&band='+'<% nvram_get("wl_unit"); %>';
+	else
+		parent.location.href = '/QIS_wizard.htm?flag=sitesurvey_mb';
+}
+
+function manualSetup(){
+	return 0;
 }
 </script>
 </head>
@@ -450,7 +505,7 @@ function goQIS(){
 						$j('#radio_wan_enable').iphoneSwitch('<% nvram_get("wan_enable"); %>', 
 							 function() {
 								document.internetForm.wan_enable.value = "1";
-								if (parent.dsl_support != -1) {
+								if (parent.dsl_support) {
 									document.internetForm.dslx_link_enable.value = "1";
 									document.internetForm.dslx_link_enable.disabled = false;
 								}
@@ -460,7 +515,7 @@ function goQIS(){
 							 },
 							 function() {
 								document.internetForm.wan_enable.value = "0";
-								if (parent.dsl_support != -1) {
+								if (parent.dsl_support) {
 									document.internetForm.dslx_link_enable.value = "0";
 									document.internetForm.dslx_link_enable.disabled = false;
 								}
@@ -525,6 +580,14 @@ function goQIS(){
     </td>
 </tr>
 
+<tr style="display:none;" id="yadns_ctrl">
+    <td style="padding:5px 10px 5px 15px;">
+    		<p class="formfonttitle_nwm"><#YandexDNS#></p>
+    		<p style="padding-left:10px; margin-top:3px; background-color:#444f53; line-height:20px;" id="yadns_mode"></p>
+      	<img style="margin-top:5px;" src="/images/New_ui/networkmap/linetwo2.png">
+    </td>
+</tr>
+
 <tr id="primary_WANIP_ctrl">
     <td style="padding:5px 10px 5px 15px;">
     		<p class="formfonttitle_nwm"><#WAN_IP#></p>
@@ -546,7 +609,7 @@ function goQIS(){
 
 <tr id="primary_DNS_ctrl">
     <td style="padding:5px 10px 5px 15px;">
-    		<p class="formfonttitle_nwm" >DNS</p>
+    		<p class="formfonttitle_nwm">DNS</p>
     		<p style="padding-left:10px; margin-top:3px; background-color:#444f53; line-height:20px;" id="DNS1"></p>
     		<p style="padding-left:10px; margin-top:3px; background-color:#444f53; line-height:20px;" id="DNS2"></p>
     		<p style="padding-left:10px; margin-top:3px; background-color:#444f53; line-height:20px;" id="xDNS1"></p>
@@ -556,7 +619,7 @@ function goQIS(){
 </tr>
 <tr style="display:none;" id="secondary_DNS_ctrl">
     <td style="padding:5px 10px 5px 15px;">
-    		<p class="formfonttitle_nwm" >DNS</p>
+    		<p class="formfonttitle_nwm">DNS</p>
     		<p style="padding-left:10px; margin-top:3px; background-color:#444f53; line-height:20px;" id="secondary_DNS1"></p>
     		<p style="padding-left:10px; margin-top:3px; background-color:#444f53; line-height:20px;" id="secondary_DNS2"></p>
     		<p style="padding-left:10px; margin-top:3px; background-color:#444f53; line-height:20px;" id="secondary_xDNS1"></p>
@@ -567,7 +630,7 @@ function goQIS(){
 
 <tr id="primary_gateway_ctrl">
     <td style="padding:5px 10px 5px 15px;">
-    		<p class="formfonttitle_nwm" ><#RouterConfig_GWStaticGW_itemname#></p>
+    		<p class="formfonttitle_nwm"><#RouterConfig_GWStaticGW_itemname#></p>
     		<p style="padding-left:10px; margin-top:3px; background-color:#444f53; line-height:20px;" id="gateway"></p>
     		<p style="padding-left:10px; margin-top:3px; background-color:#444f53; line-height:20px;" id="xgateway"></p>
       	<img style="margin-top:5px;" src="/images/New_ui/networkmap/linetwo2.png">
@@ -575,7 +638,7 @@ function goQIS(){
 </tr>
 <tr style="display:none;" id="secondary_gateway_ctrl">
     <td style="padding:5px 10px 5px 15px;">
-    		<p class="formfonttitle_nwm" ><#RouterConfig_GWStaticGW_itemname#></p>
+    		<p class="formfonttitle_nwm"><#RouterConfig_GWStaticGW_itemname#></p>
     		<p style="padding-left:10px; margin-top:3px; background-color:#444f53; line-height:20px;" id="secondary_gateway"></p>
     		<p style="padding-left:10px; margin-top:3px; background-color:#444f53; line-height:20px;" id="secondary_xgateway"></p>
       	<img style="margin-top:5px;" src="/images/New_ui/networkmap/linetwo2.png">
@@ -613,7 +676,13 @@ function goQIS(){
     	<img style="margin-top:5px;" src="/images/New_ui/networkmap/linetwo2.png">
     </td>
 </tr>
-
+<tr id="goSetting" style="display:none">
+	<td height="50" style="padding:10px 15px 0px 15px;">
+		<p class="formfonttitle_nwm" style="float:left;width:138px;">Go to WAN setting</p>
+		<input type="button" class="button_gen" onclick="goToWAN();" value="<#btn_go#>" style="margin-top:-10px;">
+		<img style="margin-top:5px;" src="/images/New_ui/networkmap/linetwo2.png">
+	</td>
+</tr>
 <!--tr>
     <td height="50" style="padding:10px 15px 0px 15px;">
     		<p class="formfonttitle_nwm" style="float:left;width:98px; "><#QIS#></p>
@@ -667,6 +736,17 @@ function goQIS(){
       	<img style="margin-top:5px;" src="/images/New_ui/networkmap/linetwo2.png">
     </td>
 </tr>
+
+<tr id="sitesurvey_tr" style="display:none">
+  <td height="50" style="padding:10px 15px 0px 15px;">
+  	<p class="formfonttitle_nwm" style="float:left;"><#APSurvey_action_search_again_hint2#></p>
+		<br />
+  	<input type="button" class="button_gen" onclick="gotoSiteSurvey();" value="<#QIS_rescan#>" style="float:right;">
+  	<!--input type="button" class="button_gen" onclick="manualSetup();" value="<#Manual_Setting_btn#>" style="float:right;"-->
+		<img style="margin-top:5px; *margin-top:-10px;" src="/images/New_ui/networkmap/linetwo2.png">
+  </td>
+</tr>
+
 </table>
 
 </form>

@@ -53,45 +53,32 @@
 
 #include <mtd.h>
 
-//#if 0
-#define XSTR(s) STR(s)
-#define STR(s) #s
-
 void update_lan_status(int);
-static char list[2048];
-//#endif
 
-// oleg patch ~
-in_addr_t
-inet_addr_(const char *cp)
+in_addr_t inet_addr_(const char *cp)
 {
-       struct in_addr a;
+	struct in_addr a;
 
-       if (!inet_aton(cp, &a)) {
-	       return INADDR_ANY;
-	}
-       else {
-	       return a.s_addr;
-	}
+	if (!inet_aton(cp, &a))
+		return INADDR_ANY;
+	else
+		return a.s_addr;
 }
-// ~ oleg patch
 
 /* remove space in the end of string */
 char *trim_r(char *str)
 {
 	int i;
 
-	i=strlen(str);
+	if (!str || !*str)
+		return str;
+	
+	i = strlen(str) - 1;
+	while ((i >= 0) && (str[i] == ' ' || str[i] == '\n' || str[i] == '\r'))
+		str[i--] = 0;
 
-	while (i>=1)
-	{
-		if (*(str+i-1) == ' ' || *(str+i-1) == 0x0a || *(str+i-1) == 0x0d) *(str+i-1)=0x0;
-		else break;
-		i--;
-	}
-	return (str);
+	return str;
 }
-
 
 /* convert mac address format from XXXXXXXXXXXX to XX:XX:XX:XX:XX:XX */
 char *conv_mac(char *mac, char *buf)
@@ -276,7 +263,6 @@ void init_switch_mode()
 	{
 		nvram_set("wan_nat_x", "1");
 		nvram_set("wan_route_x", "IP_Routed");
-		nvram_set("wl_mode_ex", "ap");
 #ifdef RTCONFIG_BCMWL6
 #ifdef RTCONFIG_PROXYSTA
 		nvram_set("wlc_psta", "0");
@@ -290,7 +276,6 @@ void init_switch_mode()
 	{
 		nvram_set("wan_nat_x", "0");
 		nvram_set("wan_route_x", "IP_Routed");
-		nvram_set("wl_mode_ex", "ap");
 #ifdef RTCONFIG_BCMWL6
 #ifdef RTCONFIG_PROXYSTA
 		nvram_set("wlc_psta", "0");
@@ -305,7 +290,6 @@ void init_switch_mode()
 	{
 		nvram_set("wan_nat_x", "0");
 		nvram_set("wan_route_x", "IP_Bridged");
-		nvram_set("wl_mode_ex", "re");
 		
 		nvram_set("wl0_vifs", "wl0.1");
 		
@@ -343,7 +327,6 @@ void init_switch_mode()
 	{
 		nvram_set("wan_nat_x", "0");
 		nvram_set("wan_route_x", "IP_Bridged");
-		nvram_set("wl_mode_ex", "ap");
 		nvram_set("ure_disable", "1");
 	}
 	else
@@ -352,7 +335,6 @@ void init_switch_mode()
 		nvram_set("sw_mode_ex", "1");
 		nvram_set("wan_nat_x", "1");
 		nvram_set("wan_route_x", "IP_Routed");
-		nvram_set("wl_mode_ex", "ap");
 #ifdef RTCONFIG_BCMWL6
 #ifdef RTCONFIG_PROXYSTA
 		nvram_set("wlc_psta", "0");
@@ -370,13 +352,13 @@ void init_switch_mode()
  */
 void wanmessage(char *fmt, ...)
 {
-  va_list args;
-  char buf[512];
+	va_list args;
+	char buf[512];
 
-  va_start(args, fmt);
-  vsnprintf(buf, sizeof(buf), fmt, args);
-  nvram_set("wan_reason_t", buf);
-  va_end(args);
+	va_start(args, fmt);
+	vsnprintf(buf, sizeof(buf), fmt, args);
+	nvram_set("wan_reason_t", buf);
+	va_end(args);
 }
 
 int pppstatus(void)
@@ -404,16 +386,16 @@ int pppstatus(void)
 
 void logmessage(char *logheader, char *fmt, ...)
 {
-  va_list args;
-  char buf[512];
+	va_list args;
+	char buf[512];
 
-  va_start(args, fmt);
+	va_start(args, fmt);
 
-  vsnprintf(buf, sizeof(buf), fmt, args);
-  openlog(logheader, 0, 0);
-  syslog(0, buf);
-  closelog();
-  va_end(args);
+	vsnprintf(buf, sizeof(buf), fmt, args);
+	openlog(logheader, 0, 0);
+	syslog(0, buf);
+	closelog();
+	va_end(args);
 }
 
 void usage_exit(const char *cmd, const char *help)
@@ -536,11 +518,11 @@ static void execute_with_maxwait(char *const argv[], int wtime)
 			if (kill(pid, 0) != 0) break;
 			sleep(1);
 		}
-		_dprintf("%s killdon:   errno: %d    pid %d\n", argv[0], errno, pid);
+		_dprintf("%s killdon: errno: %d pid %d\n", argv[0], errno, pid);
 	}
 }
 
-/* This is a bit ugly.  Why didn't they allow another parameter to filter???? */
+/* This is a bit ugly. Why didn't they allow another parameter to filter???? */
 static char *filter_extension;
 static int endswith_filter(const struct dirent *entry)
 {
@@ -731,7 +713,7 @@ void setup_ftp_conntrack(int port)
 	}
 }
 
-void setup_udp_timeout(int connflag) 
+void setup_udp_timeout(int connflag)
 {
 	unsigned int v[10];
 	const char *p;
@@ -756,7 +738,7 @@ void setup_udp_timeout(int connflag)
 	}
 	else {
 		write_udp_timeout(NULL, 1);
-		write_udp_timeout("stream", 6); 
+		write_udp_timeout("stream", 6);
 	}
 }
 
@@ -885,7 +867,16 @@ void setup_conntrack(void)
 		if (atoi(buf) > 0) nvram_set("ct_hashsize", buf);
 	}
 #endif
-
+#ifdef LINUX26
+	p = nvram_safe_get("ct_max");
+	i = atoi(p);
+	if (i >= 128) {
+		f_write_string("/proc/sys/net/nf_conntrack_max", p, 0, 0);
+	}
+	else if (f_read_string("/proc/sys/net/nf_conntrack_max", buf, sizeof(buf)) > 0) {
+		if (atoi(buf) > 0) nvram_set("ct_max", buf);
+	}
+#else
 	p = nvram_safe_get("ct_max");
 	i = atoi(p);
 	if (i >= 128) {
@@ -894,13 +885,14 @@ void setup_conntrack(void)
 	else if (f_read_string("/proc/sys/net/ipv4/netfilter/ip_conntrack_max", buf, sizeof(buf)) > 0) {
 		if (atoi(buf) > 0) nvram_set("ct_max", buf);
 	}
-
-	//if (!nvram_match("nf_rtsp", "0")) {
-	//	ct_modprobe("rtsp");
-	//}
-	//else {
-	//	ct_modprobe_r("rtsp");
-	//}
+#endif
+#if 0
+	if (!nvram_match("nf_rtsp", "0")) {
+		ct_modprobe("rtsp");
+	}
+	else {
+		ct_modprobe_r("rtsp");
+	}
 
 	if (!nvram_match("nf_h323", "0")) {
 		ct_modprobe("h323");
@@ -917,7 +909,7 @@ void setup_conntrack(void)
 		ct_modprobe_r("sip");
 	}
 #endif
-
+#endif
 	// !!TB - FTP Server
 #ifdef RTCONFIG_FTP
 	i = nvram_get_int("ftp_port");
@@ -951,7 +943,7 @@ void setup_conntrack(void)
 	}
 }
 
-void setup_pt_conntrack()
+void setup_pt_conntrack(void)
 {
 	if (!nvram_match("fw_pt_rtsp", "0")) {
 		ct_modprobe("rtsp", "ports=554,8554");
@@ -959,6 +951,22 @@ void setup_pt_conntrack()
 	else {
 		ct_modprobe_r("rtsp");
 	}
+
+	if (!nvram_match("fw_pt_h323", "0")) {
+		ct_modprobe("h323");
+	}
+	else {
+		ct_modprobe_r("h323");
+	}
+
+#ifdef LINUX26
+	if (!nvram_match("fw_pt_sip", "0")) {
+		ct_modprobe("sip");
+	}
+	else {
+		ct_modprobe_r("sip");
+	}
+#endif
 }
 
 void inc_mac(char *mac, int plus)
@@ -1234,10 +1242,10 @@ void time_zone_x_mapping(void)
 
 	nvram_set("time_zone_x", tmpstr);
 
-#if 0
 	/* special mapping */
 	if (nvram_match("time_zone", "JST"))
 		nvram_set("time_zone_x", "UCT-9");
+#if 0
 	else if (nvram_match("time_zone", "TST-10TDT"))
 		nvram_set("time_zone_x", "UCT-10");
 	else if (nvram_match("time_zone", "CST-9:30CDT"))
@@ -1297,22 +1305,22 @@ is_invalid_char_for_hostname(char c)
 
 	if (c < 0x20)
 		ret = 1;
-	else if (c >= 0x21 && c <= 0x2c)
+	else if (c >= 0x21 && c <= 0x2c)	/* !"#$%&'()*+, */
 		ret = 1;
-	else if (c >= 0x2e && c <= 0x2f)
+	else if (c >= 0x2e && c <= 0x2f)	/* ./ */
 		ret = 1;
-	else if (c >= 0x3a && c <= 0x40)
+	else if (c >= 0x3a && c <= 0x40)	/* :;<=>?@ */
 		ret = 1;
 #if 0
-	else if (c >= 0x5b && c <= 0x60)
+	else if (c >= 0x5b && c <= 0x60)	/* [\]^_ */
 		ret = 1;
 #else	/* allow '_' */
-	else if (c >= 0x5b && c <= 0x5e)
+	else if (c >= 0x5b && c <= 0x5e)	/* [\]^ */
 		ret = 1;
-	else if (c == 0x60)
+	else if (c == 0x60)			/* ` */
 		ret = 1;
 #endif
-	else if (c >= 0x7b)
+	else if (c >= 0x7b)			/* {|}~ DEL */
 		ret = 1;
 #if 0
 	printf("%c (0x%02x) is %svalid for hostname\n", c, c, (ret == 0) ? "  " : "in");
@@ -1339,6 +1347,30 @@ is_valid_hostname(const char *name)
 	printf("%s is %svalid for hostname\n", name, len ? "" : "in");
 #endif
 	return len;
+}
+
+int get_meminfo_item(const char *name)
+{
+	int ret = 0;
+	FILE *fp;
+	char memdata[256] = {0};
+	int mem = 0;
+
+	if (!name || *name == '\0')
+		return -1;
+
+	if ((fp = fopen("/proc/meminfo", "r")) != NULL) {
+		/* get one memory parameter specified by the name */
+		while (fgets(memdata, 255, fp) != NULL) {
+			if (strstr(memdata, name) != NULL) {
+				ret = sscanf(memdata, "%*s %d kB", &mem);
+				break;
+			}
+		}
+		fclose(fp);
+	}
+
+	return mem;
 }
 
 #ifdef RTCONFIG_OLD_PARENTALCTRL
@@ -1401,18 +1433,73 @@ void setup_dnsmq(int mode)
 	eval("iptables", "-t", "nat", "-I", "PREROUTING", "-p", "udp", "--dport", "53", "-j", "DNAT", "--to-destination", strcat_r(nvram_safe_get("lan_ipaddr"), ":18018", tmp));
 
 	if(mode) {
-		eval("iptables", "-t", "nat", "-I", "PREROUTING", "-p", "tcp", "-d", "10.0.0.1", "--dport", "80", "-j", "DNAT", "--to-destination", strcat_r(nvram_safe_get("lan_ipaddr"), ":80", tmp)); 
+		eval("iptables", "-t", "nat", "-I", "PREROUTING", "-p", "tcp", "-d", "10.0.0.1", "--dport", "80", "-j", "DNAT", "--to-destination", strcat_r(nvram_safe_get("lan_ipaddr"), ":80", tmp));
 	
 		//sprintf(v, "%x my.%s", inet_addr("10.0.0.1"), get_productid());
-		sprintf(v, "%x www.asusnetwork.net", inet_addr(nvram_safe_get("lan_ipaddr")));
+		sprintf(v, "%x %s", inet_addr(nvram_safe_get("lan_ipaddr")), DUT_DOMAIN_NAME);
 		f_write_string("/proc/net/dnsmqctrl", v, 0, 0);
 	}
 	else {
 		// setup ebtables and iptables
-		eval("iptables", "-t", "nat", "-I", "PREROUTING", "-p", "tcp", "-d", "10.0.0.1", "--dport", "80", "-j", "DNAT", "--to-destination", strcat_r(nvram_safe_get("lan_ipaddr"), ":18017", tmp)); 
+		eval("iptables", "-t", "nat", "-I", "PREROUTING", "-p", "tcp", "-d", "10.0.0.1", "--dport", "80", "-j", "DNAT", "--to-destination", strcat_r(nvram_safe_get("lan_ipaddr"), ":18017", tmp));
 	
 		f_write_string("/proc/net/dnsmqctrl", "", 0, 0);
 	}
 }
 #endif
 
+void stop_if_misc(void)
+{
+	DIR *dir;
+	struct dirent *dirent;
+	struct ifreq ifr;
+	int sfd;
+
+	if ((dir = opendir("/proc/sys/net/ipv4/conf")) != NULL) {
+		while ((dirent = readdir(dir)) != NULL) {
+			if (!strcmp(dirent->d_name, ".") || !strcmp(dirent->d_name, ".."))
+				continue;
+
+			if (strcmp(dirent->d_name, "all") &&
+				strcmp(dirent->d_name, "default") &&
+				strcmp(dirent->d_name, "lo") &&
+				strncmp(dirent->d_name, "br", 2) &&
+				strncmp(dirent->d_name, "eth", 3) &&
+				strncmp(dirent->d_name, "ra", 2) &&
+				!((sfd = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0))
+			{
+				strcpy(ifr.ifr_name, dirent->d_name);
+				if (!ioctl(sfd, SIOCGIFFLAGS, &ifr) && (ifr.ifr_flags & IFF_UP))
+					ifconfig(ifr.ifr_name, 0, NULL, NULL);
+
+				close(sfd);
+			}
+
+		}
+		closedir(dir);
+	}
+}
+
+int mssid_mac_validate(const char *macaddr)
+{
+	unsigned char mac_binary[6];
+	unsigned long long macvalue;
+	char macbuf[13];
+
+	if (!macaddr || !strlen(macaddr))
+		return 0;
+
+	ether_atoe(macaddr, mac_binary);
+	sprintf(macbuf, "%02X%02X%02X%02X%02X%02X",
+		mac_binary[0],
+		mac_binary[1],
+		mac_binary[2],
+		mac_binary[3],
+		mac_binary[4],
+		mac_binary[5]);
+	macvalue = strtoll(macbuf, (char **) NULL, 16);
+	if (macvalue % 4)
+		return 0;
+	else
+		return 1;
+}
