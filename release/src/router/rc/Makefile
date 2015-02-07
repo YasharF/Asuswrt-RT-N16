@@ -20,6 +20,8 @@ export CFLAGS += -DMAC_REPEATER
 endif
 endif
 
+include $(SRCBASE)/.config
+
 ifneq ($(findstring DSL,$(BUILD_NAME)),)
 MODEL = $(subst -,_,$(BUILD_NAME))
 else
@@ -328,6 +330,7 @@ endif
 	@cd $(INSTALLDIR)/sbin && ln -sf rc get_phy_status
 	@cd $(INSTALLDIR)/sbin && ln -sf rc get_phy_speed
 	@cd $(INSTALLDIR)/sbin && ln -sf rc firmware_check
+	@cd $(INSTALLDIR)/sbin && ln -sf rc test_endian
 
 clean:
 	rm -f rc *.o .*.depend

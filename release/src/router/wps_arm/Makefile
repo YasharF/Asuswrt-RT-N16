@@ -11,6 +11,8 @@
 #
 # $Id: Makefile 383955 2013-02-08 06:00:32Z $
 #
+REBUILD = $(shell if [ -f "prebuilt/wps_monitor" ]; then echo 0; else echo 1; fi)
+
 ifneq (true,$(parallel))
   .NOTPARALLEL:
 endif
@@ -184,8 +186,12 @@ mkversion :
 
 # target
 # force compile wps_monitor in case the library changed.
+ifeq ($(wildcard ./prebuilt),)
 wps_monitor : objs FORCE
 	$(CC) $(LIBPATH) $(WPS_OSLOBJS) -l$(WPS_LIB_FILE) $(WPSM_LIBS) $(LDFLAGS) -o $@
+else
+wps_monitor :
+endif
 
 FORCE:
 
@@ -199,7 +205,11 @@ clean:
 # install
 install: all
 	install -d $(INSTALLDIR)/wps${BCMEX}/bin
+ifeq ($(REBUILD),0)
+	install prebuilt/wps_monitor $(INSTALLDIR)/wps${BCMEX}/bin
+else
 	install wps_monitor $(INSTALLDIR)/wps${BCMEX}/bin
+endif
 	$(STRIP) $(INSTALLDIR)/wps${BCMEX}/bin/wps_monitor
 
 .PHONY: all clean install libs dirs osl

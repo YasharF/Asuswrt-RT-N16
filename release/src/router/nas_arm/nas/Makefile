@@ -41,7 +41,12 @@ NASOBJS = mppe.o wpa.o nas.o nas_linux.o nas_wl.o nas_wksp.o
 NASOBJS += nas_radius.o nas_wksp_radius.o
 UTLOBJS = bcmwpa.o bcmutils.o
 
+ifeq ($(wildcard ../*.c), )
+all:
+	-cp ./prebuilt/nas .
+else
 all: nas
+endif
 
 nas: $(NASOBJS) $(UTLOBJS)
 	$(CC) -o $@ $^ $(LDFLAGS)

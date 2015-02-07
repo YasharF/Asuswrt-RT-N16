@@ -1,3 +1,8 @@
+var dragenterHandler = function (event) {
+	openUploadPanel(1);
+	handleDragOver(event);
+};
+		
 function create_ui_view(type, container, query_type, parent_url, folder_array, file_array, mousedown_item_handler){
 	
 	var cancel_all_select_items = function(){
@@ -69,6 +74,16 @@ function create_ui_view(type, container, query_type, parent_url, folder_array, f
 		createListView(container, query_type, parent_url, folder_array, file_array, mousedown_item_handler)
 	}
 	
+	if(g_support_html5==1){		
+		var dropZone = document.getElementById('fileview');
+		if(query_type==0){
+			dropZone.addEventListener('dragenter', dragenterHandler, false);
+		}
+		else{
+			dropZone.removeEventListener('dragenter', dragenterHandler, false);
+		}
+  	}
+	
 	$(".item-check").click(function(){
 		var wcb = $(this).parents(".wcb");
 		select_item(wcb);
@@ -124,7 +139,7 @@ function create_ui_view(type, container, query_type, parent_url, folder_array, f
 
 function createThumbView(container, query_type, parent_url, folder_array, file_array, mousedown_item_handler){
 	var html = "";
-			
+	
 	//- Parent Path
 	if(query_type == 0) {
 		html += '<div class="albumDiv fcb" qtype="1" isParent="1" isdir="1" uhref="' + parent_url + '">';
@@ -277,7 +292,7 @@ function createThumbView(container, query_type, parent_url, folder_array, file_a
 		html += '<div class="albumDiv fcb wcb"';
 		html += ' title="';
 		html += this_title;		
-		html += ' qtype="1" isParent="1" isdir="0" uhref="';
+		html += '" qtype="1" isParent="1" isdir="0" uhref="';
 		html += file_array[i].href;
 		html += '" data-name="';
 		html += file_array[i].name;

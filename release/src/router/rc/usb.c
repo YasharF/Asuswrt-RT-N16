@@ -308,7 +308,7 @@ void start_usb(void)
 		}
 #endif
 
-#if defined (RTCONFIG_USB_XHCI) || defined (RTCONFIG_USB_2XHCI2)
+#if defined (RTCONFIG_USB_XHCI)
 #if defined(RTN65U)
 		{
 			char *param = "u3intf=0";
@@ -354,9 +354,11 @@ void start_usb(void)
 		modprobe("usbnet");
 		modprobe("asix");
 		modprobe("cdc_ether");
-		modprobe("net1080");
 		modprobe("rndis_host");
+#ifndef RTCONFIG_USB_LESSMODEM
+		modprobe("net1080");
 		modprobe("zaurus");
+#endif
 #endif
 	}
 }
@@ -367,9 +369,11 @@ void remove_usb_modem_modules(void)
 #ifdef RTCONFIG_USB_BECEEM
 	modprobe_r("drxvi314");
 #endif
+#ifndef RTCONFIG_USB_LESSMODEM
 	modprobe_r("zaurus");
-	modprobe_r("rndis_host");
 	modprobe_r("net1080");
+#endif
+	modprobe_r("rndis_host");
 	modprobe_r("cdc_ether");
 	modprobe_r("asix");
 	modprobe_r("usbnet");
@@ -475,7 +479,7 @@ void remove_usb_host_module(void)
 	modprobe_r(USBOHCI_MOD);
 	modprobe_r(USBUHCI_MOD);
 	modprobe_r(USB20_MOD);
-#if defined (RTCONFIG_USB_XHCI) || defined (RTCONFIG_USB_2XHCI2)
+#if defined (RTCONFIG_USB_XHCI)
 	modprobe_r(USB30_MOD);
 #endif
 
@@ -558,7 +562,7 @@ void stop_usb(void)
 	if (disabled || nvram_get_int("usb_ohci") != 1) modprobe_r(USBOHCI_MOD);
 	if (disabled || nvram_get_int("usb_uhci") != 1) modprobe_r(USBUHCI_MOD);
 	if (disabled || nvram_get_int("usb_usb2") != 1) modprobe_r(USB20_MOD);
-#if defined (RTCONFIG_USB_XHCI) || defined (RTCONFIG_USB_2XHCI2)
+#if defined (RTCONFIG_USB_XHCI)
 #if defined(RTN65U)
 	if (disabled) modprobe_r(USB30_MOD);
 #elif defined(RTCONFIG_XHCIMODE)
@@ -574,7 +578,7 @@ void stop_usb(void)
 		modprobe_r(USBOHCI_MOD);
 		modprobe_r(USBUHCI_MOD);
 		modprobe_r(USB20_MOD);
-#if defined (RTCONFIG_USB_XHCI) || defined (RTCONFIG_USB_2XHCI2)
+#if defined (RTCONFIG_USB_XHCI)
 		modprobe_r(USB30_MOD);
 #endif
 		modprobe_r(USBCORE_MOD);
@@ -599,20 +603,25 @@ void start_usblpsrv(void)
 #define MOUNT_VAL_RW 	2
 #define MOUNT_VAL_EXIST	3
 
-int mount_r(char *mnt_dev, char *mnt_dir, char *type)
+int mount_r(char *mnt_dev, char *mnt_dir, char *_type)
 {
 	struct mntent *mnt;
 	int ret;
 	char options[140];
 	char flagfn[128];
 	int dir_made;
+	char type[16];
 
-	if(type != NULL && !strcmp(type, "apple_efi")){
+	memset(type, 0, 16);
+	if(_type != NULL)
+		strncpy(type, _type, 16);
+
+	if(strlen(type) > 0 && !strcmp(type, "apple_efi")){
 		TRACE_PT("Don't mount the EFI partition(%s) of APPLE!\n", mnt_dev, type);
 		return MOUNT_VAL_EXIST;
 	}
 
-	if ((mnt = findmntents(mnt_dev, 0, NULL, 0))) {
+	if((mnt = findmntents(mnt_dev, 0, NULL, 0))){
 		syslog(LOG_INFO, "USB partition at %s already mounted on %s",
 			mnt_dev, mnt->mnt_dir);
 		return MOUNT_VAL_EXIST;
@@ -620,7 +629,7 @@ int mount_r(char *mnt_dev, char *mnt_dir, char *type)
 
 	options[0] = 0;
 
-	if (type) {
+	if(strlen(type) > 0){
 #ifndef RTCONFIG_BCMARM
 		unsigned long flags = MS_NOATIME | MS_NODEV;
 #else
@@ -631,12 +640,7 @@ int mount_r(char *mnt_dev, char *mnt_dir, char *type)
 			/* not a mountable partition */
 			flags = 0;
 		}
-		else if (strcmp(type, "ext2") == 0 || strcmp(type, "ext3") == 0
-#if defined(RTCONFIG_BCMARM) || defined(RTCONFIG_EXT4FS)
-			|| strcmp(type, "ext4") == 0
-#endif
-			)
-		{
+		else if(!strncmp(type, "ext", 3)){
 			sprintf(options, "user_xattr");
 
 			if (nvram_invmatch("usb_ext_opt", ""))
@@ -750,8 +754,31 @@ int mount_r(char *mnt_dev, char *mnt_dir, char *type)
 			{
 				ret = mount(mnt_dev, mnt_dir, type, flags, options[0] ? options : "");
 				if(ret != 0){
-					syslog(LOG_INFO, "USB %s(%s) failed to mount at the first try!", mnt_dev, type);
-					TRACE_PT("USB %s(%s) failed to mount at the first try!\n", mnt_dev, type);
+					if(strncmp(type, "ext", 3)){
+						syslog(LOG_INFO, "USB %s(%s) failed to mount at the first try!", mnt_dev, type);
+						TRACE_PT("USB %s(%s) failed to mount at the first try!\n", mnt_dev, type);
+					}
+					else{
+						if(!strcmp(type, "ext4")){
+							snprintf(type, 16, "ext3");
+							ret = mount(mnt_dev, mnt_dir, type, flags, options[0] ? options : "");
+						}
+
+						if(ret != 0 && !strcmp(type, "ext3")){
+							snprintf(type, 16, "ext2");
+							ret = mount(mnt_dev, mnt_dir, type, flags, options[0] ? options : "");
+						}
+
+						if(ret != 0 && !strcmp(type, "ext2")){
+							snprintf(type, 16, "ext");
+							ret = mount(mnt_dev, mnt_dir, type, flags, options[0] ? options : "");
+						}
+
+						if(ret != 0){
+							syslog(LOG_INFO, "USB %s(ext) failed to mount at the first try!", mnt_dev);
+							TRACE_PT("USB %s(ext) failed to mount at the first try!\n", mnt_dev);
+						}
+					}
 				}
 			}
 
@@ -1721,7 +1748,9 @@ void write_ftpd_conf()
 	fp=fopen("/etc/vsftpd.conf", "w");
 	if (fp==NULL) return;
 
-	if (nvram_match("st_ftp_mode", "2"))
+	if (nvram_match("st_ftp_mode", "2")
+			|| (nvram_match("st_ftp_mode", "1") && !strcmp(nvram_safe_get("st_ftp_force_mode"), ""))
+			)
 		fprintf(fp, "anonymous_enable=NO\n");
 	else{
 		fprintf(fp, "anonymous_enable=YES\n");
@@ -2478,7 +2507,7 @@ void start_webdav(void)	// added by Vanic
 	write_webdav_permissions();
 	
 	/* WebDav SSL support */
-	write_webdav_server_pem();
+	//write_webdav_server_pem();
 
 	/* write WebDav configure file*/
 	system("/sbin/write_webdav_conf");
@@ -2886,7 +2915,7 @@ int __ejusb_main(const char *port_path)
 {
 	disk_info_t *disk_list, *disk_info;
 	partition_info_t *partition_info;
-	char nvram_name[32], device_name[8], devpath[16];
+	char nvram_name[32], devpath[16];
 
 	disk_list = read_disk_data();
 	if(disk_list == NULL){

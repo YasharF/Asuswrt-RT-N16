@@ -48,7 +48,12 @@ CFLAGS += -DBCM_BSD
 endif
 #endif
 
+ifeq ($(wildcard $(SRCBASE)/router/eapd${BCMEX}/*.c),)
+all:
+	-cp prebuilt/eapd eapd
+else
 all: eapd
+endif
 
 eapd: $(OBJS)
 	$(CC) -o $@ $^ $(LDFLAGS)

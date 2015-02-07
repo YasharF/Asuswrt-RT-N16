@@ -93,8 +93,13 @@ endif
 
 all: $(UTILS)
 
+ifeq ($(wildcard $(SRCBASE)/wl/exe/*.c),)
+wl:
+	-cp -f $(SRCBASE)/wl/exe/prebuilt/wl wl
+else
 wl: $(WLU_OBJS)
 	$(CC) $^ -o $@ $(LDFLAGS)
+endif
 
 ifeq ($(RWL),1)
 $(WFA_APUT_ALL): $(WFA_APUT_OBJS)

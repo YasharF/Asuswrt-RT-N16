@@ -244,21 +244,6 @@ function getFileViewHeight(){
 	return $("#fileview").height()-20;
 }
 
-function confirmCancelUploadFile(){
-	var is_onUploadFile = g_storage.get('isOnUploadFile');
-	
-	if(is_onUploadFile==1){
-		var r = confirm(m.getString('msg_confirm_cancel_upload'));
-		if (r!=true){
-			return 0;
-		}
-			
-		$("#upload_panel iframe")[0].contentWindow.stop_upload();
-	}
-	
-	return 1;
-}
-
 function closeJqmWindow(v){	
 	g_reload_page=v;
 	var $modalWindow = $('div#modalWindow');
@@ -366,7 +351,10 @@ function doPROPFINDMEDIALIST(open_url, append_result, complete_handler, media_ty
 					}
 					
 					var parent_url = "";
-					if(g_ui_mode.get()==6){
+					if(g_ui_mode.get()==1 || g_ui_mode.get()==2 || g_ui_mode.get()==3){
+						this_query_type = 0;
+					}
+					else if(g_ui_mode.get()==6){
 						this_query_type = 0;
 						parent_url = "goto:music_album";
 					}
@@ -595,12 +583,13 @@ function parserPropfindXML(xmlDoc, open_url, append_result){
 										
 						this_name = mydecodeURI(this_name);
 						this_short_name = this_name;
-										
+						/*				
 						var len = (g_list_view.get()==0) ? 12 : 45;	
 														
 						if(this_short_name.length>len){
 							this_short_name = this_short_name.substring(0, len) + "...";
 						}
+						*/
 					}
 					else{
 						this_href="";
@@ -744,8 +733,16 @@ function doPROPFIND(open_url, complete_handler, auth){
 						//- Refresh UI
 						showHideAiButton( (this_isusb=="1") ? true : false );
 						closeAiMode();
-						$("div#btnThumbView").css("display", (g_list_view.get()==1) ? "block" : "none");
-						$("div#btnListView").css("display", (g_list_view.get()==1) ? "none" : "block");
+						
+						if(open_url=="/"){
+							$("div#btnThumbView").css("display", "none");
+							$("div#btnListView").css("display", "none");
+						}
+						else{
+							$("div#btnThumbView").css("display", (g_list_view.get()==1) ? "block" : "none");
+							$("div#btnListView").css("display", (g_list_view.get()==1) ? "none" : "block");
+						}
+						
 						$("div#btnUpload").css("display", (this_query_type==0&&g_select_mode==0) ? "block" : "none");
 						$("div#btnNewDir").css("display", (this_query_type==0&&g_select_mode==0) ? "block" : "none");
 						$("div#btnPlayImage").css("display", (this_query_type==0&&g_select_mode==0) ? "block" : "none");
@@ -772,6 +769,20 @@ function doPROPFIND(open_url, complete_handler, auth){
 						
 						if(complete_handler!=undefined){
 							complete_handler();
+						}
+						
+						if( g_storage.get('openhostuid')==undefined||
+							g_storage.get('openhostuid')==0){
+							
+							var help_html = "<div id='help_1'>";
+							help_html += "<div id='help_content'>";
+							help_html += m.getString('msg_help');
+							help_html += "</div>";
+							help_html += "<div id='help_image'>";
+							help_html += "</div>";
+							help_html += "</div>";
+					
+							$("div#fileview").append(help_html);
 						}
 					}
 		  		}
@@ -1055,58 +1066,7 @@ function onMouseDownThumbDIVHandler(e, file_item){
 			openSelItem(file_item);
 			return;
 		}
-		/*
-		if($(this).find(".selectDiv").css("display")=="none"){
-			$(this).find(".selectDiv").css("display", "block");
-			$(this).find(".selectHintDiv").css("display", "none");
-		}
-		else{
-			$(this).find(".selectDiv").css("display", "none");
-			$(this).find(".selectHintDiv").css("display", "block");
-		}
 		
-		g_select_array = null;
-		g_select_array = new Array();		
-		g_select_file_count=0;
-		g_select_folder_count=0;
-		
-		$("#fileview").find(".albumDiv").each(function(){
-			if($(this).find(".selectDiv").css("display")=="block"){
-				var uhref = $(this).find("#list_item").attr("uhref");
-				var isdir = $(this).find("#list_item").attr("isdir");
-				var title = myencodeURI($(this).find("#list_item").attr("title"));
-				
-				if(isdir==1){					
-					g_select_folder_count++;
-				}
-				else{
-					g_select_file_count++;
-				}
-				
-				g_select_array.push( { isdir:isdir, uhref:uhref, title:title } );
-    		}
-		});	
-		
-		refreshSelectWindow();
-		
-		if(g_select_file_count>0||g_select_folder_count>0){
-			if(isAiModeView()<0) $("#btnDeleteSel").removeClass("disable");
-			$("#btnDownload").removeClass("disable");
-			$("#btnShareLink").removeClass("disable");
-		}
-		else{
-			$("#btnDeleteSel").addClass("disable");
-			$("#btnDownload").addClass("disable");
-			$("#btnShareLink").addClass("disable");
-		}
-
-		if((g_select_file_count+g_select_folder_count==1) && isAiModeView()<0){
-			$("#btnRename").removeClass("disable");
-		}
-		else{
-			$("#btnRename").addClass("disable");
-		}
-		*/
 		return;
 	}
 	
@@ -1125,60 +1085,10 @@ function onMouseDownListDIVHandler(e, file_item){
 			openSelItem(file_item);
 			return;
 		}
-		/*
-		if($(this).find(".selectListDiv").css("display")=="none"){			
-			$(this).find(".selectListDiv").css("display", "block");
-			$(this).find(".selectListHintDiv").css("display", "none");
-		}
-		else{
-			$(this).find(".selectListDiv").css("display", "none");
-			$(this).find(".selectListHintDiv").css("display", "block");
-		}
 		
-		g_select_array = null;
-		g_select_array = new Array();
-		g_select_file_count=0;
-		g_select_folder_count=0;
-		
-		$("#fileview").find(".listDiv").each(function(){
-			if($(this).find(".selectListDiv").css("display")=="block"){
-				var uhref = $(this).attr("uhref");
-				var isdir = $(this).attr("isdir");
-				var title = myencodeURI($(this).attr("title"));
-				
-				if(isdir==1){					
-					g_select_folder_count++;
-				}
-				else{
-					g_select_file_count++;
-				}
-				
-				g_select_array.push( { isdir:isdir, uhref:uhref, title:title } );
-    		}
-		});	
-		
-		refreshSelectWindow();
-		
-		if(g_select_file_count>0||g_select_folder_count>0){
-			if(isAiModeView()<0) $("#btnDeleteSel").removeClass("disable");
-			$("#btnDownload").removeClass("disable");
-			$("#btnShareLink").removeClass("disable");
-		}
-		else{
-			$("#btnDeleteSel").addClass("disable");
-			$("#btnDownload").addClass("disable");
-			$("#btnShareLink").addClass("disable");
-		}
-
-		if((g_select_file_count+g_select_folder_count==1) && isAiModeView()<0)		
-			$("#btnRename").removeClass("disable");
-		else	
-			$("#btnRename").addClass("disable");
-		*/
 		return;
 	}
 	
-	//openSelItem($(this).parents('.thumb-table-parent').find("a#list_item"));
 	openSelItem(file_item);
 }
 
@@ -1459,8 +1369,8 @@ $(document).ready(function(){
 			if(g_select_mode==1)
 				showHideSelectModeUI(false);
 			else if(g_upload_mode==1){
-				if(confirmCancelUploadFile()==0)
-					return;
+				//if(confirmCancelUploadFile()==0)
+				//	return;
 			
 				closeUploadPanel();
 			}
@@ -1490,7 +1400,7 @@ $(document).ready(function(){
 			
 			if(loc!=undefined && loc!="/")
 				doPROPFIND(loc);
-			
+			/*
 			if( g_storage.get('openhostuid')==undefined||
 				g_storage.get('openhostuid')==0){
 				
@@ -1504,7 +1414,7 @@ $(document).ready(function(){
 		
 				$("div#fileview").append(help_html);
 			}
-			
+			*/
 		}, 0);
 	}
 	else{
@@ -1658,14 +1568,17 @@ $(document).ready(function(){
     			g_storage.set('ddns_host_name', x.find("ddns_host_name").text());
     			g_storage.set('router_version', x.find("version").text());
 				g_storage.set('aicloud_version', x.find("aicloud_version").text());
+				g_storage.set('smartsync_version', x.find("smartsync_version").text());
     			g_storage.set('wan_ip', x.find("wan_ip").text());
 				g_storage.set('modalname', x.find("modalname").text());
 				g_storage.set('usbdiskname', x.find("usbdiskname").text());
 				g_storage.set('dms_enable', x.find("dms_enable").text());
 				g_storage.set('app_installation_url', x.find("app_installation_url").text());
+				g_storage.set('https_crt_cn', x.find("https_crt_cn").text());
+				g_storage.set('max_sharelink', x.find("max_sharelink").text());
 				
     			var login_info = g_storage.get('last_login_info');
-				if(login_info!=""&&login_info!=undefined){
+				if(login_info!=""&&login_info!=undefined&&login_info!=null){
 					var login_info_array = String(login_info).split(">");  	
 				  	var info = m.getString('title_logininfo')+ login_info_array[1] + ", " + m.getString('title_ip') + login_info_array[2];
 				  	$("#login_info").text(info);
@@ -1731,286 +1644,6 @@ $(document).ready(function(){
 		if($modalWindow){			
 			$modalWindow.jqmShow();
 		}
-	});
-	
-	$("div#btnShareLinkx").click(function(){	
-		if($(this).hasClass("disable"))
-			return false;
-			
-		var popupmeny = "<div class='popupmenu' id='popupmenu'>";
-		
-		//- Share to Facebook	
-		popupmeny += "<div class='menuitem share2web' id='share2facebook' data-service='facebook'>";
-		popupmeny += "<div class='menuitem-content' style='-webkit-user-select: none;'>";		
-		popupmeny += "<span class='menuitem-icon a-inline-block' style='-webkit-user-select: none;'>&nbsp;</span>";
-		popupmeny += "<span class='menuitem-container a-inline-block' style='-webkit-user-select: none;'>";
-		popupmeny += "<span class='menuitem-caption a-inline-block' style='-webkit-user-select: none;'>";
-		popupmeny += "<div style='-webkit-user-select: none;'>" + m.getString("title_share2facebook") + "</div>";
-		popupmeny += "</span>";		
-		popupmeny += "</span>";
-		popupmeny += "</div>";
-		popupmeny += "</div>";
-		
-		//- Share to Flickr	
-		popupmeny += "<div class='menuitem share2web' id='share2flickr' data-service='flickr'>";
-		popupmeny += "<div class='menuitem-content' style='-webkit-user-select: none;'>";		
-		popupmeny += "<span class='menuitem-icon a-inline-block' style='-webkit-user-select: none;'>&nbsp;</span>";
-		popupmeny += "<span class='menuitem-container a-inline-block' style='-webkit-user-select: none;'>";
-		popupmeny += "<span class='menuitem-caption a-inline-block' style='-webkit-user-select: none;'>";
-		popupmeny += "<div style='-webkit-user-select: none;'>" + m.getString("title_upload2flickr") + "</div>";
-		popupmeny += "</span>";		
-		popupmeny += "</span>";
-		popupmeny += "</div>";
-		popupmeny += "</div>";
-		
-		//- Share by Email
-		popupmeny += "<div class='menuitem' id='sharebyemail'>";
-		popupmeny += "<div class='menuitem-content' style='-webkit-user-select: none;'>";		
-		popupmeny += "<span class='menuitem-icon a-inline-block' style='-webkit-user-select: none;'>&nbsp;</span>";
-		popupmeny += "<span class='menuitem-container a-inline-block' style='-webkit-user-select: none;'>";
-		popupmeny += "<span class='menuitem-caption a-inline-block' style='-webkit-user-select: none;'>";
-		popupmeny += "<div style='-webkit-user-select: none;'>" + m.getString("title_gen_sharelink") + "</div>";
-		popupmeny += "</span>";		
-		popupmeny += "</span>";
-		popupmeny += "</div>";
-		popupmeny += "</div>";
-				
-		popupmeny += "</div>";
-		
-		$(popupmeny).appendTo("body");
-		
-		$(".popupmenu").css("left", ( g_mouse_x - $(".popupmenu").width() ) + "px");
-		$(".popupmenu").css("top", ( g_mouse_y - $(".popupmenu").height() ) + "px");
-		
-		$(".share2web").click(function(e){
-			
-			var service = $(this).attr("data-service");
-			var upload_files = new Array(0);
-			for(var i=0; i < g_select_array.length; i++){			  
-				var this_full_url = g_select_array[i].uhref;
-				var filext = getFileExt(this_full_url);
-								
-				if(filext=='jpg'||filext=='jpeg'||filext=='png'||filext=='gif'){
-					upload_files.push(this_full_url);
-				}
-			}
-			
-			open_upload2service_window(service, upload_files);
-			upload_files = null;
-			/*
-			
-			var $modalWindow = $("div#modalWindow");
-			
-			if(g_select_array.length<=0)
-				return;
-				
-			var ddns_host_name = g_storage.get('ddns_host_name');    
-			var webdav_mode = g_storage.get('webdav_mode');
-
-			var hostName = (ddns_host_name=="") ? window.location.host : ddns_host_name;
-			if(hostName.indexOf(":")!=-1)
-				hostName = hostName.substring(0, hostName.indexOf(":"));
-			
-			//- The array which upload file to facebook.
-			var upload_item = {
-				_array: new Array(),
-				add: function(obj){					
-					this._array.push(obj);
-				},
-				length: function(){
-					return this._array.length;	
-				},
-				get: function(i){
-					if(i<0||i>this._array.length-1)
-						return null;
-					return this._array[i];
-				},
-				remove: function(i){
-					if(i>=0&&i<=this._array.length-1){
-						this._array.splice(i, 1);
-					}
-				},
-				create: function( callback_function ){
-					var _self = this;
-					var this_url = "";
-					var selectFiles= "";					
-					var prefix_url = "http://" + hostName + ":" + g_storage.get("http_port");
-					
-					if(this._array.length<=0){
-						if(callback_function)
-							callback_function("");
-						return;
-					}
-						
-					for(var i=0; i < this._array.length; i++){			  
-						var this_file_name = this._array[i].title;
-						var this_full_url = this._array[i].uhref;
-						
-						this_url = this_full_url.substring(0, this_full_url.lastIndexOf('/'));
-						
-						selectFiles += this_file_name;
-						selectFiles += ";";
-					}
-			
-					g_webdav_client.GSL(this_url, this_url, selectFiles, 0, 0, function(error, content, statusstring){
-						var share_link_url = "";
-						if(error==200){
-							var data = parseXml(statusstring);
-							var share_link = $(data).find('sharelink').text();
-							var array = share_link.split(";");
-							
-							for(var i=0; i<array.length; i++){
-								share_link_url += prefix_url + "/" + array[i];
-								share_link_url += "," + _self._array[i].isdir;
-								
-								if(i!=array.length-1)
-									share_link_url += ";";
-							}
-							array=null;
-						}
-						
-						if(callback_function)
-							callback_function(share_link_url);
-					});
-				}
-			};
-			
-			//- Only generate share link and post to facebook
-			var share_item = {
-				_array: new Array(),
-				add: function(obj){					
-					this._array.push(obj);
-				},
-				length: function(){
-					return this._array.length;	
-				},
-				get: function(i){
-					if(i<0||i>this._array.length-1)
-						return null;
-					return this._array[i];
-				},
-				remove: function(i){
-					if(i>=0&&i<=this._array.length-1){
-						this._array.splice(i, 1);
-					}
-				},
-				create: function( callback_function ){
-					var _self = this;
-					var this_url = "";
-					var selectFiles= "";
-					var prefix_url = "";
-					
-					if(this._array.length<=0){
-						if(callback_function)
-							callback_function("");
-						return;
-					}
-					
-					if( webdav_mode == 0 ) //- Only enable http
-						prefix_url = "http://" + hostName + ":" + g_storage.get("http_port");
-					else
-						prefix_url = "https://" + hostName;
-			
-					for(var i=0; i < this._array.length; i++){			  
-						var this_file_name = this._array[i].title;
-						var this_full_url = this._array[i].uhref;
-						
-						this_url = this_full_url.substring(0, this_full_url.lastIndexOf('/'));
-						
-						selectFiles += this_file_name;
-						selectFiles += ";";
-					}
-			
-					g_webdav_client.GSL(this_url, this_url, selectFiles, 86400, 1, function(error, content, statusstring){
-						var share_link_url = "";
-						
-						if(error==200){
-							var data = parseXml(statusstring);
-							var share_link = $(data).find('sharelink').text();
-							var array = share_link.split(";");
-							
-							for(var i=0; i<array.length; i++){
-								share_link_url += prefix_url + "/" + array[i];
-								share_link_url += "," + _self._array[i].isdir;
-								
-								if(i!=array.length-1)
-									share_link_url += ";";
-							}
-							array=null;
-						}
-						
-						if(callback_function)
-							callback_function(share_link_url);
-					});
-				}
-			};
-			
-			for(var i=0; i < g_select_array.length; i++){			  
-				var this_full_url = g_select_array[i].uhref;
-				var filext = getFileExt(this_full_url);
-								
-				if(filext=='jpg'||filext=='jpeg'||filext=='png'||filext=='gif'){
-					upload_item.add(g_select_array[i]);
-				}			
-				else{
-					share_item.add(g_select_array[i]);
-				}
-			}
-			
-			//- Create share link
-			var share_link_url = '';
-			upload_item.create(function(sharelink){
-				
-				share_link_url += sharelink;
-				
-				share_item.create(function(sharelink){
-					if(share_link_url!="") share_link_url += ";";	
-					share_link_url += sharelink;
-					
-					var modalWindow_title = "";
-					if(web_service=="facebook"){
-						g_modal_url = '/smb/css/facebook/index.html';
-						modalWindow_title = m.getString("title_share2facebook")
-					}
-					else if(web_service=="flickr"){
-						g_modal_url = '/smb/css/flickr/index.html';
-						modalWindow_title = m.getString("title_upload2flickr")
-					}
-						
-					g_modal_url += '?v=' + share_link_url;
-					
-					g_modal_window_width = 600;
-					g_modal_window_height = 370;
-					$('#jqmMsg').css("display", "none");	
-					$('#jqmTitleText').text(modalWindow_title);
-					if($modalWindow){
-						$modalWindow.jqmShow();
-					}
-							
-					$("#image_slide_show").remove();
-				});	
-			});
-			*/
-		});
-		
-		$("#sharebyemail").click(function(e){
-			
-			if(g_select_array.length<=0)
-				return;
-			
-			var selectURL = g_storage.get('openurl');
-			var selectFileArray = new Array();
-				
-			for(var i=0; i < g_select_array.length; i++){			  
-				var this_file_name = g_select_array[i].title;
-				selectFileArray.push(this_file_name);
-			}
-				
-			open_sharelink_window(selectURL, selectFileArray);
-			selectFileArray = null;			
-		});
-		
-		return false;				
 	});
 	
 	var downloadURL = function downloadURL(url){
@@ -2144,8 +1777,8 @@ $(document).ready(function(){
 	
 	$("#btnThumbView").click(function(){
 		
-		if(confirmCancelUploadFile()==0)
-			return;
+		//if(confirmCancelUploadFile()==0)
+		//	return;
 		
 		g_list_view.set(0);
 		
@@ -2186,121 +1819,6 @@ $(document).ready(function(){
 		}
 	});
 	
-	$("#btnUploadx").click(function(e){
-		if($(this).hasClass("disable"))
-			return false;
-			
-		var popupmeny = "<div class='popupmenu' id='popupmenu'>";
-		
-		//- Upload file			
-		popupmeny += "<div class='menuitem' id='uploadfile'>";
-		popupmeny += "<div class='menuitem-content' style='-webkit-user-select: none;'>";		
-		popupmeny += "<span class='menuitem-icon a-inline-block' style='-webkit-user-select: none;'>&nbsp;</span>";
-		popupmeny += "<span class='menuitem-container a-inline-block' style='-webkit-user-select: none;'>";
-		popupmeny += "<span class='menuitem-caption a-inline-block' style='-webkit-user-select: none;'>";
-		popupmeny += "<div style='-webkit-user-select: none;'>" + m.getString("title_upload_file") + "</div>";
-		popupmeny += "</span>";		
-		popupmeny += "</span>";
-		popupmeny += "</div>";
-		popupmeny += "</div>";
-	
-		//- Upload folder
-		popupmeny += "<div class='menuitem' id='uploadfolder'>";
-		popupmeny += "<div class='menuitem-content' style='-webkit-user-select: none;'>";		
-		popupmeny += "<span class='menuitem-icon a-inline-block' style='-webkit-user-select: none;'>&nbsp;</span>";
-		popupmeny += "<span class='menuitem-container a-inline-block' style='-webkit-user-select: none;'>";
-		popupmeny += "<span class='menuitem-caption a-inline-block' style='-webkit-user-select: none;'>";
-		popupmeny += "<div style='-webkit-user-select: none;'>" + m.getString("title_upload_folder") + "</div>";
-		popupmeny += "</span>";		
-		popupmeny += "</span>";
-		popupmeny += "</div>";
-		popupmeny += "</div>";
-				
-		popupmeny += "</div>";
-		
-		$(popupmeny).appendTo("body");
-		
-		$(".popupmenu").css("left", ( g_mouse_x - $(".popupmenu").width() ) + "px");
-		$(".popupmenu").css("top", g_mouse_y + "px");
-		
-		$("#uploadfile").click(function(e){
-			
-			if( ( isBrowser("msie") && getInternetExplorerVersion() <= 9 ) ){
-				var $modalWindow = $("div#modalWindow");	
-				
-				g_modal_url = '/smb/css/upload_file.html';
-				g_modal_window_width = 600;
-				g_modal_window_height = 150;
-				$('#jqmMsg').css("display", "none");
-				$('#jqmTitleText').text(m.getString('title_upload_file'));
-				if($modalWindow){
-					$modalWindow.jqmShow();
-				}
-			}
-			else{
-				g_upload_mode = 1;
-					
-				$("div#btnNewDir").css("display", "none");
-				$("div#btnUpload").css("display", "none");
-				$("div#btnPlayImage").css("display", "none");
-				$("div#boxSearch").css("display", "none");
-				$("div#btnListView").css("display", "none");
-				$("div#btnThumbView").css("display", "none");
-						
-				$("#upload_panel").css("display", "block");
-				
-				$("#upload_panel").css("left", '1999px');		
-				$("#upload_panel").animate({left:"0px"},"slow");
-				
-				var this_url = addPathSlash(g_storage.get('openurl'));		
-				$("#upload_panel iframe").attr( 'src', '/smb/css/upload.html?u=' + this_url + '&d=1' );
-				
-				$("#function_help").text(m.getString('msg_uploadmode_help'));
-				
-				adjustLayout();
-			}
-		});
-		
-		$("#uploadfolder").click(function(e){
-			if( isBrowser("chrome") ){
-				g_upload_mode = 1;
-				
-				$("div#btnNewDir").css("display", "none");
-				$("div#btnUpload").css("display", "none");
-				$("div#btnPlayImage").css("display", "none");
-				$("div#boxSearch").css("display", "none");
-				$("div#btnListView").css("display", "none");
-				$("div#btnThumbView").css("display", "none");
-						
-				$("#upload_panel").css("display", "block");
-				
-				$("#upload_panel").css("left", '1999px');		
-				$("#upload_panel").animate({left:"0px"},"slow");
-				
-				var this_url = addPathSlash(g_storage.get('openurl'));		
-				$("#upload_panel iframe").attr( 'src', '/smb/css/upload.html?u=' + this_url +'&d=2' );
-					
-				$("#function_help").text(m.getString('msg_uploadmode_help'));
-				
-				adjustLayout();
-			}
-			else{
-				var $modalWindow = $("div#modalWindow");	
-				
-				g_modal_url = '/smb/css/upload_folder.html';
-				g_modal_window_width = 600;
-				g_modal_window_height = 150;
-				$('#jqmMsg').css("display", "none");
-				$('#jqmTitleText').text(m.getString('title_upload_folder'));
-				if($modalWindow){
-					$modalWindow.jqmShow();
-				}
-			}
-		});
-		
-		return false;
-	});
-	
 	$("#btnUpload2").click(function(){		
 			
 		g_upload_mode = 1;
@@ -2317,7 +1835,7 @@ $(document).ready(function(){
 		
 		var this_url = addPathSlash(g_storage.get('openurl'));		
 		$("#upload_panel iframe").attr( 'src', '/smb/css/upload.html?u=' + this_url );
-			
+		
 		$("#function_help").text(m.getString('msg_uploadmode_help'));
 		
 		adjustLayout();
@@ -2326,8 +1844,8 @@ $(document).ready(function(){
 	$("#btnCancelUpload").click(closeUploadPanel);
 	
 	$(".mediaListDiv").mousedown( function(){	
-		if(confirmCancelUploadFile()==0)
-			return;
+		//if(confirmCancelUploadFile()==0)
+		//	return;
 		/*
 		if(g_storage.get('dms_enable')=="0"){
 			//alert(m.getString("msg_no_mediaserver"));
@@ -2438,6 +1956,7 @@ $(document).ready(function(){
 	
 	$(".navigation#setting dd a").click(function(){		
 		var func = $(this).attr("id");
+		
 		if(func=="logout"){
 			if(confirmCancelUploadFile()==0)
 				return;
@@ -2548,20 +2067,41 @@ $(document).ready(function(){
 				$modalWindow.jqmShow();
 			}
 		}
-		else if(func=="other_settings"){
+		else if(func=="crt"){
 			var $modalWindow = $("div#modalWindow");
 			var page_size = getPageSize();
 			g_modal_url = '/smb/css/setting.html?p=3&s=1';
 			g_modal_window_width = 800;
 			g_modal_window_height = page_size[1]-30;
 			$('#jqmMsg').css("display", "none");
-			$('#jqmTitleText').text(m.getString('title_setting'));
+			$('#jqmTitleText').text(m.getString('title_crt'));
 			if($modalWindow){
 				$modalWindow.jqmShow();
 			}
 		}
-		else if(func=="test"){
-			
+		else if(func=="test_func"){
+			g_webdav_client.GETNOTICE("/", "Dec 31 12:00:20", function(error, statusstring, content){				
+				if(error==200){
+					var data = parseXml(content);
+					var x = $(data);
+					var notice_log = x.find("log").text();
+					alert(notice_log);
+				}
+				else{
+					alert(error);	
+				}
+			});
+			/*
+			g_webdav_client.APPLYAPP("/", "apply", "", "restart_webdav", function(error, statusstring, content){				
+				if(error==200){
+					alert("complete");
+				}
+				else{
+					alert(error);	
+				}
+			});
+			*/
+			/*
 			g_webdav_client.GETROUTERINFO("/AICLOUD306106790/AiCloud", function(error, statusstring, content){				
 				if(error==200){
 				
@@ -2585,7 +2125,7 @@ $(document).ready(function(){
 					}
 				}
 			});
-		
+			*/
 			/*
 			var apply_url = "http://stage615.asuscomm.com:8082/AICLOUD890940472/Santana";
 			//var apply_url = "http://192.168.1.10:8082/AICLOUD306106790/AiCloud";
@@ -2614,12 +2154,28 @@ $(document).ready(function(){
 			}, 0);
 			*/
 		}
+		else if(func=="test_func2"){
+			g_webdav_client.NVRAMGET("/", "rc_support;webdav_last_login_info", function(error, statusstring, content){				
+				if(error==200){
+					var data = parseXml(content);
+					
+					$(data).find('nvram').each(function(){
+						var key = $(this).attr("key");
+						var value = $(this).attr("value");
+						alert("key="+key+", value="+value);
+					});
+				}
+				else{
+					alert(error);	
+				}
+			});
+		}
 	});
 	
 	$(".navigation#refresh dt a").click(function(){
 		
-		if(confirmCancelUploadFile()==0)
-			return;
+		//if(confirmCancelUploadFile()==0)
+		//	return;
 	
 		//- Query host list first.
 		var loc = g_storage.get('openurl');
@@ -2763,6 +2319,66 @@ $(document).ready(function(){
 				open_upload2service_window("flickr", upload_files);
 				upload_files = null;
 			}
+			else if(key=="share2facebook"){
+				if(g_select_array.length<=0)
+					return;
+				
+				var selectURL = g_storage.get('openurl');	
+				var selectFileArray = new Array();
+					
+				for(var i=0; i < g_select_array.length; i++){			  
+					var this_file = g_select_array[i].title;
+					selectFileArray.push(this_file);
+				}
+								
+				open_sharelink_window("facebook", selectURL, selectFileArray);
+				selectFileArray = null;
+			}
+			else if(key=="share2googleplus"){
+				if(g_select_array.length<=0)
+					return;
+				
+				var selectURL = g_storage.get('openurl');	
+				var selectFileArray = new Array();
+					
+				for(var i=0; i < g_select_array.length; i++){			  
+					var this_file = g_select_array[i].title;
+					selectFileArray.push(this_file);
+				}
+								
+				open_sharelink_window("googleplus", selectURL, selectFileArray);
+				selectFileArray = null;
+			}
+			else if(key=="share2twitter"){
+				if(g_select_array.length<=0)
+					return;
+				
+				var selectURL = g_storage.get('openurl');	
+				var selectFileArray = new Array();
+					
+				for(var i=0; i < g_select_array.length; i++){			  
+					var this_file = g_select_array[i].title;
+					selectFileArray.push(this_file);
+				}
+								
+				open_sharelink_window("twitter", selectURL, selectFileArray);
+				selectFileArray = null;
+			}
+			else if(key=="share2plurk"){
+				if(g_select_array.length<=0)
+					return;
+				
+				var selectURL = g_storage.get('openurl');	
+				var selectFileArray = new Array();
+					
+				for(var i=0; i < g_select_array.length; i++){			  
+					var this_file = g_select_array[i].title;
+					selectFileArray.push(this_file);
+				}
+								
+				open_sharelink_window("plurk", selectURL, selectFileArray);
+				selectFileArray = null;
+			}
 			else if(key=="sharelink"){
 				if(g_select_array.length<=0)
 					return;
@@ -2771,57 +2387,58 @@ $(document).ready(function(){
 				var selectFileArray = new Array();
 					
 				for(var i=0; i < g_select_array.length; i++){			  
-					var this_file_name = g_select_array[i].title;
-					selectFileArray.push(this_file_name);
+					var this_file = g_select_array[i].title;
+					selectFileArray.push(this_file);
 				}
 					
-				open_sharelink_window(selectURL, selectFileArray);
+				open_sharelink_window("other", selectURL, selectFileArray);
 				selectFileArray = null;
 			}
         },
-        items: {
-            "upload2facebook": {
-				name: m.getString("title_upload2facebook"), 
-				disabled: function(key, opt) {
-					if(g_storage.get('isAidisk')=="0")
-						return true;
-						
+        items: {			
+			"submenu_upload": { 
+				name : m.getString("title_upload2"),
+				disabled: function(key, opt) {							
 					if(g_select_array.length<=0)
 						return true;
 						
 					for(var i=0; i < g_select_array.length; i++){			  
 						var this_full_url = g_select_array[i].uhref;
 						var filext = getFileExt(this_full_url);
-										
+												
 						if(filext=='jpg'||filext=='jpeg'||filext=='png'||filext=='gif'){
 							return false;
 						}
 					}
-				
+						
 					return true;
-            	}
-			},
-			"upload2flickr": {
-				name: m.getString("title_upload2flickr"), 
-				disabled: function(key, opt) {
-					if(g_storage.get('isAidisk')=="0")
-						return true;
-						
-					if(g_select_array.length<=0)
-						return true;
-						
-					for(var i=0; i < g_select_array.length; i++){			  
-						var this_full_url = g_select_array[i].uhref;
-						var filext = getFileExt(this_full_url);
-										
-						if(filext=='jpg'||filext=='jpeg'||filext=='png'||filext=='gif'){
-							return false;
-						}
+				},
+                items : {
+                	"upload2facebook": {
+						name: m.getString("title_facebook")
+					},
+					"upload2flickr": {
+						name: m.getString("title_flickr")
 					}
-					
-					return true;
-            	}
-			},
+                }
+            },
+			"submenu_share": { 
+				name : m.getString("title_share2"),
+                items : {
+                	"share2facebook": {
+						name: m.getString("title_facebook")
+					},
+					"share2googleplus": {
+						name: m.getString("title_googleplus")
+					},
+					"share2twitter": {
+						name: m.getString("title_twitter")
+					},
+					"share2plurk": {
+						name: m.getString("title_plurk")
+					}
+                }
+            },
 			"sharelink": {name: m.getString("title_gen_sharelink")}
         }
     });
@@ -2895,7 +2512,7 @@ $(document).ready(function(){
         callback: function(key, options) {
 			var select_item = $(this).parents(".wcb");
 			var uhref = select_item.attr("uhref");
-			var file_name = select_item.attr("data-name");
+			var file_name = encodeURIComponent(select_item.attr("data-name"));
 			var isdir = select_item.attr("isdir");
 			
 			if(key=="delete"){
@@ -2927,59 +2544,92 @@ $(document).ready(function(){
 			else if(key=="upload2flickr"){
 				open_upload2service_window("flickr", uhref);
 			}
+			else if(key=="share2facebook"){
+				var selectURL = g_storage.get('openurl');
+				open_sharelink_window("facebook", selectURL, file_name);
+			}
+			else if(key=="share2googleplus"){
+				var selectURL = g_storage.get('openurl');
+				open_share2service_window("googleplus", selectURL, file_name);
+			}
+			else if(key=="share2twitter"){
+				var selectURL = g_storage.get('openurl');
+				open_sharelink_window("twitter", selectURL, file_name);
+			}
+			else if(key=="share2plurk"){
+				var selectURL = g_storage.get('openurl');
+				open_sharelink_window("plurk", selectURL, file_name);
+			}
 			else if(key=="sharelink"){				
 				var selectURL = g_storage.get('openurl');
-				open_sharelink_window(selectURL, file_name);
+				open_sharelink_window("other", selectURL, file_name);
 			}
         },
         items: {
-            "delete": {name: m.getString("func_delete")},
+            "delete": {
+				name: m.getString("func_delete"),
+				disabled: function(){
+					if(g_storage.get('aimode')==1||
+					   g_storage.get('aimode')==2||
+					   g_storage.get('aimode')==3)
+					   return true;
+				}
+			},
 			"sep1": "---------",
-			"rename": {name: m.getString("func_rename")},
+			"rename": {
+				name: m.getString("func_rename"),
+				disabled: function(){
+					if(g_storage.get('aimode')==1||
+					   g_storage.get('aimode')==2||
+					   g_storage.get('aimode')==3)
+					   return true;
+				}
+			},
             "download": {name: m.getString("func_download")},
 			"sep2": "---------",
-            "upload2facebook": {
-				name: m.getString("title_upload2facebook"), 
-				disabled: function(key, opt) {
-					if(g_storage.get('isAidisk')=="0")
-						return true;
-					
+			"submenu_upload": { 
+				name : m.getString("title_upload2"),
+				disabled: function(key, opt) {							
 					if(g_select_array.length<=0)
 						return true;
 						
 					for(var i=0; i < g_select_array.length; i++){			  
 						var this_full_url = g_select_array[i].uhref;
 						var filext = getFileExt(this_full_url);
-										
+												
 						if(filext=='jpg'||filext=='jpeg'||filext=='png'||filext=='gif'){
 							return false;
 						}
 					}
-				
+						
 					return true;
-            	}
-			},
-			"upload2flickr": {
-				name: m.getString("title_upload2flickr"), 
-				disabled: function(key, opt) {
-					if(g_storage.get('isAidisk')=="0")
-						return true;
-						
-					if(g_select_array.length<=0)
-						return true;
-						
-					for(var i=0; i < g_select_array.length; i++){			  
-						var this_full_url = g_select_array[i].uhref;
-						var filext = getFileExt(this_full_url);
-										
-						if(filext=='jpg'||filext=='jpeg'||filext=='png'||filext=='gif'){
-							return false;
-						}
+				},
+                items : {
+                	"upload2facebook": {
+						name: m.getString("title_facebook")
+					},
+					"upload2flickr": {
+						name: m.getString("title_flickr")
 					}
-				
-					return true;
-            	}
-			},
+                }
+            },
+			"submenu_share": { 
+				name : m.getString("title_share2"),
+                items : {
+                	"share2facebook": {
+						name: m.getString("title_facebook")
+					},
+					"share2googleplus": {
+						name: m.getString("title_googleplus")
+					},
+					"share2twitter": {
+						name: m.getString("title_twitter")
+					},
+					"share2plurk": {
+						name: m.getString("title_plurk")
+					}
+                }
+            },
 			"sharelink": {name: m.getString("title_gen_sharelink")}
         }
     });
@@ -2989,7 +2639,6 @@ $(document).ready(function(){
 
 window.onbeforeunload = function (e) {
 	var is_onUploadFile = g_storage.get('isOnUploadFile');
-	
 	if(is_onUploadFile==1){
 		var msg = m.getString('msg_confirm_cancel_upload');		
 		var e = e || window.event;
@@ -3004,13 +2653,17 @@ window.onbeforeunload = function (e) {
 	}
 };
 
-window.onunload = function (e) {
-	
+window.onunload = function (e) {	
+	if(confirmCancelUploadFile()==0){
+		return;	
+	}
+	/*
 	var is_onUploadFile = g_storage.get('isOnUploadFile');
 	
 	if(is_onUploadFile==1){
-		$("#upload_panel iframe")[0].contentWindow.stop_upload();
+		stop_upload();
 	}
+	*/
 };
 
 function doBackgroundPlay(){

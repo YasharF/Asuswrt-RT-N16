@@ -289,6 +289,11 @@ config RTCONFIG_USB_MODEM
 	depends on RTCONFIG_USB
 	default n
 
+config RTCONFIG_USB_LESSMODEM
+	bool "Less USB Modem Support"
+	depends on RTCONFIG_USB_MODEM
+	default n
+
 config RTCONFIG_USB_MODEM_PIN
 	bool "USB Modem pin code Support"
 	depends on RTCONFIG_USB_MODEM
@@ -480,10 +485,6 @@ config RTCONFIG_USB_XHCI
 	bool "XHCI"
 	default n
 
-config RTCONFIG_USB_2XHCI2
-	bool "XHCI2, XHCI is disabled by default"
-	default n
-
 config RTCONFIG_WLMODULE_RT3090_AP
 	bool "Wireless module RT3090 ap"
 	default n
@@ -576,3 +577,15 @@ config RTCONFIG_LLDP
 config RTCONFIG_HAS_5G
 	bool "has 5G band"
 	default y
+
+config RTCONFIG_TFTP
+	bool "TFTP server or client"
+	default n
+
+config RTCONFIG_QTN
+	bool "Quantenna boot-code and firmware"
+	default n
+
+config RTCONFIG_RGMII_BRCM5301X
+	bool "Config 5301x to RGMII mode"
+	default n

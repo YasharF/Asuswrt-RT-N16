@@ -313,13 +313,13 @@ function validForm(){
 											<th width="20%"><#NetworkTools_option#></th>
 											<td>
 												<select id="NetOption" class="input_option" name="NetOption" onChange="append_value(this);">
-													<option value="-a">Display all sockets</option>
-													<option value="-t">TCP sockets</option>
-													<option value="-u">UDP sockets</option>
-													<option value="-w">RAW sockets</option>
-													<option value="-x">UNIX sockets</option>
-													<option value="-l">Display listening server sockets</option>
-													<option value="-r">Display routing table</option>
+													<option value="-a"><#sockets_all#></option>
+													<option value="-t"><#sockets_TCP#></option>
+													<option value="-u"><#sockets_UDP#></option>
+													<option value="-w"><#sockets_RAW#></option>
+													<option value="-x"><#sockets_UNIX#></option>
+													<option value="-l"><#sockets_listening#></option>
+													<option value="-r"><#Display_routingtable#></option>
  												</select>	
 											</td>			
 										</tr>

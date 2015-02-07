@@ -54,7 +54,7 @@ var g_thumb_loader = {
 			var load_item = self._array[0];
 			var item_con = load_item.item_con;
 			var item_uhref = load_item.uhref;
-			var filename = load_item.filename;
+			var filename = myencodeURI(load_item.filename);
 			var loc = (g_storage.get('openurl')==undefined) ? "/" : g_storage.get('openurl');
 			
 			var thumb_image = g_storage.getl(item_uhref);

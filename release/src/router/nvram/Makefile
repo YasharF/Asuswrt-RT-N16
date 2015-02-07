@@ -1,13 +1,19 @@
 include ../common.mak
 
-CFLAGS = -O2 -Wall $(EXTRACFLAGS) -fPIC
-CFLAGS += -I$(TOP)/shared -I$(SRCBASE)/include -I.
+CFLAGS  += -I. -I$(SRCBASE)/include -Wall -fPIC $(EXTRACFLAGS)
+#CFLAGS += -g -DDEBUG
+CFLAGS  += -s
+ifeq ($(CONFIG_RTR_OPTIMIZE_SIZE),y)
+CFLAGS  += -Os
+else
+CFLAGS  += -O2
+endif
+LDFLAGS += -L. -L$(TOP)/shared -lshared
+
+CFLAGS += -I$(TOP)/shared
+
 ifeq ($(STATIC),1)
 CFLAGS += -static
-endif
-
-ifeq ($(RTCONFIG_DSL),y)
-CFLAGS += -DRTCONFIG_DSL
 endif
 
 all: libnvram.so libnvram.a nvram

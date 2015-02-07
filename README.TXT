@@ -26,6 +26,7 @@ Set Up Environment(Tested in Fedora 8/9 and Ubuntu)
 		shtool
 		autogen
 		mtd-utils
+		intltool
 
 	b. Fedora
 		sudo yum groupinstall "Development Tools"

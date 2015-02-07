@@ -63,11 +63,11 @@ endif
 
 export BRANCH := $(shell git branch)
 
-ifeq ($(BRANCH),) 
+#ifeq ($(BRANCH),) 
 include ./router/extendno.conf
-else
-export EXTENDNO := $(shell git log --pretty=oneline asuswrt_$(KERNEL_VER).$(FS_VER).$(SERIALNO)..HEAD | wc -l)-g$(shell git log --pretty=format:'%h' -n 1)
-endif
+#else
+#export EXTENDNO := $(shell git log --pretty=oneline asuswrt_$(KERNEL_VER).$(FS_VER).$(SERIALNO)..HEAD | wc -l)-g$(shell git log --pretty=format:'%h' -n 1)
+#endif
 
 ifeq ($(EXTENDNO),)
 export EXTENDNO := 0-g$(shell git log --pretty=format:'%h' -n 1)
@@ -620,6 +620,18 @@ define RouterOptions
 			sed -i "/RTCONFIG_USB_EXTRAS/d" $(1); \
 			echo "RTCONFIG_USB_EXTRAS=y" >>$(1); \
 		fi; \
+		if [ "$(TUXERA)" = "y" ]; then \
+			sed -i "/RTCONFIG_TUXERA/d" $(1); \
+			echo "RTCONFIG_TUXERA=y" >>$(1); \
+		fi; \
+		if [ "$(TFAT)" = "y" ]; then \
+			sed -i "/RTCONFIG_TFAT/d" $(1); \
+			echo "RTCONFIG_TFAT=y" >>$(1); \
+		fi; \
+		if [ "$(EXFAT)" = "y" ]; then \
+			sed -i "/RTCONFIG_EXFAT/d" $(1); \
+			echo "RTCONFIG_EXFAT=y" >>$(1); \
+		fi; \
 		if [ "$(NTFS)" = "y" ]; then \
 			sed -i "/RTCONFIG_NTFS/d" $(1); \
 			echo "RTCONFIG_NTFS=y" >>$(1); \
@@ -661,6 +673,10 @@ define RouterOptions
 				sed -i "/RTCONFIG_USB_BECEEM/d" $(1); \
 				echo "RTCONFIG_USB_BECEEM=y" >>$(1); \
 			fi; \
+			if [ "$(LESSMODEM)" = "y" ]; then \
+				sed -i "/RTCONFIG_USB_LESSMODEM/d" $(1); \
+				echo "RTCONFIG_USB_LESSMODEM=y" >>$(1); \
+			fi; \
 		fi; \
 		if [ "$(PRINTER)" = "y" ]; then \
 			sed -i "/RTCONFIG_USB_PRINTER/d" $(1); \
@@ -687,10 +703,6 @@ define RouterOptions
 		if [ "$(XHCI)" = "y" ]; then \
 			sed -i "/RTCONFIG_USB_XHCI/d" $(1); \
 			echo "RTCONFIG_USB_XHCI=y" >>$(1); \
-		fi; \
-		if [ "$(XHCI2)" = "y" ]; then \
-			sed -i "/RTCONFIG_USB_2XHCI2/d" $(1); \
-			echo "RTCONFIG_USB_2XHCI2=y" >>$(1); \
 		fi; \
 	else \
 		sed -i "/RTCONFIG_USB\b/d" $(1); \
@@ -722,10 +734,10 @@ define RouterOptions
 		sed -i "/RTCONFIG_JFFS2/d" $(1); \
 		echo "RTCONFIG_JFFS2=y" >>$(1); \
 	fi; \
-        if [ "$(BRCM_NAND_JFFS2)" = "y" ]; then \
-                sed -i "/RTCONFIG_BRCM_NAND_JFFS2/d" $(1); \
-                echo "RTCONFIG_BRCM_NAND_JFFS2=y" >>$(1); \
-        fi; \
+	if [ "$(BRCM_NAND_JFFS2)" = "y" ]; then \
+		sed -i "/RTCONFIG_BRCM_NAND_JFFS2/d" $(1); \
+		echo "RTCONFIG_BRCM_NAND_JFFS2=y" >>$(1); \
+	fi; \
 	if [ "$(JFFS1)" = "y" ]; then \
 		sed -i "/RTCONFIG_JFFSV1/d" $(1); \
 		echo "RTCONFIG_JFFSV1=y" >>$(1); \
@@ -733,6 +745,8 @@ define RouterOptions
 	if [ "$(CIFS)" = "y" ]; then \
 		sed -i "/RTCONFIG_CIFS/d" $(1); \
 		echo "RTCONFIG_CIFS=y" >>$(1); \
+		sed -i "/RTCONFIG_AUTODICT/d" $(1); \
+		echo "RTCONFIG_AUTODICT=n" >>$(1); \
 	fi; \
 	if [ "$(SSH)" = "y" ]; then \
 		sed -i "/RTCONFIG_SSH/d" $(1); \
@@ -850,13 +864,13 @@ define RouterOptions
 		sed -i "/RTCONFIG_TEMPROOTFS/d" $(1); \
 		echo "# RTCONFIG_TEMPROOTFS is not set" >>$(1); \
 	fi; \
-        if [ "$(JFFS2LOG)" = "y" ]; then \
-                sed -i "/RTCONFIG_JFFS2LOG/d" $(1); \
-                echo "RTCONFIG_JFFS2LOG=y" >>$(1); \
+	if [ "$(JFFS2LOG)" = "y" ]; then \
+		sed -i "/RTCONFIG_JFFS2LOG/d" $(1); \
+		echo "RTCONFIG_JFFS2LOG=y" >>$(1); \
 	else \
-                sed -i "/RTCONFIG_JFFS2LOG/d" $(1); \
-                echo "# RTCONFIG_JFFS2LOG is not set" >>$(1); \
-        fi; \
+		sed -i "/RTCONFIG_JFFS2LOG/d" $(1); \
+		echo "# RTCONFIG_JFFS2LOG is not set" >>$(1); \
+	fi; \
 	if [ "$(WPSMULTIBAND)" = "y" ]; then \
 		sed -i "/RTCONFIG_WPSMULTIBAND/d" $(1); \
 		echo "RTCONFIG_WPSMULTIBAND=y" >>$(1); \
@@ -879,24 +893,36 @@ define RouterOptions
 		sed -i "/RTCONFIG_KYIVSTAR/d" $(1); \
 		echo "RTCONFIG_KYIVSTAR=y" >>$(1); \
 	fi; \
-        if [ "$(CFE_NVRAM_CHK)" = "y" ]; then \
-                sed -i "/RTCONFIG_CFE_NVRAM_CHK/d" $(1); \
-                echo "RTCONFIG_CFE_NVRAM_CHK=y" >>$(1); \
-        fi; \
-        if [ "$(LLDP)" = "y" ]; then \
-                sed -i "/RTCONFIG_LLDP/d" $(1); \
-                echo "RTCONFIG_LLDP=y" >>$(1); \
-        fi; \
-        if [ "$(DEBUG)" = "y" ]; then \
-                sed -i "/RTCONFIG_DEBUG/d" $(1); \
-                echo "RTCONFIG_DEBUG=y" >>$(1); \
+	if [ "$(CFE_NVRAM_CHK)" = "y" ]; then \
+		sed -i "/RTCONFIG_CFE_NVRAM_CHK/d" $(1); \
+		echo "RTCONFIG_CFE_NVRAM_CHK=y" >>$(1); \
+	fi; \
+	if [ "$(LLDP)" = "y" ]; then \
+		sed -i "/RTCONFIG_LLDP/d" $(1); \
+		echo "RTCONFIG_LLDP=y" >>$(1); \
+	fi; \
+	if [ "$(DEBUG)" = "y" ]; then \
+		sed -i "/RTCONFIG_DEBUG/d" $(1); \
+		echo "RTCONFIG_DEBUG=y" >>$(1); \
 		sed -i "/RTCONFIG_GDB/d" $(1); \
 		echo "RTCONFIG_GDB=y" >>$(1); \
-        fi; \
-        if [ "$(SINGLE_2G)" = "y" ]; then \
-                sed -i "/RTCONFIG_HAS_5G/d" $(1); \
-                echo "# RTCONFIG_HAS_5G is not set" >>$(1); \
-        fi; \
+	fi; \
+	if [ "$(SINGLE_2G)" = "y" ]; then \
+		sed -i "/RTCONFIG_HAS_5G/d" $(1); \
+		echo "# RTCONFIG_HAS_5G is not set" >>$(1); \
+	fi; \
+	if [ "$(TFTP)" = "y" ]; then \
+		sed -i "/RTCONFIG_TFTP/d" $(1); \
+		echo "RTCONFIG_TFTP=y" >>$(1); \
+	fi; \
+	if [ "$(QTN)" = "y" ]; then \
+		sed -i "/RTCONFIG_QTN/d" $(1); \
+		echo "RTCONFIG_QTN=y" >>$(1); \
+	fi; \
+	if [ "$(RGMII_BRCM5301X)" = "y" ]; then \
+		sed -i "/RTCONFIG_RGMII_BRCM5301X/d" $(1); \
+		echo "RTCONFIG_RGMII_BRCM5301X=y" >>$(1); \
+	fi; \
 	)
 	$(call platformRouterOptions, $(1))
 endef
@@ -935,14 +961,10 @@ define BusyboxOptions
 			echo "CONFIG_E2FSCK=y" >>$(1); \
 			sed -i "/CONFIG_FSCK_MINIX/d" $(1); \
 			echo "CONFIG_FSCK_MINIX=y" >>$(1); \
-			sed -i "/CONFIG_MKE2FS/d" $(1); \
-			echo "CONFIG_MKE2FS=y" >>$(1); \
 			sed -i "/CONFIG_FDISK/d" $(1); \
 			echo "CONFIG_FDISK=y" >>$(1); \
 			sed -i "/CONFIG_FEATURE_FDISK_WRITABLE/d" $(1); \
 			echo "CONFIG_FEATURE_FDISK_WRITABLE=y" >>$(1); \
-			sed -i "/CONFIG_MKFS_VFAT/d" $(1); \
-			echo "CONFIG_MKFS_VFAT=y" >>$(1); \
 			sed -i "/CONFIG_MKSWAP/d" $(1); \
 			echo "CONFIG_MKSWAP=y" >>$(1); \
 			sed -i "/CONFIG_FLOCK/d" $(1); \
@@ -1139,6 +1161,23 @@ define KernelConfig
 			sed -i "/CONFIG_USB_BECEEM/d" $(1); \
 			echo "CONFIG_USB_BECEEM=m" >>$(1); \
 		fi; \
+		if [ "$(LESSMODEM)" = "y" ]; then \
+			sed -i "/CONFIG_USB_NET_NET1080/d" $(1); \
+			echo "# CONFIG_USB_NET_NET1080 is not set" >>$(1); \
+			sed -i "/CONFIG_USB_NET_ZAURUS/d" $(1); \
+			echo "# CONFIG_USB_NET_ZAURUS is not set" >>$(1); \
+			sed -i "/CONFIG_HSO/d" $(1); \
+			echo "# CONFIG_HSO is not set" >>$(1); \
+			sed -i "/CONFIG_USB_SERIAL_FTDI_SIO/d" $(1); \
+			echo "# CONFIG_USB_SERIAL_FTDI_SIO is not set" >>$(1); \
+			sed -i "/CONFIG_USB_SERIAL_PL2303/d" $(1); \
+			echo "# CONFIG_USB_SERIAL_PL2303 is not set" >>$(1); \
+		fi; \
+	else \
+		sed -i "/CONFIG_USB_SERIAL/d" $(1); \
+		echo "# CONFIG_USB_SERIAL is not set" >>$(1); \
+		sed -i "/CONFIG_USB_ACM/d" $(1); \
+		echo "# CONFIG_USB_ACM is not set" >>$(1); \
 	fi; \
 	if [ "$(AP_CARRIER_DETECTION)" = "y" ]; then \
 		sed -i "/CONFIG_RALINK_TIMER_DFS/d" $(1); \
@@ -1175,10 +1214,6 @@ define KernelConfig
 		sed -i "/CONFIG_IP_NF_LFP/d" $(1); \
 		echo "CONFIG_IP_NF_LFP=y" >>$(1); \
  	fi; \
-	if [ "$(MODEM)" != "y" ]; then \
-		echo "# CONFIG_USB_SERIAL is not set" >>$(1); \
-		echo "# CONFIG_USB_ACM is not set" >>$(1); \
-	fi; \
 	if [ "$(DNSMQ)" = "y" ]; then \
 		sed -i "/CONFIG_IP_NF_DNSMQ/d" $(1); \
 		echo "CONFIG_IP_NF_DNSMQ=y" >>$(1); \
@@ -1345,8 +1380,8 @@ define KernelConfig
 		sed -i "/# CONFIG_HOTPLUG_CPU is not set/d" $(1); \
 		sed -i "/CONFIG_RPS=y/d" $(1); \
 	fi; \
-        if [ "$(DUALWAN)" = "y" ]; then \
-        	if [ "$(BCMWL6A)" = "y" ]; then \
+	if [ "$(DUALWAN)" = "y" ]; then \
+		if [ "$(BCMWL6A)" = "y" ]; then \
 			sed -i "/CONFIG_IP_ADVANCED_ROUTER/d" $(1); \
 			echo "CONFIG_IP_ADVANCED_ROUTER=y" >>$(1); \
 			echo "CONFIG_ASK_IP_FIB_HASH=y" >>$(1); \
@@ -1357,31 +1392,37 @@ define KernelConfig
 			echo "CONFIG_IP_MROUTE_MULTIPLE_TABLES=y" >>$(1); \
 		fi; \
 	fi; \
-        sed -i "/CONFIG_CFE_NVRAM_CHK/d" $(1); \
-        if [ "$(NVRAM_64K)" = "y" ]; then \
-                echo "CONFIG_CFE_NVRAM_CHK=y" >>$(1); \
-        else \
-                echo "# CONFIG_CFE_NVRAM_CHK is not set" >>$(1); \
-        fi; \
+	sed -i "/CONFIG_CFE_NVRAM_CHK/d" $(1); \
+	if [ "$(NVRAM_64K)" = "y" ]; then \
+		echo "CONFIG_CFE_NVRAM_CHK=y" >>$(1); \
+	else \
+		echo "# CONFIG_CFE_NVRAM_CHK is not set" >>$(1); \
+	fi; \
 	if [ "$(DEBUG)" = "y" ] || [ "$(GDB)" = "y" ]; then \
-                sed -i "/CONFIG_ELF_CORE/d" $(1); \
-                echo "CONFIG_ELF_CORE=y" >>$(1); \
-        	if [ "$(BCMWL6A)" = "y" ]; then \
-                	sed -i "/CONFIG_CORE_DUMP_DEFAULT_ELF_HEADERS/d" $(1); \
-                	echo "# CONFIG_CORE_DUMP_DEFAULT_ELF_HEADERS is not set" >>$(1); \
-        	fi; \
-        fi; \
-        if [ "$(DUMP_OOPS_MSG)" = "y" ]; then \
-                if [ "$(BUILD_NAME)" = "RT-AC66U" ] || [ "$(BUILD_NAME)" = "RT-N66U" ]; then \
-                        echo "CONFIG_DUMP_PREV_OOPS_MSG=y" >>$(1); \
-                        echo "CONFIG_DUMP_PREV_OOPS_MSG_BUF_ADDR=0x07FFE000" >>$(1); \
-                        echo "CONFIG_DUMP_PREV_OOPS_MSG_BUF_LEN=0x2000" >>$(1); \
-                else \
-                        echo "# CONFIG_DUMP_PREV_OOPS_MSG is not set" >>$(1); \
-                fi; \
-        else \
-                echo "# CONFIG_DUMP_PREV_OOPS_MSG is not set" >>$(1); \
-        fi; \
+		sed -i "/CONFIG_ELF_CORE/d" $(1); \
+		echo "CONFIG_ELF_CORE=y" >>$(1); \
+		if [ "$(BCMWL6A)" = "y" ]; then \
+			sed -i "/CONFIG_CORE_DUMP_DEFAULT_ELF_HEADERS/d" $(1); \
+			echo "# CONFIG_CORE_DUMP_DEFAULT_ELF_HEADERS is not set" >>$(1); \
+		fi; \
+	fi; \
+	if [ "$(DUMP_OOPS_MSG)" = "y" ]; then \
+		if [ "$(BUILD_NAME)" = "RT-AC66U" ] || [ "$(BUILD_NAME)" = "RT-N66U" ]; then \
+			echo "CONFIG_DUMP_PREV_OOPS_MSG=y" >>$(1); \
+			echo "CONFIG_DUMP_PREV_OOPS_MSG_BUF_ADDR=0x07FFE000" >>$(1); \
+			echo "CONFIG_DUMP_PREV_OOPS_MSG_BUF_LEN=0x2000" >>$(1); \
+		else \
+			echo "# CONFIG_DUMP_PREV_OOPS_MSG is not set" >>$(1); \
+		fi; \
+	else \
+		echo "# CONFIG_DUMP_PREV_OOPS_MSG is not set" >>$(1); \
+	fi; \
+	sed -i "/CONFIG_LINUX_MTD/d" $(1); \
+	if [ "$(LINUX_MTD)" = "" ]; then \
+		echo "CONFIG_LINUX_MTD=32" >>$(1); \
+	else \
+		echo "CONFIG_LINUX_MTD=$(LINUX_MTD)" >>$(1); \
+	fi; \
 	)
 	$(call platformKernelConfig, $(1))
 	$(call extraKernelConfig, $(1))

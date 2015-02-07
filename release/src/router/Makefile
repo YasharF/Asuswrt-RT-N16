@@ -12,6 +12,7 @@
 #
 
 include common.mak
+include $(SRCBASE)/.config
 
 ifneq ($(RTCONFIG_RALINK),y)
 export CFLAGS += -DBCMWPA2
@@ -25,6 +26,9 @@ export CFLAGS += -DPHYMON
 export CFLAGS += -DPROXYARP
 export CFLAGS += -DTRAFFIC_MGMT
 export CFLAGS += -DTRAFFIC_MGMT_RSSI_POLICY
+ifeq ($(RTCONFIG_BCMARM),y)
+export CFLAGS += -DMFP
+endif
 endif
 export CFLAGS += $(EXTRACFLAGS)
 endif
@@ -187,6 +191,7 @@ obj-y += libbcmcrypto
 #obj-y += cyassl
 obj-$(RTCONFIG_HTTPS) += mssl
 #obj-y += mdu
+obj-$(RTCONFIG_TFTP) += tftp
 
 # !!TB
 ifeq ($(RTCONFIG_USB),y)
@@ -217,7 +222,7 @@ obj-$(RTCONFIG_USB_BECEEM) += gctwimax-0.0.3rc4 # for GCT WiMAX
 
 obj-y += libdisk
 
-obj-y += dosfstools
+#obj-y += dosfstools
 #obj-$(RTCONFIG_NTFS) += linux-ntfs-2.0.0
 obj-$(RTCONFIG_FTP) += vsftpd
 
@@ -402,6 +407,7 @@ obj-$(UBIFS) += util-linux lzo zlib
 ifeq ($(RTCONFIG_RALINK),y)
 obj-$(RA_SKU) += ra_SingleSKU
 endif
+obj-$(RTCONFIG_BCMARM) += wl$(BCMEX)
 
 #obj-y += bonnie
 
@@ -718,13 +724,12 @@ endif
 	$(if $(RTCONFIG_USB_MODEM),@cp -f,@mv) $(TARGETDIR)/lib/modules/*/kernel/drivers/net/usb/usbnet.*o $(PLATFORMDIR)/extras/ || true
 	$(if $(RTCONFIG_USB_MODEM),@cp -f,@mv) $(TARGETDIR)/lib/modules/*/kernel/drivers/net/usb/asix.*o $(PLATFORMDIR)/extras/ || true
 	$(if $(RTCONFIG_USB_MODEM),@cp -f,@mv) $(TARGETDIR)/lib/modules/*/kernel/drivers/net/usb/cdc_ether.*o $(PLATFORMDIR)/extras/ || true
-	$(if $(RTCONFIG_USB_MODEM),@cp -f,@mv) $(TARGETDIR)/lib/modules/*/kernel/drivers/net/usb/net1080.*o $(PLATFORMDIR)/extras/ || true
 	$(if $(RTCONFIG_USB_MODEM),@cp -f,@mv) $(TARGETDIR)/lib/modules/*/kernel/drivers/net/usb/rndis_host.*o $(PLATFORMDIR)/extras/ || true
-	$(if $(RTCONFIG_USB_MODEM),@cp -f,@mv) $(TARGETDIR)/lib/modules/*/kernel/drivers/net/usb/zaurus.*o $(PLATFORMDIR)/extras/ || true
 	$(if $(RTCONFIG_USB_MODEM),@cp -f,@mv) $(TARGETDIR)/lib/modules/*/kernel/drivers/usb/sierra.*o $(PLATFORMDIR)/extras/ || true
-	$(if $(RTCONFIG_USB_MODEM),@cp -f,@mv) $(TARGETDIR)/lib/modules/*/kernel/drivers/net/usb/cdc_subset.*o $(PLATFORMDIR)/extras/ || true
-	$(if $(RTCONFIG_USB_MODEM),@cp -f,@mv) $(TARGETDIR)/lib/modules/*/kernel/drivers/usb/ftdi_sio.*o $(PLATFORMDIR)/extras/ || true
-	$(if $(RTCONFIG_USB_MODEM),@cp -f,@mv) $(TARGETDIR)/lib/modules/*/kernel/drivers/usb/pl2303.*o $(PLATFORMDIR)/extras/ || true
+	$(if $(RTCONFIG_USB_MODEM),$(if $(RTCONFIG_USB_LESSMODEM),@mv,@cp -f),@mv) $(TARGETDIR)/lib/modules/*/kernel/drivers/net/usb/net1080.*o $(PLATFORMDIR)/extras/ || true
+	$(if $(RTCONFIG_USB_MODEM),$(if $(RTCONFIG_USB_LESSMODEM),@mv,@cp -f),@mv) $(TARGETDIR)/lib/modules/*/kernel/drivers/net/usb/zaurus.*o $(PLATFORMDIR)/extras/ || true
+	$(if $(RTCONFIG_USB_MODEM),$(if $(RTCONFIG_USB_LESSMODEM),@mv,@cp -f),@mv) $(TARGETDIR)/lib/modules/*/kernel/drivers/usb/ftdi_sio.*o $(PLATFORMDIR)/extras/ || true
+	$(if $(RTCONFIG_USB_MODEM),$(if $(RTCONFIG_USB_LESSMODEM),@mv,@cp -f),@mv) $(TARGETDIR)/lib/modules/*/kernel/drivers/usb/pl2303.*o $(PLATFORMDIR)/extras/ || true
 
 	@mv $(TARGETDIR)/lib/modules/*/kernel/drivers/usb/usbkbd.*o $(PLATFORMDIR)/extras/ || true
 	@mv $(TARGETDIR)/lib/modules/*/kernel/drivers/usb/usbmouse.*o $(PLATFORMDIR)/extras/ || true
@@ -813,6 +818,12 @@ ifneq ($(RTCONFIG_BCMARM),y)
 	mv $(TARGETDIR)/lib/modules/$(LINUX_KERNEL)/modules.dep $(TARGETDIR)/lib/modules/
 else
 	mv $(TARGETDIR)/lib/modules/*/modules.dep $(TARGETDIR)/lib/modules/
+endif
+
+ifeq ($(RTCONFIG_QTN),y)
+	# install qtn boot-code and firmware
+	install -D qtnimage/topaz-linux.lzma.img $(TARGETDIR)/rom/qtn/topaz-linux.lzma.img
+	install -D qtnimage/u-boot.bin $(TARGETDIR)/rom/qtn/u-boot.bin
 endif
 	@echo ---
 
@@ -2525,7 +2536,7 @@ lighttpd-1.4.29/stamp-h1:
 	   ./preconfigure-script \
 	touch $@
 
-lighttpd-1.4.29: shared nvram$(BCMEX) libdisk samba-3.5.8 pcre-8.31 libxml2 sqlite libexif openssl lighttpd-1.4.29/stamp-h1
+lighttpd-1.4.29: shared nvram$(BCMEX) libdisk samba-3.5.8 pcre-8.31 libxml2 sqlite libexif openssl wb push_log lighttpd-1.4.29/stamp-h1
 
 lighttpd-1.4.29-install: lighttpd-1.4.29
 	install -D lighttpd-1.4.29/src/.libs/lighttpd $(INSTALLDIR)/lighttpd-1.4.29/usr/sbin/lighttpd
@@ -2543,10 +2554,10 @@ lighttpd-1.4.29-install: lighttpd-1.4.29
 
 	mkdir -p $(INSTALLDIR)/lighttpd-1.4.29/usr/lighttpd
 	mkdir -p $(INSTALLDIR)/lighttpd-1.4.29/usr/lighttpd/css & mkdir -p $(INSTALLDIR)/lighttpd-1.4.29/usr/lighttpd/js
-#install -D lighttpd-1.4.29/external_file/css/*.* $(INSTALLDIR)/lighttpd-1.4.29/usr/css
 	cp -rf  lighttpd-1.4.29/external_file/css/ $(INSTALLDIR)/lighttpd-1.4.29/usr/lighttpd
 	cp -rf  lighttpd-1.4.29/external_file/js/ $(INSTALLDIR)/lighttpd-1.4.29/usr/lighttpd
 	cp -f APP-IPK/AiCloud-ipk/CONTROL/control $(INSTALLDIR)/lighttpd-1.4.29/usr/lighttpd
+	cp -f APP-IPK/SmartSync-ipk/CONTROL/control $(INSTALLDIR)/lighttpd-1.4.29/usr/lighttpd/smartsync_control
 
 	$(STRIP) -s $(INSTALLDIR)/lighttpd-1.4.29/usr/lib/*.so
 	$(STRIP) -s $(INSTALLDIR)/lighttpd-1.4.29/usr/lib/*.so.0
@@ -2688,6 +2699,12 @@ inotify-install: inotify
 
 inotify-clean:
 	-@$(MAKE) -C inotify clean
+
+wl$(BCMEX):
+	-@$(MAKE) -C wl_arm
+	
+wl$(BCMEX)-install:
+	@$(SEP)
 
 #libgpg-error-1.10
 libgpg-error-1.10/stamp-h1:
@@ -2919,6 +2936,20 @@ netstat-nat: netstat-nat/stamp-h1
 
 netstat-nat: netstat-nat/Makefile
 	$(MAKE) -C netstat-nat
+
+tftp:
+	cd tftp-1.0 && CC=$(CC) && $(MAKE)
+
+tftp-clean:
+	cd tftp-1.0 && $(MAKE) clean
+
+tftp-install:
+	# TPTP server
+	install -D tftp-1.0/tftpd $(INSTALLDIR)/tftp/usr/sbin/tftpd
+	$(STRIP) -s $(INSTALLDIR)/tftp/usr/sbin/tftpd
+	# TFTP client
+	#install -D tftp-1.0/tftpc $(INSTALLDIR)/tftp/usr/sbin/tftpc
+	#$(STRIP) -s $(INSTALLDIR)/tftp/usr/sbin/tftpc
 
 NORTON_DIR := $(SRCBASE)/router/norton${BCMEX}
 

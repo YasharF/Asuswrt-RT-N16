@@ -541,8 +541,8 @@ function flickr_upload_photo(){
 		var title = $("textarea." + uploadfile_obj.textAreaClassName).val();
 		var pos = count*$(".service_image_upload_container table").height();
 		var filext = uploadfile_obj.filext;
-		var this_url = g_storage.get('openurl');
-			
+		var this_url = url.substring(0, url.lastIndexOf("/"));
+		
 		$(".service_image_upload_container").animate({scrollTop: pos}, 'slow');
 					
 		g_bUpload = true;
@@ -567,7 +567,7 @@ function flickr_upload_photo(){
 					count++;
 				}
 				else{
-					alert("Fail to upload!");	
+					alert("Fail to upload! " + m.getString(error));	
 				}
 			});		
 		}		
@@ -614,6 +614,13 @@ function getMouseXY(e) {
 </script>
 <table class="x-table-layout" cellspacing="0" style="width:100%;height:100%;font-size:14px;" id="ext-gen94">
 	<tbody>
+    	<tr>
+            <td>
+                <div style="background-color:#FF9100;width:99%;padding:5px;">
+                    <span id="sharelink_warning" name="sharelink_warning" style="color:#fff"></span>
+                </div>
+            </td>
+        </tr>
 		<tr id="tr_user_option">        
             <td class="x-table-layout-cell" colspan="1" id="ext-gen84">
             	<div class=" x-panel x-panel-noborder">
@@ -642,11 +649,6 @@ function getMouseXY(e) {
             		<select id="album_combo" name="album_combo" class="x-form-text x-form-field x-form-empty-field" style="width: 295px;" ></select>
                     <!--<button id="open_addalbum_dialog" class="btnStyle x-form-addalbum">+</button>-->
                 </div>
-            </td>
-        </tr>
-        <tr>
-        	<td>
-            	<div id="sharelink_warning" name="sharelink_warning" style="margin:10px;color:#ff0000">Shared files will be opened on internet, please make sure that you have the rights to share these files with your friends. ASUS will not responsible for copyrights of files you shared.</div>
             </td>
         </tr>
        	<tr>

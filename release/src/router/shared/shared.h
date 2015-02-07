@@ -220,6 +220,7 @@ enum {
 	MODEL_RTN66U,
 	MODEL_RTAC66U,
 	MODEL_RTAC68U,
+	MODEL_RTAC87U,
 	MODEL_RTAC56S,
 	MODEL_RTAC56U,
 	MODEL_RTAC53U,
@@ -350,6 +351,9 @@ extern int f_wait_notexists(const char *name, int max);
 #define LED_LAN4        13
 #endif
 #define LED_TURBO			14
+#ifdef RTCONFIG_QTN
+#define BTN_QTN_RESET			15
+#endif
 
 #define	LED_OFF				0
 #define	LED_ON				1

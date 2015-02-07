@@ -12,7 +12,7 @@ function open_rename_window(file_name, uhref, isdir){
 		$modalWindow.jqmShow();
 	}
 }
-
+/*
 function open_sharelink_window(url, input){
 	var selectURL = url;
 	var selectFiles = "";	
@@ -45,7 +45,7 @@ function open_sharelink_window(url, input){
 		hostName = "http://" + hostName + ":" + g_storage.get("http_port");
 	else
 		hostName = "https://" + hostName;
-	//alert(selectURL + ", " + selectFiles);
+	
 	g_webdav_client.GSL(selectURL, selectURL, selectFiles, 86400, 1, function(error, content, statusstring){
 		if(error==200){
 			var data = parseXml(statusstring);				
@@ -78,7 +78,7 @@ function open_sharelink_window(url, input){
 		}
 	});
 }
-
+*/
 function open_upload2service_window(service, input){
 
 	var upload_list = "";
@@ -100,11 +100,11 @@ function open_upload2service_window(service, input){
 	var modalWindow_title = "";
 	if(service=="facebook"){
 		g_modal_url = '/smb/css/service/facebook.html';
-		modalWindow_title = m.getString("title_share2facebook")
+		modalWindow_title = m.getString("title_upload2") + " " + m.getString("title_facebook");
 	}
 	else if(service=="flickr"){
 		g_modal_url = '/smb/css/service/flickr.html';
-		modalWindow_title = m.getString("title_upload2flickr")
+		modalWindow_title = m.getString("title_upload2") + " " + m.getString("title_flickr");
 	}
 	
 	g_modal_url += '?v=' + upload_list;
@@ -114,6 +114,54 @@ function open_upload2service_window(service, input){
 	$('#jqmMsg').css("display", "none");	
 	$('#jqmTitleText').text(modalWindow_title);
 	$modalWindow.jqmShow();
+}
+
+function open_sharelink_window(share2service, url, input){
+	
+	var selectURL = url;
+	var selectFiles = "";	
+	var bod = "";
+	
+	if( input instanceof Array ){		
+		var count = input.length;
+		
+		for(var i=0; i<count; i++){
+			selectFiles += input[i];				
+			if(i!=count-1) selectFiles += ";";
+		}
+	}
+	else {
+    	selectFiles = input;
+	}
+	
+	if(selectURL=="" || selectFiles=="") return;
+	
+	var window_title = "";
+	if(share2service=="facebook"){
+		window_title = m.getString("title_share2")+ " " +m.getString("title_facebook");	
+	}
+	else if(share2service=="googleplus"){
+		window_title = m.getString("title_share2")+ " " +m.getString("title_googleplus");	
+	}
+	else if(share2service=="twitter"){
+		window_title = m.getString("title_share2")+ " " +m.getString("title_twitter");	
+	}
+	else if(share2service=="plurk"){
+		window_title = m.getString("title_share2")+ " " +m.getString("title_plurk");
+	}
+	else{
+		window_title = m.getString("title_gen_sharelink");
+	}
+	
+	var $modalWindow = $("div#modalWindow");
+	g_modal_url = '/smb/css/sharelink.html?s='+share2service+'&u='+selectURL+'&f='+selectFiles;	
+	g_modal_window_width = 600;
+	g_modal_window_height = 530;
+	$('#jqmMsg').css("display", "none");
+	$('#jqmTitleText').text(window_title);
+	if($modalWindow){
+		$modalWindow.jqmShow();
+	}
 }
 
 function download_file(file){
@@ -172,6 +220,8 @@ function open_uploadfile_window(){
 		$modalWindow.jqmShow();		
 	}
 	else{
+		openUploadPanel(1);
+		/*
 		g_upload_mode = 1;
 				
 		$("div#btnNewDir").css("display", "none");
@@ -192,11 +242,14 @@ function open_uploadfile_window(){
 		$("#function_help").text(m.getString('msg_uploadmode_help'));
 				
 		adjustLayout();
+		*/
 	}
 }
 
 function open_uploadfolder_window(){
 	if( isBrowser("chrome") ){
+		openUploadPanel(2);
+		/*
 		g_upload_mode = 1;
 					
 		$("div#btnNewDir").css("display", "none");
@@ -217,6 +270,7 @@ function open_uploadfolder_window(){
 		$("#function_help").text(m.getString('msg_uploadmode_help'));
 			
 		adjustLayout();
+		*/
 	}
 	else{
 		var $modalWindow = $("div#modalWindow");

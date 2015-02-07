@@ -80,7 +80,7 @@ color: #3B5998;
 font-weight: bold;
 position: absolute;
 left: 80px;
-top: 20px;
+top: 90px;
 }
 .user_login_option {
 text-decoration: underline;
@@ -90,7 +90,7 @@ cursor: pointer;
 color: #3B5998;
 position: absolute;
 left: 80px;
-top: 40px;
+top: 70px;
 cursor: pointer;
 }
 .service_image_upload_container{

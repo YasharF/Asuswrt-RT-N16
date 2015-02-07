@@ -696,7 +696,13 @@ start_dhcp6c(void)
 	if (!nvram_match("ipv6_ra_conf", "mset") &&
 		!nvram_get_int("ipv6_dhcp_pd") &&
 		nvram_match("ipv6_dnsenable", "0"))
+	{
+		// (re)start radvd and httpd
+		start_radvd();
+		start_httpd();
+
 		return -2;
+	}
 	if (nvram_match("ipv6_ra_conf", "noneset") &&
 		!nvram_get_int("ipv6_dhcp_pd"))
 		return -3;
@@ -746,8 +752,8 @@ start_dhcp6c(void)
 			!nvram_match("ipv6_ra_conf", "noneset"))
 		fprintf(fp,		"request domain-name-servers;\n"
 					"request domain-name;\n"
-					"script \"/sbin/dhcp6c-state\";\n"
-				"};\n");
+					"script \"/sbin/dhcp6c-state\";\n");
+		fprintf(fp,	"};\n");
 		if (nvram_get_int("ipv6_dhcp_pd"))
 		fprintf(fp,	"id-assoc pd %lu {\n"
 					"prefix-interface %s {\n"

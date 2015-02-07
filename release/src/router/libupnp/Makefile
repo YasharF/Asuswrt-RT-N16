@@ -43,11 +43,7 @@ OBJFILES = ${SRCFILES:.c=.o}
 
 ifeq ($(wildcard ./upnp),)
 all:
-ifeq ($(RTCONFIG_BCMARM),y)
-	cp -f ./prebuilt.arm/$(UPNPLIB_NAME) .
-else
-	cp -f ./prebuilt.mipsel/$(UPNPLIB_NAME) .
-endif
+	cp -f ./prebuilt/$(UPNPLIB_NAME) .
 else
 all: $(OBJFILES)
 	$(LD) -shared -o $(UPNPLIB_NAME) $^
