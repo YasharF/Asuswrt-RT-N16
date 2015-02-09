@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
 <html xmlns:v>
 <head>
-<meta http-equiv="X-UA-Compatible" content="IE=EmulateIE7"/>
+<meta http-equiv="X-UA-Compatible" content="IE=Edge"/>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <meta HTTP-EQUIV="Pragma" CONTENT="no-cache">
 <meta HTTP-EQUIV="Expires" CONTENT="-1">
@@ -138,6 +138,11 @@ function valid_form(){
 				<td>
 					<select id="" class="input_option" name="dslx_snrm_offset">
 						<option value="0" <% nvram_match("dslx_snrm_offset", "0", "selected"); %>><#btn_Disabled#></option>
+						<option value="5120" <% nvram_match("dslx_snrm_offset", "5120", "selected"); %>>10 dB</option>
+						<option value="4608" <% nvram_match("dslx_snrm_offset", "4608", "selected"); %>>9 dB</option>
+						<option value="4096" <% nvram_match("dslx_snrm_offset", "4096", "selected"); %>>8 dB</option>
+						<option value="3584" <% nvram_match("dslx_snrm_offset", "3584", "selected"); %>>7 dB</option>
+						<option value="3072" <% nvram_match("dslx_snrm_offset", "3072", "selected"); %>>6 dB</option>
 						<option value="2560" <% nvram_match("dslx_snrm_offset", "2560", "selected"); %>>5 dB</option>
 						<option value="2048" <% nvram_match("dslx_snrm_offset", "2048", "selected"); %>>4 dB</option>
 						<option value="1536" <% nvram_match("dslx_snrm_offset", "1536", "selected"); %>>3 dB</option>
@@ -263,6 +268,28 @@ function valid_form(){
 					<select id="" class="input_option" name="dslx_bitswap">
 						<option value="1" <% nvram_match("dslx_bitswap", "1", "selected"); %>><#btn_Enabled#></option>
 						<option value="0" <% nvram_match("dslx_bitswap", "0", "selected"); %>><#btn_Disabled#></option>
+					</select>
+				</td>
+			</tr>
+			<tr>
+				<th>
+					<a class="hintstyle" href="javascript:void(0);" onClick="openHint(25,8);">VDSL Profile</a>
+				</th>
+				<td>
+					<select id="" class="input_option" name="dslx_vdsl_profile">
+						<option value="0" <% nvram_match("dslx_vdsl_profile", "0", "selected"); %>>30a multi mode</option>
+						<option value="1" <% nvram_match("dslx_vdsl_profile", "1", "selected"); %>>17a multi mode</option>
+					</select>
+				</td>
+			</tr>
+			<tr>
+				<th>
+					Improved Impulse Noise Protection (G.998.4)
+				</th>
+				<td>
+					<select id="" class="input_option" name="dslx_ginp">
+						<option value="1" <% nvram_match("dslx_ginp", "1", "selected"); %>><#btn_Enabled#></option>
+						<option value="0" <% nvram_match("dslx_ginp", "0", "selected"); %>><#btn_Disabled#></option>
 					</select>
 				</td>
 			</tr>

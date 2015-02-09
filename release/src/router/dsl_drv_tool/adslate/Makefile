@@ -2,6 +2,7 @@ include ../../common.mak
 
 ifeq ($(BUILD_NAME), DSL-N55U)
 CFLAGS += -DDSL_N55U=1
+CFLAGS += -DDSL_N55U_ANNEX_A=1
 endif
 ifeq ($(BUILD_NAME), DSL-N55U-B)
 CFLAGS += -DDSL_N55U=1
@@ -29,6 +30,7 @@ endif
 
 ifeq ($(RTCONFIG_BCMARM),y)
 CFLAGS += $(EXTRA_FLAG)
+CFLAGS += -I$(SRCBASE)/common/include
 endif
 
 CFLAGS += -Wall -O
@@ -52,7 +54,12 @@ else
 OBJS += switch_control.o
 endif
 
+ifneq ($(wildcard ./prebuild),)
+all:
+	@-cp -f ./prebuild/adslate .
+else
 all: adslate
+endif
 
 adslate: $(OBJS)
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^

@@ -21,7 +21,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <signal.h>
 #include <unistd.h>
 #include <errno.h>
 #include <sys/time.h>
@@ -116,7 +115,7 @@ start_wps_method(void)
 	char buf[256] = "SET ";
 	int len = 4;
 
-	if(getpid()!=1) {
+	if (getpid()!=1) {
 		notify_rc("start_wps_method");
 		return 0;
 	}
@@ -127,15 +126,37 @@ start_wps_method(void)
 //	wps_method = nvram_get_int("wps_method"); // useless
 	wps_sta_pin = nvram_safe_get("wps_sta_pin");
 
-	if(strlen(wps_sta_pin) && strcmp(wps_sta_pin, "00000000") && (wl_wpsPincheck(wps_sta_pin) == 0))
+#ifdef RTCONFIG_QTN
+	int retval;
+
+	if (wps_band)
+	{
+		if (strlen(wps_sta_pin) && strcmp(wps_sta_pin, "00000000") && (wl_wpsPincheck(wps_sta_pin) == 0))
+		{
+			retval = rpc_qcsapi_wps_registrar_report_pin(WIFINAME, wps_sta_pin);
+			if (retval < 0)
+				dbG("rpc_qcsapi_wps_registrar_report_pin %s error, return: %d\n", WIFINAME, retval);
+		}
+		else
+		{
+			retval = rpc_qcsapi_wps_registrar_report_button_press(WIFINAME);
+			if (retval < 0)
+				dbG("rpc_qcsapi_wps_registrar_report_button_press %s error, return: %d\n", WIFINAME, retval);
+		}
+
+		return 0;
+	}
+#endif
+
+	if (strlen(wps_sta_pin) && strcmp(wps_sta_pin, "00000000") && (wl_wpsPincheck(wps_sta_pin) == 0))
 		len += sprintf(buf + len, "wps_method=%d ", WPS_UI_METHOD_PIN);
 	else
 		len += sprintf(buf + len, "wps_method=%d ", WPS_UI_METHOD_PBC);
 
-	if(nvram_match("wps_version2", "enabled") && strlen(nvram_safe_get("wps_autho_sta_mac")))
+	if (nvram_match("wps_version2", "enabled") && strlen(nvram_safe_get("wps_autho_sta_mac")))
 		len += sprintf(buf + len, "wps_autho_sta_mac=%s ", nvram_safe_get("wps_autho_sta_mac"));
 
-	if(strlen(wps_sta_pin))
+	if (strlen(wps_sta_pin))
 		len += sprintf(buf + len, "wps_sta_pin=%s ", wps_sta_pin);
 	else
 		len += sprintf(buf + len, "wps_sta_pin=00000000 ");
@@ -214,10 +235,16 @@ stop_wps_method(void)
 	char buf[256] = "SET ";
 	int len = 4;
 
-	if(getpid()!=1) {
+	if (getpid()!=1) {
 		notify_rc("stop_wps_method");
 		return 0;
 	}
+
+#ifdef RTCONFIG_QTN
+	int retval = rpc_qcsapi_wps_cancel(WIFINAME);
+	if (retval < 0)
+		dbG("rpc_qcsapi_wps_cancel %s error, return: %d\n", WIFINAME, retval);
+#endif
 
 	len += sprintf(buf + len, "wps_config_command=%d ", WPS_UI_CMD_STOP);
 	len += sprintf(buf + len, "wps_action=%d ", WPS_UI_ACT_NONE);
@@ -230,34 +257,6 @@ stop_wps_method(void)
 
 	return 0;
 }
-
-#ifdef RTCONFIG_QTN
-int rpc_qcsapi_wps_get_state(const char *ifname, char *wps_state, const qcsapi_unsigned_int max_len)
-{
-	int ret;
-
-	ret = qcsapi_wps_get_state(ifname, wps_state, max_len);
-	if (ret < 0) {
-		dbG("Qcsapi qcsapi_wps_get_state %s error, return: %d\n", ifname, ret);
-		return ret;
-	}
-
-	return 0;
-}
-
-int rpc_qcsapi_wifi_disable_wps(const char *ifname, int disable_wps)
-{
-	int ret;
-
-	ret = qcsapi_wifi_disable_wps(ifname, disable_wps);
-	if (ret < 0) {
-		dbG("Qcsapi qcsapi_wifi_disable_wps %s error, return: %d\n", ifname, ret);
-		return ret;
-	}
-
-	return 0;
-}
-#endif
 
 int is_wps_stopped(void)
 {

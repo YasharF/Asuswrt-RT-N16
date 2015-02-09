@@ -163,8 +163,12 @@ function gotoHome() {
 
 <!-- dsltmp_qis_hwaddr is in the HTML code -->
 <div class="QISmain">
-	<div class="formfonttitle" style="padding:0 0 0 10;" id="FailReason"><#Manual_Setting_Title#></div>
 	<table width="730px">
+		<tr>
+			<td align="left">
+				<span class="description_down"><#Manual_Setting_Title#></span>
+			</td>
+		</tr>
 		<tr id="home_button">
 			<td align="right">
 				<img onclick="gotoHome();" style="cursor:pointer;" align="right" title="Go to Home" src="/images/backtohome.png" onMouseOver="this.src='/images/backtohomeclick.png'" onMouseOut="this.src='/images/backtohome.png'">
@@ -176,46 +180,51 @@ function gotoHome() {
 
 <table id="tblsetting_1" class="QISform" width="400" border=0 align="center" cellpadding="5" cellspacing="0">
   <tr>
-	<div id="atm_info" style="display:none;">
-		&nbsp;&nbsp;&nbsp;ADSL WAN (ATM),&nbsp;<#Layer3Forwarding_x_ConnectionType_itemname#>: <script>document.write(prctl_str);</script>, VPI/VCI: <% nvram_get("dsltmp_cfg_vpi"); %>/<% nvram_get("dsltmp_cfg_vci"); %><script>document.write(encap_str);</script><br>
-		&nbsp;&nbsp;&nbsp;<b><script>document.write(iptv_num_pvc_str);</script></b><br>
-	</div>
-	<div id="ptm_info" style="display:none;">
-		&nbsp;&nbsp;&nbsp;VDSL WAN (PTM),&nbsp;<#Layer3Forwarding_x_ConnectionType_itemname#>: <script>document.write(prctl_str);</script>, <#WANVLANIDText#>: <script>document.write(vlanid);</script><br>
-	</div>
-	&nbsp;&nbsp;&nbsp;<#PPP_cfg_usersel_desc#>
-     <br><br>
+  	<td class="test_css">
+			<div id="atm_info" style="display:none;">
+				ADSL WAN (ATM),&nbsp;<#Layer3Forwarding_x_ConnectionType_itemname#>: <script>document.write(prctl_str);</script>, VPI/VCI: <% nvram_get("dsltmp_cfg_vpi"); %>/<% nvram_get("dsltmp_cfg_vci"); %><script>document.write(encap_str);</script><br>
+				<b><script>document.write(iptv_num_pvc_str);</script></b><br>
+			</div>
+			<div id="ptm_info" style="display:none;">
+				VDSL WAN (PTM),&nbsp;<#Layer3Forwarding_x_ConnectionType_itemname#>: <script>document.write(prctl_str);</script>, <#WANVLANIDText#>: <script>document.write(vlanid);</script><br>
+			</div>
+			<#PPP_cfg_usersel_desc#>
+  		   <br><br>
+		</td>
   </tr>
+  </table>
+
+<table style="margin-left:50px;">  
   <tr>
 	<!--
 	encodeURI and decodeURI function to be added
 	-->
 	<th width="120"><#PPPConnection_UserName_itemname#></th>
 	<td>
-	  <input type="text" name="dsltmp_qis_pppoe_username" class="input_32_table" value="" maxlength="64" size="36"/>
+	  <input type="text" name="dsltmp_qis_pppoe_username" class="input_32_table" value="" tabindex="1" maxlength="64" size="36"/>
 	</td>
   </tr>
   <tr>
 	<th width="120"><#PPPConnection_Password_itemname#></th>
 	<td>
-	  <input type="password" name="dsltmp_qis_pppoe_passwd" class="input_32_table" value="" maxlength="32" size="36"/>
+	  <input type="password" name="dsltmp_qis_pppoe_passwd" class="input_32_table" value="" tabindex="2" maxlength="32" size="36"/>
 	</td>
   </tr>
   <tr>
 	<th width="120"><span id="mac_addr1" style="display:none"><#PPPConnection_x_MacAddressForISP_itemname#></span></th>
 	<td>
 	  <span id="mac_addr2" style="display:none">
-	  <input type="text" name="dsltmp_qis_hwaddr" class="input_20_table" value="" maxlength="17" size="17">&nbsp;<#BOP_isp_mac_item#>&nbsp;example: 00:11:22:33:44:55
+	  <input type="text" name="dsltmp_qis_hwaddr" class="input_20_table" value="" tabindex="3" maxlength="17" size="17">&nbsp;<#BOP_isp_mac_item#>&nbsp;example: 00:11:22:33:44:55
 	  </span>
 	</td>
   </tr>
 </table>
 	<div class="apply_gen" style="margin-top:30px">
-		<input type="button" id="prevButton" value="<#Manual_Setting_btn#>" onclick="gotoprev(document.form);" class="button_gen" >
+		<input type="button" id="prevButton" value="<#Manual_Setting_btn#>" tabindex="5" onclick="gotoprev(document.form);" class="button_gen" >
 <!--
 		<input type="button" id="nextButton" value="Ethernet WAN" onclick="redirect_page('internet_type');" class="button_gen" >
 -->
-		<input type="button" id="nextButton" value="<#btn_next#>" onclick="submitForm();" class="button_gen">
+		<input type="button" id="nextButton" value="<#btn_next#>" tabindex="4" onclick="submitForm();" class="button_gen">
 	</div>
 
 </div>

@@ -1176,7 +1176,7 @@ color:#FFFFFF;
 	background: transparent url(/images/New_ui/hightabspan.png) no-repeat;
 	height: 40px;
 	padding-left: 6px;
-	padding-top: 5px \9;
+	padding-top: 10px \9;
 	line-height: 15px;
 	font-family: Verdana;
 	font-size: 12px;
@@ -1201,7 +1201,7 @@ color:#FFFFFF;
 	background: transparent url(/images/New_ui/hightabclickspan.png) repeat;
 	height: 40px;
 	padding-left: 6px;
-	padding-top: 5px \9;
+	padding-top: 10px \9;
 	line-height: 15px;
 	font-family: Verdana;
 	font-size: 12px; 
@@ -1228,6 +1228,9 @@ div.tabclick {
 	max-width:130px;
 }
 .tab_NW span {
+	cursor:pointer;
+	font-weight: bolder;
+	white-space:nowrap;
 	font-weight: bolder;
 	background: transparent url(images/New_ui/tabspan.png) no-repeat;
 	display: block;
@@ -1244,27 +1247,30 @@ div.tabclick {
 } 
 
 .tabclick_NW {	   
-			font-weight: bolder;
-      background: transparent url(images/New_ui/tabclicka.png) no-repeat scroll right top;
-			font-family: Verdana;	
-      color: White;
-      display: block;
-      float: left;
-      height: 28px;
-      padding-right: 8px;      
-      margin-right:2px;
-      text-align:center;
-      text-decoration: none;
-	 		max-width:130px;
-    }
+	font-weight: bolder;
+	background: transparent url(images/New_ui/tabclicka.png) no-repeat scroll right top;
+	font-family: Verdana;	
+    color: White;
+    display: block;
+    float: left;
+    height: 28px;
+    padding-right: 8px;      
+    margin-right:2px;
+    text-align:center;
+    text-decoration: none;
+	max-width:130px;
+}
 .tabclick_NW span {
-		font-weight: bolder;
-	  background: transparent url(images/New_ui/tabclickspan.png) no-repeat;
-		font-family: Arial, Helvetica, sans-serif;	 
+	cursor:pointer;
+	font-weight: bolder;
+	white-space:nowrap;
+	font-weight: bolder;
+	background: transparent url(images/New_ui/tabclickspan.png) no-repeat;
+	font-family: Arial, Helvetica, sans-serif;	 
     display: block;
     padding: 5px 4px 5px 12px;
     line-height: 20px;	
-		font-size: 13px; 
+	font-size: 13px; 
 }	
 
 .radioleft {	
@@ -1860,7 +1866,9 @@ padding-top:1px;
 	margin:0px 0px 1px 30px;
 	height:339px;
 	overflow:auto;
-	width:455px;
+	overflow-x: hidden;
+	width:450px;
+	padding-right: 5px;
 }
 
 /* 控制user account and folder "add", "delete", "modify的圖形偏移"*/
@@ -2146,5 +2154,9 @@ padding-top:1px;
 	height: 30px;
 	cursor: pointer;
 	border: 1px solid #222;
+}
+.link{
+	cursor:pointer !important;
+	text-decoration:underline !important;
 }
 

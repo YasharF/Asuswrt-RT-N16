@@ -32,31 +32,28 @@
 /* Serialize using fcntl() calls 
  */
 
-int check_magic(char *buf, char *magic)
-{
-	if (strncmp(magic, "ext3_chk", 8) == 0) 
-	{
-		if (!((uint32_t)(buf) & 4))
+int check_magic(char *buf, char *magic){
+	if(!strncmp(magic, "ext3_chk", 8)){
+		if(!((*buf)&4))
 			return 0;
-		if ((uint32_t)(buf+4) >= 0x40)
+		if(*(buf+4) >= 0x40)
 			return 0;
-		if((uint32_t)(buf+8) >=8)
+		if(*(buf+8) >= 8)
 			return 0;
 		return 1;
 	}
  
-	if (strncmp(magic, "ext4_chk", 8) == 0) 
-	{
-		if (!((uint32_t)(buf) & 4))
+	if(!strncmp(magic, "ext4_chk", 8)){
+		if(!((*buf)&4))
 			return 0;
-		if ((uint32_t)(buf+4) > 0x3F)
+		if(*(buf+4) > 0x3F)
 			return 1;
-		if ((uint32_t)(buf+4) >= 0x40)
+		if(*(buf+4) >= 0x40)
 			return 0;
-		if((uint32_t)(buf+8) <= 7)
+		if(*(buf+8) <= 7)
 			return 0;
 		return 1;
-	} 
+	}
 
 	return 0;
 }
@@ -496,6 +493,7 @@ extern int volume_id_probe_ext();
 extern int volume_id_probe_vfat();
 extern int volume_id_probe_ntfs();
 extern int volume_id_probe_linux_swap();
+extern int volume_id_probe_hfs_hfsplus(struct volume_id *id);
 
 /* Put the label in *label and uuid in *uuid.
  * Return 0 if no label/uuid found, NZ if there is a label or uuid.
@@ -520,6 +518,10 @@ int find_label_or_uuid(char *dev_name, char *label, char *uuid)
 		goto ret;
 	if (volume_id_probe_ntfs(&id) == 0 || id.error)
 		goto ret;
+#if defined(RTCONFIG_HFS)
+	if(volume_id_probe_hfs_hfsplus(&id) == 0 || id.error)
+		goto ret;
+#endif
 ret:
 	volume_id_free_buffer(&id);
 	if (label && (*id.label != 0))

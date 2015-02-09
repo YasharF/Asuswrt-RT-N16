@@ -142,11 +142,13 @@ static int check_name(char *in)
    for the tighter criteria. */
 int legal_hostname(char *name)
 {
-  char c;
+  char c, *at;
   int first;
 
   if (!check_name(name))
     return 0;
+
+  at = strchr(name, '@');
 
   for (first = 1; (c = *name); name++, first = 0)
     /* check for legal char a-z A-Z 0-9 - _ . */
@@ -157,6 +159,10 @@ int legal_hostname(char *name)
 	continue;
 
       if (!first && (c == '-' || c == '_'))
+	continue;
+
+      /* relax name part */
+      if (at && (name <= at) && (c >= 33) && (c < 127))
 	continue;
       
       /* end of hostname part */
@@ -601,4 +607,23 @@ int wildcard_match(const char* wildcard, const char* match)
     }
 
   return *wildcard == *match;
+}
+
+/* The same but comparing a maximum of NUM characters, like strncmp.  */
+int wildcard_matchn(const char* wildcard, const char* match, int num)
+{
+  while (*wildcard && *match && num)
+    {
+      if (*wildcard == '*')
+        return 1;
+
+      if (*wildcard != *match)
+        return 0; 
+
+      ++wildcard;
+      ++match;
+      --num;
+    }
+
+  return (!num) || (*wildcard == *match);
 }

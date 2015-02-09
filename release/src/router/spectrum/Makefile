@@ -4,6 +4,10 @@ CFLAGS	= -Os -Wall $(EXTRACFLAGS) #-mips32
 CFLAGS	+= -I$(SRCBASE)/include -I$(TOP)/shared -DRTCONFIG_ISP_METER -DDEBUG
 LDFLAGS	= $(EXTRALDFLAGS)
 
+ifeq ($(RTCONFIG_BCMARM),y)
+CFLAGS += -I$(SRCBASE)/common/include
+endif
+
 ifeq ($(RTCONFIG_DSL_TCLINUX),y)
 OBJS = spectrum-tclinux.o
 else
@@ -11,6 +15,7 @@ OBJS = spectrum.o
 endif
 
 ifeq ($(wildcard $(TOP)/spectrum/*.c),)
+all:
 	-cp -f $(TOP)/spectrum/prebuilt/spectrum spectrum
 else
 all: spectrum

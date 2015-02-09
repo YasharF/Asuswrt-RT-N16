@@ -535,20 +535,23 @@ static size_t process_reply(struct dns_header *header, time_t now, struct server
   (void) do_bit;
 
 #ifdef HAVE_IPSET
-  /* Similar algorithm to search_servers. */
-  struct ipsets *ipset_pos;
-  unsigned int namelen = strlen(daemon->namebuff);
-  unsigned int matchlen = 0;
-  for (ipset_pos = daemon->ipsets; ipset_pos; ipset_pos = ipset_pos->next) 
+  if (daemon->ipsets && extract_request(header, n, daemon->namebuff, NULL))
     {
-      unsigned int domainlen = strlen(ipset_pos->domain);
-      char *matchstart = daemon->namebuff + namelen - domainlen;
-      if (namelen >= domainlen && hostname_isequal(matchstart, ipset_pos->domain) &&
-	  (domainlen == 0 || namelen == domainlen || *(matchstart - 1) == '.' ) &&
-	  domainlen >= matchlen) 
+      /* Similar algorithm to search_servers. */
+      struct ipsets *ipset_pos;
+      unsigned int namelen = strlen(daemon->namebuff);
+      unsigned int matchlen = 0;
+      for (ipset_pos = daemon->ipsets; ipset_pos; ipset_pos = ipset_pos->next) 
 	{
-	  matchlen = domainlen;
-	  sets = ipset_pos->sets;
+	  unsigned int domainlen = strlen(ipset_pos->domain);
+	  char *matchstart = daemon->namebuff + namelen - domainlen;
+	  if (namelen >= domainlen && hostname_isequal(matchstart, ipset_pos->domain) &&
+	      (domainlen == 0 || namelen == domainlen || *(matchstart - 1) == '.' ) &&
+	      domainlen >= matchlen) 
+	    {
+	      matchlen = domainlen;
+	      sets = ipset_pos->sets;
+	    }
 	}
     }
 #endif
@@ -585,7 +588,7 @@ static size_t process_reply(struct dns_header *header, time_t now, struct server
      header->hb4 &= ~HB4_AD;
   
   if (OPCODE(header) != QUERY || (RCODE(header) != NOERROR && RCODE(header) != NXDOMAIN))
-    return n;
+    return resize_packet(header, n, pheader, plen);
   
   /* Complain loudly if the upstream server is non-recursive. */
   if (!(header->hb4 & HB4_RA) && RCODE(header) == NOERROR && ntohs(header->ancount) == 0 &&
@@ -1344,13 +1347,20 @@ static int do_check_sign(time_t now, struct dns_header *header, size_t plen, cha
 { 
   char *name_start;
   unsigned char *p;
-  int status = dnssec_validate_ds(now, header, plen, name, keyname, class);
-  
-  if (status != STAT_INSECURE)
-    {
-      if (status == STAT_NO_DS)
-	status = STAT_INSECURE;
-      return status;
+  int status;
+
+  /* In this case only, a SERVFAIL reply allows us to continue up the tree, looking for a 
+     suitable NSEC reply to DS queries. */
+  if (RCODE(header) != SERVFAIL)
+    { 
+      status = dnssec_validate_ds(now, header, plen, name, keyname, class);
+      
+      if (status != STAT_INSECURE)
+	{
+	  if (status == STAT_NO_DS)
+	    status = STAT_INSECURE;
+	  return status;
+	}
     }
   
   p = (unsigned char *)(header+1);
@@ -1443,8 +1453,13 @@ static int  tcp_check_for_unsigned_zone(time_t now, struct dns_header *header, s
 	      newhash = hash_questions(header, (unsigned int)m, name);
 	      if (newhash && memcmp(hash, newhash, HASH_SIZE) == 0)
 		{
-		  /* Note this trashes all three name workspaces */
-		  status = tcp_key_recurse(now, STAT_NEED_DS_NEG, header, m, class, name, keyname, server, keycount);
+		   /* In this case only, a SERVFAIL reply allows us to continue up the tree, looking for a 
+		      suitable NSEC reply to DS queries. */
+		  if (RCODE(header) == SERVFAIL)
+		    status = STAT_INSECURE;
+		  else
+		    /* Note this trashes all three name workspaces */
+		    status = tcp_key_recurse(now, STAT_NEED_DS_NEG, header, m, class, name, keyname, server, keycount);
 		  
 		  /* We've found a DS which proves the bit of the DNS where the
 		     original query is, is unsigned, so the answer is OK, 
@@ -1742,7 +1757,7 @@ unsigned char *tcp_request(int confd, time_t now,
 		  struct server *firstsendto = NULL;
 #ifdef HAVE_DNSSEC
 		  unsigned char *newhash, hash[HASH_SIZE];
-		  if ((newhash = hash_questions(header, (unsigned int)size, daemon->keyname)))
+		  if ((newhash = hash_questions(header, (unsigned int)size, daemon->namebuff)))
 		    memcpy(hash, newhash, HASH_SIZE);
 		  else
 		    memset(hash, 0, HASH_SIZE);
@@ -1820,6 +1835,10 @@ unsigned char *tcp_request(int confd, time_t now,
 			}
 		      
 		      *length = htons(size);
+
+		      /* get query name again for logging - may have been overwritten */
+		      if (!(gotname = extract_request(header, (unsigned int)size, daemon->namebuff, &qtype)))
+			strcpy(daemon->namebuff, "query");
 		      
 		      if (!read_write(last_server->tcpfd, packet, size + sizeof(u16), 0) ||
 			  !read_write(last_server->tcpfd, &c1, 1, 1) ||
@@ -1833,8 +1852,6 @@ unsigned char *tcp_request(int confd, time_t now,
 		      
 		      m = (c1 << 8) | c2;
 		      
-		      if (!gotname)
-			strcpy(daemon->namebuff, "query");
 		      if (last_server->addr.sa.sa_family == AF_INET)
 			log_query(F_SERVER | F_IPV4 | F_FORWARD, daemon->namebuff, 
 				  (struct all_addr *)&last_server->addr.in.sin_addr, NULL); 
@@ -2112,6 +2129,25 @@ static struct frec *lookup_frec_by_sender(unsigned short id,
       return f;
    
   return NULL;
+}
+ 
+/* Send query packet again, if we can. */
+void resend_query()
+{
+  if (daemon->srv_save)
+    {
+      int fd;
+      
+      if (daemon->srv_save->sfd)
+	fd = daemon->srv_save->sfd->fd;
+      else if (daemon->rfd_save && daemon->rfd_save->refcount != 0)
+	fd = daemon->rfd_save->fd;
+      else
+	return;
+      
+      while(sendto(fd, daemon->packet, daemon->packet_len, 0,
+		   &daemon->srv_save->addr.sa, sa_len(&daemon->srv_save->addr)) == -1 && retry_send()); 
+    }
 }
 
 /* A server record is going away, remove references to it */

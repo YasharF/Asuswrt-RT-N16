@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
 <html xmlns:v>
 <head>
-<meta http-equiv="X-UA-Compatible" content="IE=EmulateIE7"/>
+<meta http-equiv="X-UA-Compatible" content="IE=Edge"/>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <meta HTTP-EQUIV="Pragma" CONTENT="no-cache">
 <meta HTTP-EQUIV="Expires" CONTENT="-1">
@@ -106,7 +106,11 @@ if(dualWAN_support && wans_dualwan.search("usb") >= 0 ){
 function genWANSoption(){
 	for(i=0; i<wans_dualwan.split(" ").length; i++){
 	var wans_dualwan_NAME = wans_dualwan.split(" ")[i].toUpperCase();
-		if(wans_dualwan_NAME == "LAN")
+		//MODELDEP: DSL-N55U, DSL-N55U-B, DSL-AC68U, DSL-AC68R
+		if(wans_dualwan_NAME == "LAN" && 
+			(productid == "DSL-N55U" || productid == "DSL-N55U-B" || productid == "DSL-AC68U" || productid == "DSL-AC68R"))	
+			wans_dualwan_NAME = "Ethernet WAN";
+		else if(wans_dualwan_NAME == "LAN")
 			wans_dualwan_NAME = "Ethernet LAN";
 		document.form.wan_unit.options[i] = new Option(wans_dualwan_NAME, i);
 	}
@@ -456,7 +460,6 @@ function setClientIP(apnAddr){
 function showLANIPList(isp_order){
 	var code = "";
 	var show_name = "";
-	var client_list_array = apnlist[isp_order];
 
 	for(var i = 0; i < apnlist[isp_order].length; i++){
 		var apnlist_col = apnlist[isp_order][i].split('&&');
@@ -675,7 +678,7 @@ function check_dongle_status(){
 					</tr>
 					<tr>
 						<th width="40%">
-							<a class="hintstyle" href="javascript:void(0);">Network Type</a>
+							<a class="hintstyle" href="javascript:void(0);"><#Network_type#></a>
 						</th>
 						<td>
 							<select name="modem_mode" id=modem_mode" class="input_option">

@@ -63,7 +63,8 @@ function setIptvNumPvc() {
 function showCountryList(o){
 	var code = "";
 	var showed_country = "";
-	code +="<select	name='country' class='input_option' onchange='showAllList(this.value);'>";
+	code +="<select	name='country' class='input_option' tabindex='1' onchange='showAllList(this.value);'>";
+	code +="<option value='default'><#Select_menu_default#></option>";
 	for(var i = 0; i < ISP_PTM_List.length; i++){
 		if(showed_country != ISP_PTM_List[i][1]){
 			code +="<option value='"+ISP_PTM_List[i][1];
@@ -84,7 +85,7 @@ function showCountryList(o){
 function showCityList(o){
 	var code = "";
 	var showedCity = "";
-	code +="<select	name='city' class='input_option' onchange='showRussiaISPList(this.value);'>";
+	code +="<select	name='city' class='input_option' tabindex='2' onchange='showRussiaISPList(this.value);'>";
 	for(var i = 0; i < ISP_PTM_List.length; i++){
 		if((showedCity != ISP_PTM_List[i][3]) && (o == ISP_PTM_List[i][1])){
 			code +="<option value='"+ISP_PTM_List[i][3]+"'>"+ISP_PTM_List[i][3]+"</option>";
@@ -98,7 +99,7 @@ function showCityList(o){
 
 function showNomoISPList(o){
 	var code = "";
-	code +="<select	id='ISP' name='ISP' class='input_option' onChange='ShowPVC(this.value);'>";
+	code +="<select	id='ISP' name='ISP' class='input_option' tabindex='3' onChange='ShowPVC(this.value);'>";
 	var first_element = 0;
 	for(var i = 0; i < ISP_PTM_List.length; i++){
 		if(o == ISP_PTM_List[i][1]){
@@ -123,7 +124,7 @@ function showRussiaISPList(o){
 	var code = "";
 	var First_ISP= "";
 	var showed_ISP = "";
-	code +="<select	id='ISP' name='ISP' class='input_option' onChange='ShowPVC(this.value); showRussiaISPServiceByIdx(ISPlocatedCity, this.value)'>";
+	code +="<select	id='ISP' name='ISP' class='input_option' tabindex='3' onChange='ShowPVC(this.value); showRussiaISPServiceByIdx(ISPlocatedCity, this.value)'>";
 	var first_element = 0;
 	for(var i = ru_idx_start; i < ISP_PTM_List.length; i++){
 		if((showed_ISP != ISP_PTM_List[i][4]) && (o == ISP_PTM_List[i][3])){
@@ -160,7 +161,7 @@ function showRussiaISPServiceByIdx(c, idx){
    	else {
       	    $("Service_tr").style.display="";
 	var code = "";
-	code +="<select	id='ISPSVC' name='ISPSVC' class='input_option' onChange='ChgSVC(this.value);'>";
+	code +="<select	id='ISPSVC' name='ISPSVC' class='input_option' tabindex='4' onChange='ChgSVC(this.value);'>";
 	var first_element = 0;
 	for(var i = ru_idx_start; i < ISP_PTM_List.length; i++){
 		if((c == ISP_PTM_List[i][3]) && (isp_str == ISP_PTM_List[i][4])){
@@ -185,7 +186,7 @@ function showRussiaISPService(c, o){
    	else {
       	    $("Service_tr").style.display="";
 	var code = "";
-	code +="<select	id='ISPSVC' name='ISPSVC' class='input_option' onChange='ChgSVC(this.value);'>";
+	code +="<select	id='ISPSVC' name='ISPSVC' class='input_option' tabindex='4' onChange='ChgSVC(this.value);'>";
 	var first_element = 0;
 	for(var i = ru_idx_start; i < ISP_PTM_List.length; i++){
 		if((c == ISP_PTM_List[i][3]) && (o == ISP_PTM_List[i][4])){
@@ -312,7 +313,7 @@ function QIS_manual_setting_load_body() {
 	parent.set_step("t2");
 	hidePVCInfo(1);
 	if(country_code=="")
-		country_code = "Germany";
+		country_code = "default";
 	showCountryList(country_code);
 	showAllList(country_code);
 }
@@ -329,7 +330,12 @@ function submit_page(){
 
 function btnNext() {
 	var connection_type = 0;
-	if ( document.form.country.value=='NO'|| document.form.ISP.value=='NO' ){
+	if(document.form.country.value=='default'){
+                alert("<#JS_fieldblank#>");
+                document.form.country.focus();
+                return false;
+        }
+        else if ( document.form.country.value=='NO'|| document.form.ISP.value=='NO' ){
 		var tmp_vlanid = document.form.dslx_vid.value;
 		if ( isNaN(tmp_vlanid) == true ) {
 			alert('<#WANVLANIDText#> "' + tmp_vlanid + '" <#Manual_Setting_JS_invalid#>');
@@ -503,7 +509,7 @@ function submit_detect(){
 	<tr>
 		<th><#Layer3Forwarding_x_ConnectionType_itemname#></th>
 		<td>
-			<select name="user_prctl" class="input_option">
+			<select name="user_prctl" class="input_option" tabindex="5">
 				<option value = 2><#BOP_ctype_title1#></option>
 				<option value = 4><#BOP_ctype_title5#></option>
 				<option value = 0>PPPoE</option>				
@@ -513,15 +519,15 @@ function submit_detect(){
 	</tr>
 	<tr>
 		<th><#WANVLANIDText#></th>
-		<td><input type='text' name='dslx_vid' maxlength="5" class="input_6_table"></td>
+		<td><input type='text' name='dslx_vid' tabindex="6" maxlength="5" class="input_6_table"></td>
 	</tr>
 	</tbody>
 </table>
 </div>
 
 	<div class="apply_gen" style="margin-top:10px">
-		<span id="bottom_btn1"><input type="button" value="<#CTL_Detect_Again#>" onclick="submit_detect();" class="button_gen" ></span>
-		<input type="button" value="<#btn_next#>" onclick="btnNext();" class="button_gen">
+		<span id="bottom_btn1"><input type="button" value="<#CTL_Detect_Again#>" tabindex="8" onclick="submit_detect();" class="button_gen" ></span>
+		<input type="button" value="<#btn_next#>" tabindex="7" onclick="btnNext();" class="button_gen">
 	</div>
 
 </div>

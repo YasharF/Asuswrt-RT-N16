@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
 <html xmlns:v>
 <head>
-<meta http-equiv="X-UA-Compatible" content="IE=EmulateIE7"/>
+<meta http-equiv="X-UA-Compatible" content="IE=Edge"/>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 <meta HTTP-EQUIV="Pragma" CONTENT="no-cache">
 <meta HTTP-EQUIV="Expires" CONTENT="-1">
@@ -61,7 +61,7 @@ function initial(){
 	if(!WebDav_support)
 		$("clouddiskstr").style.display = "none";
 		
-	if (!ufsd_support)
+	if (!ntfs_sparse_support)
 		$('ntfs_sparse_files').style.display = "none";
 	else
 		$('ntfs_sparse_files').style.display = "";		
@@ -786,7 +786,7 @@ function validForm(){
 					</td>
 				</tr>
 				<tr id="ntfs_sparse_files" style="">
-					<th>NTFS Sparse Files support</th>
+					<th><#AiDisk_NTFS_Sparse#></th>
 					<td>
 							<select name="usb_fs_ntfs_sparse" class="input_option">
 								<option class="content_input_fd" value="0" <% nvram_match("usb_fs_ntfs_sparse", "0","selected"); %>><#WLANConfig11b_WirelessCtrl_buttonname#></option>
@@ -864,7 +864,7 @@ function validForm(){
 			  <div id="e0" style="font-size:10pt; margin-top:2px;"></div>
 			  
 			  <div style="text-align:center; margin:10px auto; border-top:1px dotted #CCC; width:95%; padding:2px;">
-			    <input name="changePermissionBtn" id="changePermissionBtn" type="button" value="Save Permission" class="button_gen_long_dis" disabled="disabled">
+			    <input name="changePermissionBtn" id="changePermissionBtn" type="button" value="<#CTL_save_permission#>" class="button_gen_long_dis" disabled="disabled">
 			  </div>
 		    </td>
           </tr>

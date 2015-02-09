@@ -156,25 +156,23 @@ void convert_dsl_wan()
 
 void remove_dsl_autodet(void)
 {
-	int AdslReady = 0;
-	int WaitAdslCnt;
+#ifdef RTCONFIG_RALINK
 	int x;
 	char wan_if[9];
-	char wan_num[2];	
+#endif
 
 	// not autodet , direct return
 	if (nvram_match("dsltmp_autodet_state","")) return;
 
 	// ask auto_det to quit
 	nvram_set("dsltmp_adslatequit","1");
-	
-	for(x=2; x<=8; x++) {
+
 #ifdef RTCONFIG_RALINK
+	for(x=2; x<=8; x++) {
 		sprintf(wan_if, "eth2.1.%d", x);
 		eval("ifconfig", wan_if, "down");
-#else
-#endif
 	}
+#endif
 
 	nvram_set("dsltmp_autodet_state","");
 }
@@ -182,8 +180,6 @@ void remove_dsl_autodet(void)
 
 void convert_dsl_wan_settings(int req)
 {
-	char buf[32];
-
 	if (req == 0)
 	{
 		convert_dsl_config_num();
@@ -197,10 +193,12 @@ void convert_dsl_wan_settings(int req)
 	if (req == 2)
 	{
 		convert_dsl_config_num();
-		eval("req_dsl_drv", "reloadpvc");		
-		convert_dsl_wan();		
+		eval("req_dsl_drv", "reloadpvc");
+#ifdef RTCONFIG_DSL_TCLINUX
+		eval("req_dsl_drv", "rmvlan", nvram_safe_get("dslx_rmvlan"));
+#endif
+		convert_dsl_wan();
 	}
-
 }
 
 void
@@ -208,7 +206,6 @@ dsl_defaults(void)
 {
 	struct nvram_tuple *t;
 	char prefix[]="dslXXXXXX_", tmp[100];
-	char word[256], *next;
 	int unit;
 
 	for(unit=0;unit<8;unit++) {	
@@ -283,16 +280,6 @@ void start_dsl()
 	char *argv_tp_init[] = {"tp_init", NULL};
 	int pid;
 	char buf_ip[32];
-
-	// if setting cfg file is from annex a, annex b will has invalid values
-	if(nvram_match("productid", "DSL-N55U-B"))
-	{
-		if (nvram_get_int("dslx_annex") != 0)
-		{
-			nvram_set_int("dslx_annex", 0); //Paul add 2012/8/22, for Annex B model should always be 0
-			nvram_set_int("dslx_config_num", 0);
-		}
-	}
 	
 	mkdir("/tmp/adsl", S_IRUSR | S_IWUSR | S_IXUSR);
 
@@ -329,7 +316,6 @@ void start_dsl()
 		int x;
 		char wan_if[9];
 		char wan_num[2];
-		char vlan_id[8];
 
 		eval("brctl", "addbr", "br1");
 		for(x=2; x<=config_num; x++) {

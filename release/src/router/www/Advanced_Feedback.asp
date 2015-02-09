@@ -5,7 +5,7 @@
 <!--Advanced_Feedback.asp-->
 
 <head>
-<meta http-equiv="X-UA-Compatible" content="IE=EmulateIE7"/>
+<meta http-equiv="X-UA-Compatible" content="IE=Edge"/>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <meta HTTP-EQUIV="Pragma" CONTENT="no-cache">
 <meta HTTP-EQUIV="Expires" CONTENT="-1">
@@ -14,7 +14,6 @@
 <title><#Web_Title#> - <#menu_feedback#></title>
 <link rel="stylesheet" type="text/css" href="index_style.css"> 
 <link rel="stylesheet" type="text/css" href="form_style.css">
-<!--link rel="stylesheet" type="text/css" href="pwdmeter.css"-->
 <script language="JavaScript" type="text/javascript" src="/state.js"></script>
 <script language="JavaScript" type="text/javascript" src="/general.js"></script>
 <script language="JavaScript" type="text/javascript" src="/popup.js"></script>
@@ -48,8 +47,24 @@ function applyRule(){
 		if(document.form.attach_iptables.checked == true)
 			document.form.PM_attach_iptables.value = 1;
 		else
-			document.form.PM_attach_iptables.value = 0;		
-		showLoading(20);		
+			document.form.PM_attach_iptables.value = 0;
+                
+		if(document.form.fb_email.value == ""){
+			if(!confirm("E-mail address field is empty. Are you sure you want to proceed?")){
+				document.form.fb_email.focus();
+				return false;
+			}
+		}
+		else{	//validate email
+			
+				if(!isEmail(document.form.fb_email.value)){
+						alert("The format of E-mail address is not valid.");    					
+						document.form.fb_email.focus();
+						return false;
+				}
+		}
+		document.form.fb_browserInfo.value = navigator.userAgent;
+		showLoading(60);
 		document.form.submit();
 	}
 	else{
@@ -57,6 +72,21 @@ function applyRule(){
 		return false;
 	}
 }
+
+function isEmail(strE) {
+	if (strE.search(/^[A-Za-z0-9]+((-[A-Za-z0-9]+)|(\.[A-Za-z0-9]+)|(_[A-Za-z0-9]+))*\@[A-Za-z0-9]+((\.|-)[A-Za-z0-9]+)*\.[A-Za-z]+$/) != -1)
+		return true;
+	else
+		return false;
+}
+
+function textCounter(field, cnt, upper) {
+        if (field.value.length > upper)
+                field.value = field.value.substring(0, upper);
+        else
+                cnt.value = upper - field.value.length;
+}
+
 </script>
 </head>
 <body onload="initial();" onunLoad="return unload_body();">
@@ -87,6 +117,8 @@ function applyRule(){
 <input type="hidden" name="PM_attach_cfgfile" value="">
 <input type="hidden" name="PM_attach_iptables" value="">	
 <input type="hidden" name="feedbackresponse" value="<% nvram_get("feedbackresponse"); %>">
+<input type="hidden" name="fb_experience" value="<% nvram_get("fb_experience"); %>">
+<input type="hidden" name="fb_browserInfo" value="">
 <table class="content" align="center" cellpadding="0" cellspacing="0">
 <tr>
 <td width="17">&nbsp;</td>
@@ -160,14 +192,29 @@ function applyRule(){
 		<#feedback_comments#> *
 	</th>
 	<td>
-		<textarea name="fb_comment" maxlength="2000" cols="35" rows="5" style="font-family:'Courier New', Courier, mono; font-size:13px;background:#475A5F;color:#FFFFFF;"></textarea>
-		<br> <#feedback_optional#>
+		<textarea name="fb_comment" maxlength="2000" cols="55" rows="8" style="font-family:'Courier New', Courier, mono; font-size:13px;background:#475A5F;color:#FFFFFF;" onKeyDown="textCounter(this,document.form.msglength,2000);" onKeyUp="textCounter(this,document.form.msglength,2000)"></textarea>
+		<i>Maximum of 2000 characters - characters left : <input type="text" class="input_6_table" name="msglength" id="msglength" maxlength="4" value="2000" readonly></i>
 	</td>
 </tr>
+
+<tr align="center">
+	<td colspan="2">
+		<div style="margin-left:-680px;"><#feedback_optional#></div>
+		<input class="button_gen" onclick="applyRule()" type="button" value="Send"/>
+	</td>	
+</tr>
+
+<tr>
+	<td colspan="2">
+		<strong><#FW_note#></strong>
+		<ul>
+			<li>The Firmware and DSL Driver Version will be submitted in addition to any info you choose to include above.</li>
+			<li>DSL feedback will be used to diagnose problems and help to improve the firmware of <#Web_Title2#>, any personal information you submitted, whether explicitly or incidentally will be protected in accordance with our <a style='font-weight: bolder;text-decoration:underline;cursor:pointer;' href='http://www.asus.com/Terms_of_Use_Notice_Privacy_Policy/Privacy_Policy/' target='_blank'>privacy policy</a>.</li>
+			<li>By submitting this DSL Feedback, you agree that ASUS may use feedback that you provided to improve ASUS xDSL modem router product.</li>
+		</ul>
+	</td>
+</tr>	
 </table>
-<div class="apply_gen">
-<input class="button_gen" onclick="applyRule()" type="button" value="Send"/>
-</div>
 </td>
 </tr>
 </tbody>
