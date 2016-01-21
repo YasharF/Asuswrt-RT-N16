@@ -516,7 +516,7 @@ osl_pktfastget(osl_t *osh, uint len)
 	skb->next = skb->prev = NULL;
 #if defined(__ARM_ARCH_7A__)
 	skb->data = skb->head + NET_SKB_PAD;
-	skb->tail = skb->head + NET_SKB_PAD;
+	skb->tail = skb->data;
 #else
 	skb->data = skb->head + NET_SKB_PAD_ALLOC;
 	skb->tail = skb->data;
