@@ -2,14 +2,13 @@
 #include <sys/ioctl.h>
 #include <linux/if_packet.h>
 #include <stdio.h>
-#include <linux/in.h>
+//#include <linux/in.h>
 #include <linux/if_ether.h>
 #include <net/if.h>
 #include <string.h>
 #include <errno.h>
 #include <signal.h>
 #include <sys/time.h>
-#include <shutils.h>    // for eval()
 #include <bcmnvram.h>
 #include <stdlib.h>
 #include <asm/byteorder.h>
@@ -28,7 +27,7 @@ iface_get_id(int fd, const char *device)
 {
         struct ifreq    ifr;
         memset(&ifr, 0, sizeof(ifr));
-        strncpy(ifr.ifr_name, device, sizeof(ifr.ifr_name));
+        strlcpy(ifr.ifr_name, device, sizeof(ifr.ifr_name));
         if (ioctl(fd, SIOCGIFINDEX, &ifr) == -1) {
                 perror("iface_get_id ERR:\n");
                 return -1;
@@ -154,6 +153,10 @@ int main()
 	strcpy(router_mac, nvram_safe_get("et1macaddr"));
 #else
 	strcpy(router_mac, nvram_safe_get("et0macaddr"));
+#endif
+#ifdef RTCONFIG_GMAC3
+        if(nvram_match("gmac3_enable", "1"))
+                strcpy(router_mac, nvram_safe_get("et2macaddr"));
 #endif
         inet_aton(router_ipaddr, &router_addr.sin_addr);
         memcpy(my_ipaddr,  &router_addr.sin_addr, 4);

@@ -1,30 +1,32 @@
 var productid = '<#Web_Title2#>';
 helpcontent[0] = new Array("",
-							 "<#WLANConfig11b_SSID_itemdesc#>",
-						   "<#WLANConfig11b_x_BlockBCSSID_itemdesc#>",						   
-						   "<#WLANConfig11b_Channel_itemdesc#>",
-						   "<#WLANConfig11b_x_Mode_itemdesc2#>",
-						   "<#WLANConfig11b_AuthenticationMethod_itemdesc#>",
-						   "<#WLANConfig11b_WPAType_itemdesc#>",
-						   "<#WLANConfig11b_x_PSKKey_itemdesc#>",
-						   "<#WLANConfig11b_x_Phrase_itemdesc#>",
-						   "<#WLANConfig11b_WEPType_itemdesc#>",
-						   "<#WLANConfig11b_WEPDefaultKey_itemdesc#>",
-						   "<#WLANConfig11b_x_Rekey_itemdesc#><#JS_field_wanip_rule3#>",	//11
-						   "<#WLANConfig11b_WEPKey_itemtype1#>",
-						   "<#WLANConfig11b_WEPKey_itemtype2#>",
-						   "<#WLANConfig11b_ChannelBW_itemdesc#><br/><#WLANConfig11b_Wireless_Speed_itemname_3#>",
-						   "To locate the 40MHz channel in combination with the control channel", //<#WLANConfig11b_EChannel_itemdesc#>
-							 "<#WLANConfig11b_TxPower_help1#>",
-							 "<#WLANConfig11b_TxPower_help#>",
-							 "WEP-64bits: <#WLANConfig11b_WEPKey_itemtype1#><br/>WEP-128bits: <#WLANConfig11b_WEPKey_itemtype2#>",
-							 "<#WLANConfig11b_WEPKey_itemtype1#><br/><#WLANConfig11b_WEPKey_itemtype2#>",
-							 "<#WLANConfig11b_WEPKey_itemtype1#><br/><#WLANConfig11b_WEPKey_itemtype2#>",
-							 "<#WLANConfig11b_WEPKey_itemtype1#><br/><#WLANConfig11b_WEPKey_itemtype2#>",	//21
-							 '<div><#qis_wireless_help1#></div><br/><img src="/images/qis/select_wireless.jpg">',
-							 '<div><#qis_wireless_help2#></div><br/><img width="350px" src="/images/qis/security_key.png">',
-							 "<#WLANConfig11n_automode_limition_hint#>"
-							 );
+			"<#WLANConfig11b_SSID_itemdesc#>",
+			"<#WLANConfig11b_x_BlockBCSSID_itemdesc#>",						   
+			"<#WLANConfig11b_Channel_itemdesc#>",
+			"<#WLANConfig11b_x_Mode_itemdesc2#>",
+			"<#WLANConfig11b_AuthenticationMethod_itemdesc#>",
+			"<#WLANConfig11b_WPAType_itemdesc#>",
+			"<#WLANConfig11b_x_PSKKey_itemdesc#>",
+			"<#WLANConfig11b_x_Phrase_itemdesc#>",
+			"<#WLANConfig11b_WEPType_itemdesc#>",
+			"<#WLANConfig11b_WEPDefaultKey_itemdesc#>",
+			"<#WLANConfig11b_x_Rekey_itemdesc#><#JS_field_wanip_rule3#>",	//11
+			"<#WLANConfig11b_WEPKey_itemtype1#>",
+			"<#WLANConfig11b_WEPKey_itemtype2#>",
+			"<#WLANConfig11b_ChannelBW_itemdesc#><br/><#WLANConfig11b_Wireless_Speed_itemname_3#>",
+			"<#WLANConfig11b_EChannel_itemdesc#>",
+			"<#WLANConfig11b_TxPower_help1#>",
+			"<#WLANConfig11b_TxPower_help#>",
+			"WEP-64bits: <#WLANConfig11b_WEPKey_itemtype1#><br/>WEP-128bits: <#WLANConfig11b_WEPKey_itemtype2#>",
+			"<#WLANConfig11b_WEPKey_itemtype1#><br/><#WLANConfig11b_WEPKey_itemtype2#>",
+			"<#WLANConfig11b_WEPKey_itemtype1#><br/><#WLANConfig11b_WEPKey_itemtype2#>",
+			"<#WLANConfig11b_WEPKey_itemtype1#><br/><#WLANConfig11b_WEPKey_itemtype2#>",	//21
+			'<div><#qis_wireless_help1#></div><br/><img src="/images/qis/select_wireless.jpg">',
+			'<div><#qis_wireless_help2#></div><br/><img width="350px" src="/images/qis/security_key.png">',
+			"",
+			"<#Access_Time_desc#>",
+			"<#Access_Intranet_desc#>"
+			 );
 helpcontent[1] = new Array("",
 						   "<#WLANConfig11b_x_APMode_itemdesc#>",
 						   "<#WLANConfig11b_Channel_itemdesc#>",
@@ -61,15 +63,16 @@ helpcontent[3] = new Array("",
 							"<#WLANConfig11b_x_EnhanInter_itemdesc#>", //21
 							"<#WLANConfig11b_x_IgmpSnEnable_itemdesc#>",
 							"<#WLANConfig11b_x_SchedEnable_itemdesc#>",
-							"<#WLANConfig11b_x_ExpBeam_desc#> (It's also called [Explicit Beamforming].)",
-							"<#WLANConfig11b_x_ImpBeam_desc#> (It's also called [Implicit Beamforming].)",
+							"<#WLANConfig11b_x_ExpBeam_desc#> (It's also called [Explicit Beamforming].)",	/* untranslated */
+							"<#WLANConfig11b_x_ImpBeam_desc#> (It's also called [Implicit Beamforming].)",	/* untranslated */
 							"<#WLANConfig11b_x_AMPDU_desc#>",
 							"<#WLANConfig11b_x_ACK_desc#>",
 							"<#WLANConfig11b_x_TurboQAM_desc#> <#WLANConfig11b_x_Auto#>",
 							"<#WLANConfig11b_x_ReduceUSB3_desc#>",
 							"<#RTS_for_AMPDU#>",
 							"<#WLANConfig11b_x_roamingassit_desc#>",	//31
-							"Provide Airtime Fairness between multiple links" 
+							"Provide Airtime Fairness between multiple links",	/* untranslated */
+							"<#WLANConfig11b_x_Auto#>"
 							 );
 
 helpcontent[4] = new Array("",
@@ -134,7 +137,7 @@ helpcontent[7] = new Array("",
 //Firewall
 helpcontent[8] = new Array("",
 						   "<#FirewallConfig_WanLanLog_itemdesc#>",
-						   "<#FirewallConfig_x_WanWebEnable_itemdesc#>",
+						   "<#FirewallConfig_x_WanWebEnable_itemdesc#> Notice that this option will control http and https port access from WAN interface.",	/* untranslated */
 						   "<#FirewallConfig_x_WanWebPort_itemdesc#>",
 						   "<#FirewallConfig_x_WanLPREnable_itemdesc#>",
 						   "<#FirewallConfig_x_WanPingEnable_itemdesc#>",
@@ -156,9 +159,10 @@ helpcontent[11] = new Array("",
 							"<#LANHostConfig_x_NTPServer_itemdesc#>",
 							"<#QIS_pass_desc2#> <#LANHostConfig_x_Password_itemdesc#>",
 							"<#QIS_pass_desc2#> <#File_Pop_content_alert_desc3#>",
-							"This feature allows browser to redirect to failed connection warning page when Internet is down, if disabled warning page would not appear.",
-							"To set your clock forward one hour in the spring when DST (Daylight Saving Time) starts",
-							"To set your clock back one hour in the fall when DST (Daylight Saving Time) ends");
+							"This feature allows browser to redirect to failed connection warning page when Internet is down, if disabled warning page would not appear.",	/* untranslated */
+							"To set your clock forward one hour in the spring when DST (Daylight Saving Time) starts",	/* untranslated */
+							"To set your clock back one hour in the fall when DST (Daylight Saving Time) ends"	/* untranslated */
+		);
 //Log
 helpcontent[12] = new Array("",
 							"<#General_x_SystemUpTime_itemdesc#>",
@@ -175,7 +179,7 @@ helpcontent[13] = new Array("",
 //UPnP
 helpcontent[14] = new Array("",
 							"<#UPnPMediaServer_Help#>",
-							"<#vpnc_reconnection_desc#>");
+							"");
 //AiDisk Wizard
 helpcontent[15] = new Array("",
 							"", /*<#AiDisk_moreconfig#>*/
@@ -211,13 +215,14 @@ helpcontent[19] = new Array("",
 							"<#Setting_upload_itemdesc#>");
 // QoS
 helpcontent[20] = new Array("",
-							"<#BM_measured_uplink_speed_desc#>",
-							"<#BM_manual_uplink_speed_desc#>",
+							"",
+							'<#BM_manual_link_speed_desc#>',
 							"<#min_bound_desc#>",
 							"<#max_bound_desc#>",
 							"<#bound_zero_desc#>",
 							"<#EzQoS_type_adaptive_desc#>",
-							"<#EzQoS_type_traditional_desc#>");
+							"<#EzQoS_type_traditional_desc#>",
+							"<#Bandwidth_Limiter_hint#>");
 // HSDPA
 helpcontent[21] = new Array("",
 							"<#HSDPAConfig_hsdpa_mode_itemdesc#>",
@@ -233,7 +238,7 @@ helpcontent[21] = new Array("",
 							"<#HSDPAConfig_username_itemdesc#>",
 							"<#HSDPAConfig_password_itemdesc#>",
 							"<#HSDPAConfig_usbadaptor_itemdesc#>");
-							
+					
 helpcontent[22] = new Array("",
 							"<#OP_GW_desc#>",
 							"<#OP_GW_desc#>",
@@ -258,23 +263,24 @@ helpcontent[24] = new Array("",
 							"<#qis_wireless_help1#>",											//0,22	
 							"<#qis_wireless_help2#>");										//0,23
 
-//DSL
-helpcontent[25] = new Array("",
+//DSL	/* untranslated */
+helpcontent[25] = new Array("",	
 							"<#DSL_Stab_Adjustment#>",
 							"<#DSL_SRA_itemdesc#>",
 							"<#DSL_Bitswap_id#>",
-							"This item allows you to tweak the target SNRM of VDSL. For instance with a SNR Down at 8dB, you could set to 7dB or lower value to maximize the downstream performance, 5dB (Max.performance) but please note that the lower the value, DSL modem router will be weaker to defend the line noise, thus sync lost might occur, so please adjust with proper value. However if your VDSL connection is unstable or not able to establish a connection, for this case then set to a higher value such as 9dB ~ 30dB.",
+							"This item allows you to tweak the target SNR Margin of VDSL. For instance with a downstream SNR Margin at 8dB, you could set to 7dB or lower value to maximize the downstream performance, 4dB (Max.performance) but please note that the lower the value, DSL modem router will be weaker to defend the line noise, thus sync lost might occur, so please adjust with proper value. However if your VDSL connection is unstable or not able to establish a connection, for this case then set to a higher value such as 9dB ~ 30dB.",
 							"This item allows you to tweak the Tx Power of VDSL. Reduce Tx Power(-1 dB ~ -7 dB) would increase the downstream performance(reduce more Tx Power leads to higher downstream data rate), but will impact upstream and vice versa.",
 							"This item configures Rx AGC(Auto Gain Control) GAIN for VDSL, if tweak the Stability Adjustment (VDSL) setting still could not get desired downstream speed, then could try to set Rx AGC GAIN Adjustment to High Performance mode. However if your VDSL connection is unstable and has some CRC then could set to Stable mode.",
 							"This item allows you to control whether to Enable/Disable UPBO(Upstream Power Back Off) for VDSL. DSLAM could use UPBO to reduce the Tx Power of your xDSL modem router, in some cases abnormal UPBO control from DSLAM could leads to sync up issue(such as not enough Tx Power to sync with minimum rate). Thus with this feature now you could disable UPBO and will not get affected by DSLAM setting.",
 							"This item configures Profile to be used for VDSL connection, default is 30a multi mode. However in order to work around the non-standard 30a multi mode VDSL DSLAM sync issue, which deployed by some of Germany ISP, set to 17a multi mode might be needed in order for the VDSL line to sync up. For users of other countries, there is no need to change this setting.",
 							"Apply special settings for specific country. With this option, the Stability Adjustment for ADSL is properly set according to the selected country.", 
-							"This item allows system to monitor the ADSL line, designed to maintain stability of the line. Based on current line condition necessary changes will be adopted.",
+							"This item allows system to monitor the DSL line, designed to maintain stability of the line. Based on current line condition necessary changes will be adopted.",
 							"This feature allows system to capture diagnostic DSL debug log in the background, duration depends on the \"Diagnostic debug log capture duration\" option, after capture completed debug log would be transmitted automatically to ASUS Support Team for analysis.",
 							"The G.INP stands for Impulse Noise Protection. It works on ADSL2, ADSL2+, and VDSL2 only. It is enabled to provide enhanced protection against impulse noise or to increase the efficiency of providing impulse noise protection. If your DSLAM does not support it, please disable it.",
 							"This item configures Rx AGC(Auto Gain Control) GAIN for ADSL, if tweak the Stability Adjustment (ADSL) setting still could not get desired downstream speed, then could try to set Rx AGC GAIN Adjustment to High Performance mode. However if your ADSL connection is unstable and has some CRC then could set to Stable mode.",
 							"This item supports G.vector. With G.vector crosstalk among the signals in the same cable could be canceled, such as far-end crosstalk (FEXT). Which would significantly improve Signal-to-Noise Ratio (SNR) that leads to higher achievable bit rates. However CO must deploy Vectored VDSL2 DSLAM in order for this feature to work. If you find it doesn't work well or you know the G.vector of your ISP is non-standard, please enable both of this option and Non-standard G.vector.",
-							"This item supports Non-standard G.vector for specific countries. Please note that if your G.vector is standard, please do not enable this option for optimized performance."
+							"This item supports Non-standard G.vector for specific countries. Please note that if your G.vector is standard, please do not enable this option for optimized performance.",
+							"This command is  helpful for some impulse noise environment to enhance line stability."
 							);
 							
 //DualWAN
@@ -295,3 +301,20 @@ if('<% nvram_default_get("lan_ipaddr"); %>' != "192.168.1.1"){
 	helpcontent[4][1] = "<#LANHostConfig_IPRouters_itemdesc#>".replace("192.168.1.1", '<% nvram_default_get("lan_ipaddr"); %>');
 	helpcontent[24][5] = "<#LANHostConfig_IPRouters_itemdesc#>".replace("192.168.1.1", '<% nvram_default_get("lan_ipaddr"); %>');
 }
+
+//Mobile Broadband
+helpcontent[28] = new Array("",
+							"<#Mobile_StartDay_Desc#>",
+							"<#Mobile_Usage_Limit_Desc#>",
+							"<#Mobile_Usage_Alert_Desc#>",
+							"<#Mobile_SMS_Noti_Desc#>");
+						
+//Switch Control
+helpcontent[29] = new Array("",
+							"This item had various names: Port Trunking/ Bonding/ Teaming/ Link Aggregation/ 802.3ad.",	/*untranslated*/
+							"When NAT Acceleration enabled, switch can handle the network packets by itself and bypass CPU. It can increases NAT throughput but some applications may not work precisely, such as time scheduling."	/*untranslated*/
+							);
+
+helpcontent[30] = new Array("",
+							"Send alert before monthly alert is reached",/*untranslated*/
+							"Cut-off internet if monthly limit is reached");/*untranslated*/

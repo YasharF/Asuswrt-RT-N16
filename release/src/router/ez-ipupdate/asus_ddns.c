@@ -629,12 +629,18 @@ int asus_private(void)
 	memset (msg, 0, sizeof (msg));
 	memset (user, 0, sizeof (user));
 	memset (bin_pwd, 0, sizeof (bin_pwd));
-
-	if ((get_model() == MODEL_RTN56U) ||
-	    (get_model() == MODEL_RTAC87U))
+#ifdef RTCONFIG_RGMII_BRCM5301X
+	p = nvram_get ("et1macaddr");
+#else
+	if (get_model() == MODEL_RTN56U)
 		p = nvram_get ("et1macaddr");
 	else
 	p = nvram_get ("et0macaddr");
+#endif
+#ifdef RTCONFIG_GMAC3
+	if(nvram_match("gmac3_enable", "1"))
+		p = nvram_safe_get ("et2macaddr");
+#endif
 	if (p == NULL)	{
 		PRINT ("ERROR: %s() can not take MAC address from et0macaddr\n");
 		return -1;

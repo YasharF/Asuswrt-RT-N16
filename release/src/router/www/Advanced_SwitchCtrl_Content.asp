@@ -18,6 +18,8 @@
 <script type="text/javascript" src="/help.js"></script>
 
 <script>
+var lacp_support = isSupport("lacp");
+
 function initial(){
 	var ctf_disable = '<% nvram_get("ctf_disable"); %>';
 	var ctf_fa_mode = '<% nvram_get("ctf_fa_mode"); %>';
@@ -25,14 +27,28 @@ function initial(){
 	show_menu();
 
 	if(ctf_disable == 1){
-		document.getElementById("ctfLevelDesc").innerHTML = "NAT traffic is processed by CPU.";
+		document.getElementById("ctfLevelDesc").innerHTML = "<#NAT_Acceleration_ctf_disable#>";
 	}
 	else{
 		if(ctf_fa_mode == '2')
-			document.getElementById("ctfLevelDesc").innerHTML = "CTF(Cut Through Forwarding) and FA(Flow Acceleration) accelerator are enabled.";
+			document.getElementById("ctfLevelDesc").innerHTML = "<#NAT_Acceleration_ctf_fa_mode2#>";
 		else
-			document.getElementById("ctfLevelDesc").innerHTML = "CTF(Cut Through Forwarding) is enabled.";
+			document.getElementById("ctfLevelDesc").innerHTML = "<#NAT_Acceleration_ctf_fa_mode1#>";
 	}
+
+	if(lacp_support){
+		document.getElementById("lacp_tr").style.display = "";
+	}
+	else{
+		document.form.lacp_enabled.disabled = true;
+	}
+
+	if(based_modelid == "RT-AC5300R"){
+		var new_str;
+		new_str = document.getElementById("lacp_note").innerHTML.replace("LAN1", "LAN4");
+		document.getElementById("lacp_note").innerHTML = new_str.replace("LAN2", "LAN8");
+	}
+
 }
 
 function applyRule(){
@@ -112,11 +128,11 @@ function applyRule(){
 											</tr>
 
 											<tr>
-		      									<th><#NAT_Acceleration#></th>
+		      									<th><a class="hintstyle" href="javascript:void(0);" onClick="openHint(29,2);"><#NAT_Acceleration#></a></th>
 												<td>
 													<select name="ctf_disable_force" class="input_option">
 														<option class="content_input_fd" value="1" <% nvram_match("ctf_disable", "1","selected"); %>><#WLANConfig11b_WirelessCtrl_buttonname#></option>
-														<option class="content_input_fd" value="0" <% nvram_match("ctf_disable", "0","selected"); %>>Auto</option>
+														<option class="content_input_fd" value="0" <% nvram_match("ctf_disable", "0","selected"); %>><#Auto#></option>
 													</select>
 													&nbsp
 													<span id="ctfLevelDesc"></span>
@@ -129,8 +145,20 @@ function applyRule(){
 													<input type="radio" name="gro_disable_force" value="0" <% nvram_match("gro_disable_force", "0", "checked"); %>><#checkbox_Yes#>
 													<input type="radio" name="gro_disable_force" value="1" <% nvram_match("gro_disable_force", "1", "checked"); %>><#checkbox_No#>
 												</td>
-											</tr>       
-										</table>	
+											</tr>
+
+											<tr id="lacp_tr" style="display:none;">
+		      									<th><a class="hintstyle" href="javascript:void(0);" onClick="openHint(29,1);"><#NAT_lacp#></a></th>
+												<td>
+													<select name="lacp_enabled" class="input_option">
+														<option class="content_input_fd" value="0" <% nvram_match("lacp_enabled", "0","selected"); %>><#WLANConfig11b_WirelessCtrl_buttonname#></option>
+														<option class="content_input_fd" value="1" <% nvram_match("lacp_enabled", "1","selected"); %>><#WLANConfig11b_WirelessCtrl_button1name#></option>
+													</select>
+													&nbsp
+													<div id="lacp_desc"><span id="lacp_note"><#NAT_lacp_note#></span><div>
+												</td>
+											</tr> 											  
+										</table>
 
 										<div class="apply_gen">
 											<input class="button_gen" onclick="applyRule()" type="button" value="<#CTL_apply#>"/>

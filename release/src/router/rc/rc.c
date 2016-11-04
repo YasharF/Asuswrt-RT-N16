@@ -30,6 +30,11 @@ static int rctest_main(int argc, char *argv[])
 	else if (strcmp(argv[1], "rc_service")==0) {
 		notify_rc(argv[2]);
 	}
+#ifdef RTCONFIG_BCM_7114
+	else if (strcmp(argv[1], "spect")==0) {
+		start_dfs();
+	}
+#endif
 	else if(strcmp(argv[1], "get_phy_status")==0) {
 		int mask;
 		mask = atoi(argv[2]);
@@ -100,19 +105,27 @@ static int rctest_main(int argc, char *argv[])
 			if(on) start_watchdog();
 			else stop_watchdog();
 		}
+#if ! (defined(RTCONFIG_QCA) || defined(RTCONFIG_RALINK))
+		else if (strcmp(argv[1], "watchdog02") == 0) {
+			if(on) start_watchdog02();
+			else stop_watchdog02();
+		}
+#endif  /* ! (RTCONFIG_QCA || RTCONFIG_RALINK) */
+		else if (strcmp(argv[1], "sw_devled") == 0) {
+			if(on) start_sw_devled();
+			else stop_sw_devled();
+		}
 #ifdef RTCONFIG_FANCTRL
 		else if (strcmp(argv[1], "phy_tempsense") == 0) {
 			if(on) start_phy_tempsense();
 			else stop_phy_tempsense();
 		}
 #endif
-#ifdef RTCONFIG_BCMWL6
-#ifdef RTCONFIG_PROXYSTA
+#if defined(RTCONFIG_BCMWL6) && defined(RTCONFIG_PROXYSTA)
 		else if (strcmp(argv[1], "psta_monitor") == 0) {
 			if(on) start_psta_monitor();
 			else stop_psta_monitor();
 		}
-#endif
 #endif
 #ifdef RTCONFIG_IPERF
 		else if (strcmp(argv[1], "monitor") == 0) {
@@ -128,12 +141,12 @@ static int rctest_main(int argc, char *argv[])
 					modprobe_r("hw_nat");
 					sleep(1);
 #if 0
-					system("echo 0 > /proc/sys/net/ipv4/conf/default/force_igmp_version");
-					system("echo 0 > /proc/sys/net/ipv4/conf/all/force_igmp_version");
+					f_write_string("/proc/sys/net/ipv4/conf/default/force_igmp_version", "0", 0, 0);
+					f_write_string("/proc/sys/net/ipv4/conf/all/force_igmp_version", "0", 0, 0);
 #endif
 				}
 #endif
-			add_iQosRules(get_wan_ifname(0));
+			add_iQosRules(get_wan_ifname(wan_primary_ifunit()));
 #ifdef RTCONFIG_BWDPI
 				if(nvram_get_int("qos_type") == 1)
 					start_dpi_engine_service();
@@ -154,11 +167,11 @@ static int rctest_main(int argc, char *argv[])
 					!module_loaded("hw_nat"))
 				{
 #if 0
-					system("echo 2 > /proc/sys/net/ipv4/conf/default/force_igmp_version");
-					system("echo 2 > /proc/sys/net/ipv4/conf/all/force_igmp_version");
+					f_write_string("/proc/sys/net/ipv4/conf/default/force_igmp_version", "2", 0, 0);
+					f_write_string("/proc/sys/net/ipv4/conf/all/force_igmp_version", "2", 0, 0);
 #endif
 
-#if defined(RTN14U) || defined(RTAC52U) || defined(RTAC51U) || defined(RTN11P) || defined(RTN54U) || defined(RTAC1200HP) || defined(RTN56UB1) || defined(RTAC54U)
+#if defined(RTN14U) || defined(RTAC52U) || defined(RTAC51U) || defined(RTN11P) || defined(RTN300) || defined(RTN54U) || defined(RTAC1200HP) || defined(RTN56UB1) || defined(RTAC54U) || defined(RTN56UB2)
 					if (!(!nvram_match("switch_wantag", "none")&&!nvram_match("switch_wantag", "")))
 #endif
 					{
@@ -183,11 +196,17 @@ static int rctest_main(int argc, char *argv[])
 				start_webdav();
 		}
 #endif
+#ifdef RTCONFIG_TUNNEL
+		else if (strcmp(argv[1], "mastiff") == 0) {
+			if(on)
+				start_mastiff();
+		}
+#endif
 		else if (strcmp(argv[1], "gpiow") == 0) {
 			if(argc>=4) set_gpio(atoi(argv[2]), atoi(argv[3]));
 		}
 		else if (strcmp(argv[1], "gpior") == 0) {
-			_dprintf("%d\n", get_gpio(atoi(argv[2])));
+			printf("%d\n", get_gpio(atoi(argv[2])));
 		}
 		else if (strcmp(argv[1], "gpiod") == 0) {
 			if(argc>=4) gpio_dir(atoi(argv[2]), atoi(argv[3]));
@@ -206,10 +225,10 @@ static int rctest_main(int argc, char *argv[])
         		unsigned char enc_buf[ENC_WORDS_LEN];
         		unsigned char dec_buf[DATA_WORDS_LEN + 1];
 
-        		_dprintf("get enc str:[%s]\n", enc_str(argv[2], enc_buf));
-        		_dprintf("get dec str:[%s]\n", dec_str(enc_buf, dec_buf));
+			_dprintf("get enc str:[%s]\n", enc_str(argv[2], (char *) enc_buf));
+			_dprintf("get dec str:[%s]\n", dec_str((char *) enc_buf, (char *) dec_buf));
 
-       			_dprintf("done(%d)\n", strcmp(argv[2], dec_buf));
+			_dprintf("done(%d)\n", strcmp(argv[2], (const char *) dec_buf));
 		}
 #ifdef RTCONFIG_BCMFA
 		else if (strcmp(argv[1], "fa_rev") == 0) {
@@ -289,13 +308,15 @@ static const applets_t applets[] = {
 	{ "mtd-unlock",			mtd_unlock_erase_main		},
 #endif
 	{ "watchdog",			watchdog_main			},
+#if ! (defined(RTCONFIG_QCA) || defined(RTCONFIG_RALINK))
+	{ "watchdog02",			watchdog02_main			},
+#endif  /* ! (RTCONFIG_QCA || RTCONFIG_RALINK) */
+	{ "sw_devled",			sw_devled_main			},
 #ifdef RTCONFIG_FANCTRL
 	{ "phy_tempsense",		phy_tempsense_main		},
 #endif
-#ifdef RTCONFIG_BCMWL6
-#ifdef RTCONFIG_PROXYSTA
+#if defined(RTCONFIG_BCMWL6) && defined(RTCONFIG_PROXYSTA)
 	{ "psta_monitor",		psta_monitor_main		},
-#endif
 #endif
 #ifdef RTCONFIG_IPERF
 	{ "monitor",			monitor_main			},
@@ -314,6 +335,7 @@ static const applets_t applets[] = {
 	{ "zcip",			zcip_wan			},
 #ifdef RTCONFIG_IPV6
 	{ "dhcp6c",			dhcp6c_wan			},
+	{ "ipv6_monitor",		ipv6_monitor_main		},
 #endif
 #ifdef RTCONFIG_WPS
 	{ "wpsaide",			wpsaide_main			},
@@ -324,15 +346,22 @@ static const applets_t applets[] = {
 	{ "halt",			reboothalt_main			},
 	{ "reboot",			reboothalt_main			},
 	{ "ntp", 			ntp_main			},
-#if defined(RTCONFIG_RALINK) || defined(RTCONFIG_EXT_RTL8365MB)
+#if defined(RTCONFIG_RALINK) || defined(RTCONFIG_EXT_RTL8365MB) || defined(RTCONFIG_EXT_RTL8370MB)
 	{ "rtkswitch",			config_rtkswitch		},
 #elif defined(RTCONFIG_QCA)
 	{ "rtkswitch",			config_rtkswitch		},
+#endif	
 	{ "delay_exec",			delay_main			},
-#endif
+
 	{ "wanduck",			wanduck_main			},
+#if defined(CONFIG_BCMWL5) && defined(RTCONFIG_DUALWAN)
+	{ "dualwan",			dualwan_control			},
+#endif
 	{ "tcpcheck",			tcpcheck_main			},
 	{ "autodet", 			autodet_main			},
+#ifdef RTCONFIG_QCA_PLC_UTILS
+	{ "autodet_plc", 		autodet_plc_main		},
+#endif
 #ifdef RTCONFIG_CIFS
 	{ "mount-cifs",			mount_cifs_main			},
 #endif
@@ -356,16 +385,26 @@ static const applets_t applets[] = {
 #endif
 #ifdef RTCONFIG_BWDPI
 	{ "bwdpi",			bwdpi_main			},
-	{ "bwdpi_monitor",		bwdpi_monitor_main		},
 	{ "bwdpi_check",		bwdpi_check_main		},
 	{ "bwdpi_wred_alive",		bwdpi_wred_alive_main		},
+	{ "bwdpi_db_10",		bwdpi_db_10_main		},
 	{ "rsasign_sig_check",		rsasign_sig_check_main		},
 #endif
-#ifdef RT4GAC55U
+	{ "hour_monitor",		hour_monitor_main		},
+#ifdef RTCONFIG_INTERNAL_GOBI
 	{ "lteled",			lteled_main			},
 #endif
 #ifdef RTCONFIG_TR069
 	{ "dhcpc_lease",		dhcpc_lease_main		},
+#endif
+#if ((defined(RTCONFIG_USER_LOW_RSSI) && defined(RTCONFIG_BCMARM)) || defined(RTCONFIG_NEW_USER_LOW_RSSI))
+	{ "roamast",			roam_assistant_main		},
+#endif
+#ifdef RTCONFIG_DHCP_OVERRIDE
+	{ "detectWAN_arp",		detectWAN_arp_main		},
+#endif
+#if defined(RTCONFIG_KEY_GUARD)
+	{ "keyguard",			keyguard_main			},
 #endif
 	{NULL, NULL}
 };
@@ -459,12 +498,26 @@ int main(int argc, char **argv)
 		restart_wireless();
 		return 0;
 	}
+#ifdef RTCONFIG_BCM_7114
+	else if(!strcmp(base, "stop_wl")){
+                stop_wl_bcm();
+                return 0;
+        }
+#endif
 	else if(!strcmp(base, "nvram_erase")){
 		nvram_set(ASUS_STOP_COMMIT, "1");
 		erase_nvram();
 		return 0;
 	}
 #ifdef RTCONFIG_USB
+	else if(!strcmp(base, "restart_usb")){
+		int f_stop = 0;
+		if(argc == 2)
+			f_stop = atoi(argv[1]);
+		printf("%s usb...\n", f_stop ? "stop" : "restart");
+		restart_usb(f_stop);
+		return 0;
+	}
 	else if(!strcmp(base, "get_apps_name")){
 		if(argc != 2){
 			printf("Usage: get_apps_name [File name]\n");
@@ -473,15 +526,7 @@ int main(int argc, char **argv)
 
 		return get_apps_name(argv[1]);
 	}
-	else if(!strcmp(base, "asus_sd")){
-		if(argc != 3){
-			printf("Usage: asus_sd [device_name] [action]\n");
-			return 0;
-		}
-
-		return asus_sd(argv[1], argv[2]);
-	}
-#ifdef RTCONFIG_BCMARM
+#ifdef BCM_MMC
 	else if(!strcmp(base, "asus_mmc")){
 		if(argc != 3){
 			printf("Usage: asus_mmc [device_name] [action]\n");
@@ -491,6 +536,14 @@ int main(int argc, char **argv)
 		return asus_mmc(argv[1], argv[2]);
 	}
 #endif	
+	else if(!strcmp(base, "asus_sd")){
+		if(argc != 3){
+			printf("Usage: asus_sd [device_name] [action]\n");
+			return 0;
+		}
+
+		return asus_sd(argv[1], argv[2]);
+	}
 	else if(!strcmp(base, "asus_lp")){
 		if(argc != 3){
 			printf("Usage: asus_lp [device_name] [action]\n");
@@ -638,6 +691,17 @@ int main(int argc, char **argv)
 			printf("ATE_ERROR\n");
 		return 0;
 	}
+#if defined(RTCONFIG_DSL)
+	else if(!strcmp(base, "asustest")) {
+		if( argc == 2 || argc == 3) {
+			asustest_command(argv[1], argv[2]);
+		}
+		else
+			printf("asustest:parameter error\n");
+		return 0;
+	}
+#endif
+
 #if defined(RTCONFIG_RALINK) || defined(RTCONFIG_QCA)
 	else if (!strcmp(base, "FWRITE")) {
 		if (argc == 3)
@@ -696,8 +760,15 @@ int main(int argc, char **argv)
 	}
 #endif
 #endif
+
+#if defined(CONFIG_BCMWL5) || defined(RTCONFIG_RALINK) || defined(RTCONFIG_QCA)
+	else if(!strcmp(base, "set_factory_mode")) {
+		set_factory_mode();
+		return 0;
+	}
+#endif
 	else if(!strcmp(base, "run_telnetd")) {
-		run_telnetd();
+		_start_telnetd(1);
 		return 0;
 	}
 #ifdef RTCONFIG_SSH
@@ -706,6 +777,12 @@ int main(int argc, char **argv)
 		return 0;
 	}
 #endif
+#ifdef RTCONFIG_WTFAST
+	else if(!strcmp(base, "run_wtfast")) {
+		start_wtfast();
+		return 0;
+	}
+#endif	
 #if defined(RTCONFIG_PPTPD) || defined(RTCONFIG_ACCEL_PPTPD)
 	else if(!strcmp(base, "run_pptpd")) {
 		start_pptpd();
@@ -744,10 +821,17 @@ int main(int argc, char **argv)
 	}
 #endif
 #endif
+#if defined(CONFIG_BCMWL5) && defined(RTCONFIG_DUALWAN)
+	else if (!strcmp(base, "dualwan")){
+		dualwan_control();
+	}
+#endif
 #ifdef RTCONFIG_WIRELESSREPEATER
 	else if (!strcmp(base, "wlcconnect")) {
 		return wlcconnect_main();
 	}
+#endif
+#ifdef CONFIG_BCMWL5
 	else if (!strcmp(base, "setup_dnsmq")) {
 		if(argc != 2)
 			return 0;
@@ -762,13 +846,12 @@ int main(int argc, char **argv)
 		return(led_control(atoi(argv[1]), atoi(argv[2])));
 	}
 #ifdef RTCONFIG_BCMARM
+#if defined(RTAC1200G) || defined(RTAC1200GP)
 	/* mtd-erase2 [device] */
 	else if (!strcmp(base, "mtd-erase2")) {
 		if (argv[1] && ((!strcmp(argv[1], "boot")) ||
 				(!strcmp(argv[1], "linux")) ||
-				(!strcmp(argv[1], "linux2")) ||
 				(!strcmp(argv[1], "rootfs")) ||
-				(!strcmp(argv[1], "rootfs2")) ||
 				(!strcmp(argv[1], "nvram")))) {
 			return mtd_erase(argv[1]);
 		} else {
@@ -785,6 +868,32 @@ int main(int argc, char **argv)
 			return EINVAL;
 		}
 	}
+#else
+	/* mtd-erase2 [device] */
+	else if (!strcmp(base, "mtd-erase2")) {
+		if (argv[1] && ((!strcmp(argv[1], "boot")) ||
+				(!strcmp(argv[1], "linux")) ||
+				(!strcmp(argv[1], "linux2")) ||
+				(!strcmp(argv[1], "rootfs")) ||
+				(!strcmp(argv[1], "rootfs2")) ||
+				(!strcmp(argv[1], "brcmnand")) ||
+				(!strcmp(argv[1], "nvram")))) {
+			return mtd_erase(argv[1]);
+		} else {
+			fprintf(stderr, "usage: mtd-erase2 [device]\n");
+			return EINVAL;
+		}
+	}
+	/* mtd-write2 [path] [device] */
+	else if (!strcmp(base, "mtd-write2")) {
+		if (argc >= 3)
+			return mtd_write(argv[1], argv[2]);
+		else {
+			fprintf(stderr, "usage: mtd-write2 [path] [device]\n");
+			return EINVAL;
+		}
+	}
+#endif
 #endif
 	else if(!strcmp(base, "test_endian")){
 		int num = 0x04030201;
@@ -862,9 +971,7 @@ int main(int argc, char **argv)
 	}
 #ifdef RTCONFIG_USB_MODEM
 	else if(!strcmp(base, "write_3g_ppp_conf")){
-		write_3g_ppp_conf();
-
-		return 0;
+		return write_3g_ppp_conf();
 	}
 #if (defined(RTCONFIG_JFFS2) || defined(RTCONFIG_BRCM_NAND_JFFS2) || defined(RTCONFIG_UBIFS))
 	else if(!strcmp(base, "lplus")){
@@ -897,21 +1004,23 @@ int main(int argc, char **argv)
 	}
 #endif
 #endif
-#if defined(RTCONFIG_IPV6) && defined(RTCONFIG_WIDEDHCP6)
-	else if(!strcmp(base, "stop_ipv6")) {
-		stop_ipv6();
-		return 0;
-	}
-	else if(!strcmp(base, "start_dhcp6c")) {
-		start_dhcp6c();
-		return 0;
-	}
-#endif /* RTCONFIG_WIDEDHCP6 */
 #ifdef RTCONFIG_TOR
 	else if (!strcmp(base, "start_tor")) {
-                start_Tor_proxy();
+		start_Tor_proxy();
 		return 0;
-        }
+	}
+#endif
+#if ((defined(RTCONFIG_USER_LOW_RSSI) && defined(RTCONFIG_BCMARM)) || defined(RTCONFIG_NEW_USER_LOW_RSSI))
+	else if (!strcmp(base, "start_roamast")) {
+		start_roamast();
+		return 0;
+	}
+#endif
+#if defined(RTCONFIG_KEY_GUARD)
+	else if (!strcmp(base, "start_keyguard")) {
+		start_keyguard();
+		return 0;
+	}
 #endif
 	printf("Unknown applet: %s\n", base);
 	return 0;

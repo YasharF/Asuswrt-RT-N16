@@ -19,7 +19,7 @@ LDFLAGS = -ffunction-sections -fdata-sections -Wl,--gc-sections
 
 #CFLAGS = -Wall -g -O3 -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64 \
 
-CFLAGS = -Wall -g -Os -D_GNU_SOURCE $(EXTRACFLAGS) -D_FILE_OFFSET_BITS=64 \
+CFLAGS += -Wall -g -Os -D_GNU_SOURCE $(EXTRACFLAGS) -D_FILE_OFFSET_BITS=64 \
 	-ffunction-sections -fdata-sections \
 	-I$(TOP)/ffmpeg/libavutil -I$(TOP)/ffmpeg/libavcodec -I$(TOP)/ffmpeg/libavformat \
 	-I$(TOP)/ffmpeg/libswscale -I$(TOP)/ffmpeg \
@@ -32,6 +32,9 @@ LDFLAGS += -L$(TOP)/zlib -L$(TOP)/sqlite/.libs -L$(TOP)/jpeg -L$(TOP)/libvorbis/
 	-L$(TOP)/libogg/src/.libs -L$(TOP)/libexif/libexif/.libs -L$(TOP)/flac/src/libFLAC/.libs \
 	-L$(TOP)/ffmpeg/libavutil -L$(TOP)/ffmpeg/libavcodec -L$(TOP)/ffmpeg/libavformat \
 	-L$(TOP)/libid3tag/.libs
+ifeq ($(RTAC68U), y)
+LDFLAGS += -L$(TOP)/nvram${BCMEX} -lnvram -L$(TOP)/shared -lshared
+endif
 else
 LDFLAGS += -static
 endif
@@ -44,10 +47,16 @@ INSTALL = install
 
 CFLAGS += -I$(TOP)/shared
 
-include $(SRCBASE)/.config
+ifeq ($(RTAC68U), y)
+CFLAGS += -I$(SRCBASE)/include
+endif
 
 ifeq ($(RTN65U), y)
-	CFLAGS += -DRTN56U
+CFLAGS += -DRTN56U
+endif
+
+ifeq ($(RTAC66U), y)
+CFLAGS += -DRTN66U
 endif
 
 INSTALLPREFIX ?= $(DESTDIR)/usr

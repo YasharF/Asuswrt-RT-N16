@@ -52,21 +52,21 @@ function QKfinish_load_body(){
 		else if((OS.indexOf("Windows NT 7.0")!=-1) || (OS.indexOf("Windows NT 6.1")!=-1) || (OS.indexOf("Windows NT 6.0")!=-1)){
 			document.getElementById("win7").style.display = "";
 		}
-		//$("OS_type").innerHTML = "Windows";
+		//document.getElementById("OS_type").innerHTML = "Windows";
 		//EN.dict: For <span id="OS_type"></span> based wifi enabled devices, follow these steps:
 	}
 	else if(navigator.userAgent.match(/iP/i)){
 		document.getElementById("ios").style.display = "";
-		//$("OS_type").innerHTML = "iOS";
+		//document.getElementById("OS_type").innerHTML = "iOS";
 	}else if(navigator.userAgent.match(/Android/i)){
 		document.getElementById("android").style.display = "";
-		//$("OS_type").innerHTML = "Android";
+		//document.getElementById("OS_type").innerHTML = "Android";
 	}else if(OS.indexOf("Mac")!=-1){
 		document.getElementById("mac").style.display = "";
-		//$("OS_type").innerHTML = "Mac";
+		//document.getElementById("OS_type").innerHTML = "Mac";
 	}else{
 		document.getElementById("win7").style.display = "";
-		//$("OS_type").innerHTML = "Windows";
+		//document.getElementById("OS_type").innerHTML = "Windows";
 	}
 }
 
@@ -97,12 +97,7 @@ function gotoHome(){
 							<td align="left">
 								<span class="description_down"><#qis_tutor_title1#></span>
 							</td>
-						</tr>
-						<tr id="home_button">
-							<td align="right">
-								<img onclick="gotoHome();" style="cursor:pointer;" align="right" title="Go to Home" src="/images/backtohome.png" onMouseOver="this.src='/images/backtohomeclick.png'" onMouseOut="this.src='/images/backtohome.png'">
-							</td>
-						</tr>						
+						</tr>			
 					</table>
 				</div>
 				<div style="margin:5px;"><img style="width: 720px; *width: 710px; height: 2px;" src="/images/New_ui/export/line_export.png"></div>

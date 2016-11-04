@@ -58,7 +58,7 @@ extern const char APCLI_2G[];
 
 #if defined(RTN65U)
 #define RT_802_11_MAC_ENTRY_for_2G		RT_802_11_MAC_ENTRY_RT3352_iNIC
-#elif defined(RTN56UB1)
+#elif defined(RTN56UB1) || defined(RTN56UB2)
 #define RT_802_11_MAC_ENTRY_for_2G		RT_802_11_MAC_ENTRY_7603E
 #else
 #define RT_802_11_MAC_ENTRY_for_2G		RT_802_11_MAC_ENTRY_2G
@@ -328,12 +328,12 @@ typedef enum _RT_802_11_PHY_MODE {
 #define OFFSET_EEPROM_VER	0x40002
 #define OFFSET_BOOT_VER		0x4018A
 #define OFFSET_COUNTRY_CODE	0x40188
-#if defined(RTN14U) || defined(RTN11P)
+#if defined(RTN14U) || defined(RTN11P) || defined(RTN300)
 #define OFFSET_MAC_ADDR		0x40004
 #define OFFSET_MAC_ADDR_2G	0x40004 //only one MAC
 #define OFFSET_MAC_GMAC2	0x4018E
 #define OFFSET_MAC_GMAC0	0x40194
-#elif defined(RTAC52U) || defined(RTAC51U) || defined(RTN54U) || defined(RTAC54U) || defined(RTAC1200HP) || defined(RTN56UB1)
+#elif defined(RTAC52U) || defined(RTAC51U) || defined(RTN54U) || defined(RTAC54U) || defined(RTAC1200HP) || defined(RTN56UB1) || defined(RTN56UB2)
 #define OFFSET_MAC_ADDR_2G	0x40004
 #define OFFSET_MAC_ADDR		0x48004
 #define OFFSET_MAC_GMAC0	0x40022
@@ -344,7 +344,7 @@ typedef enum _RT_802_11_PHY_MODE {
 #define OFFSET_MAC_GMAC2	0x40022
 #define OFFSET_MAC_GMAC0	0x40028
 #endif
-#if defined(RTAC1200HP) || defined(RTN56UB1)
+#if defined(RTAC1200HP) || defined(RTN56UB1) || defined(RTN56UB2)
 #define OFFSET_FIX_CHANNEL      0x40170
 #endif
 #define OFFSET_PIN_CODE		0x40180
@@ -358,6 +358,7 @@ typedef enum _RT_802_11_PHY_MODE {
 #define REGSPEC_ADDR		0x40248 // 4 bytes
 #endif /* RTCONFIG_NEW_REGULATION_DOMAIN */
 
+#define OFFSET_PSK		0x4ff80 //15bytes
 #define OFFSET_TERRITORY_CODE	0x4ff90	/* 5 bytes, e.g., US/01, US/02, TW/01, etc. */
 #define OFFSET_DEV_FLAGS	0x4ffa0 //device dependent flags
 #define OFFSET_ODMPID		0x4ffb0 //the shown model name (for Bestbuy and others)

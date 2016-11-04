@@ -3,18 +3,21 @@
 # echo "This is a script to get the modem status."
 
 
-modem_enable=`nvram get modem_enable`
-modem_type=`nvram get usb_modem_act_type`
 act_node1="usb_modem_act_int"
 act_node2="usb_modem_act_bulk"
 modem_vid=`nvram get usb_modem_act_vid`
 modem_pid=`nvram get usb_modem_act_pid`
 modem_dev=`nvram get usb_modem_act_dev`
-modem_roaming_scantime=`nvram get modem_roaming_scantime`
-modem_roaming_scanlist=`nvram get modem_roaming_scanlist`
 sim_order=`nvram get modem_sim_order`
 
-at_lock="flock -x /tmp/at_cmd_lock"
+usb_gobi2=`nvram get usb_gobi2`
+
+stop_lock=`nvram get stop_lock`
+if [ -n "$stop_lock" ] && [ "$stop_lock" -eq "1" ]; then
+	at_lock=""
+else
+	at_lock="flock -x /tmp/at_cmd_lock"
+fi
 
 jffs_dir="/jffs"
 
@@ -47,8 +50,24 @@ _get_qcqmi_by_usbnet(){
 	echo ""
 }
 
+# $1: VID, $2: PID.
+_get_gobi_device(){
+	if [ -z "$1" ] || [ -z "$2" ]; then
+		echo "0"
+		return
+	fi
+
+	if [ "$1" == "1478" ] && [ "$2" == "36902" -o "$2" == "36903" ]; then
+		echo "1"
+		return
+	fi
+
+	echo "0"
+}
+
 
 act_node=
+#modem_type=`nvram get usb_modem_act_type`
 #if [ "$modem_type" == "tty" -o "$modem_type" == "mbim" ]; then
 #	if [ "$modem_type" == "tty" -a "$modem_vid" == "6610" ]; then # e.q. ZTE MF637U
 #		act_node=$act_node1
@@ -70,14 +89,16 @@ if [ "$modem_act_node" == "" ]; then
 	fi
 fi
 
+is_gobi=`_get_gobi_device $modem_vid $modem_pid`
+
 if [ "$1" == "bytes" -o "$1" == "bytes-" ]; then
 	if [ "$modem_dev" == "" ]; then
-		echo "Can't get the active network device of USB."
+		echo "2:Can't get the active network device of USB."
 		exit 2
 	fi
 
 	if [ -z "$sim_order" ]; then
-		echo "Fail to get the SIM order."
+		echo "12:Fail to get the SIM order."
 		exit 12
 	fi
 
@@ -91,11 +112,11 @@ if [ "$1" == "bytes" -o "$1" == "bytes-" ]; then
 	echo "  tx_new=$tx_new."
 
 	if [ "$1" == "bytes" ]; then
-		rx_old=`cat "$jffs_dir/sim/$sim_order/modem_bytes_rx" 2>/dev/null`
+		rx_old=`nvram get modem_bytes_rx`
 		if [ -z "$rx_old" ]; then
 			rx_old=0
 		fi
-		tx_old=`cat "$jffs_dir/sim/$sim_order/modem_bytes_tx" 2>/dev/null`
+		tx_old=`nvram get modem_bytes_tx`
 		if [ -z "$tx_old" ]; then
 			tx_old=0
 		fi
@@ -120,15 +141,13 @@ if [ "$1" == "bytes" -o "$1" == "bytes-" ]; then
 		echo "  rx_now=$rx_now."
 		echo "  tx_now=$tx_now."
 
-		echo -n "$rx_now" > "$jffs_dir/sim/$sim_order/modem_bytes_rx"
 		nvram set modem_bytes_rx=$rx_now
-		echo -n "$tx_now" > "$jffs_dir/sim/$sim_order/modem_bytes_tx"
 		nvram set modem_bytes_tx=$tx_now
 	else
-		echo -n 0 > "$jffs_dir/sim/$sim_order/modem_bytes_rx"
-		nvram set modem_bytes_rx=0
-		echo -n 0 > "$jffs_dir/sim/$sim_order/modem_bytes_tx"
-		nvram set modem_bytes_tx=0
+		rx_now=0
+		tx_now=0
+		nvram set modem_bytes_rx=$rx_now
+		nvram set modem_bytes_tx=$tx_now
 		data_start=`nvram get modem_bytes_data_start 2>/dev/null`
 		if [ -n "$data_start" ]; then
 			echo -n "$data_start" > "$jffs_dir/sim/$sim_order/modem_bytes_data_start"
@@ -141,9 +160,25 @@ if [ "$1" == "bytes" -o "$1" == "bytes-" ]; then
 	echo "set tx_reset=$tx_new."
 
 	echo "done."
+elif [ "$1" == "bytes+" ]; then
+	if [ -z "$sim_order" ]; then
+		echo "12:Fail to get the SIM order."
+		exit 12
+	fi
+
+	if [ ! -d "$jffs_dir/sim/$sim_order" ]; then
+		mkdir -p "$jffs_dir/sim/$sim_order"
+	fi
+
+	rx_now=`nvram get modem_bytes_rx`
+	tx_now=`nvram get modem_bytes_tx`
+	echo -n "$rx_now" > "$jffs_dir/sim/$sim_order/modem_bytes_rx"
+	echo -n "$tx_now" > "$jffs_dir/sim/$sim_order/modem_bytes_tx"
+
+	echo "done."
 elif [ "$1" == "get_dataset" ]; then
 	if [ -z "$sim_order" ]; then
-		echo "Fail to get the SIM order."
+		echo "12:Fail to get the SIM order."
 		exit 12
 	fi
 
@@ -177,10 +212,15 @@ elif [ "$1" == "get_dataset" ]; then
 	fi
 	nvram set modem_bytes_data_warning=$data_warning
 
+	rx_now=`cat "$jffs_dir/sim/$sim_order/modem_bytes_rx" 2>/dev/null`
+	tx_now=`cat "$jffs_dir/sim/$sim_order/modem_bytes_tx" 2>/dev/null`
+	nvram set modem_bytes_rx=$rx_now
+	nvram set modem_bytes_tx=$tx_now
+
 	echo "done."
 elif [ "$1" == "set_dataset" ]; then
 	if [ -z "$sim_order" ]; then
-		echo "Fail to get the SIM order."
+		echo "12:Fail to get the SIM order."
 		exit 12
 	fi
 
@@ -216,13 +256,28 @@ elif [ "$1" == "set_dataset" ]; then
 
 	echo "done."
 elif [ "$1" == "sim" ]; then
+	stop_sim=`nvram get stop_sim`
+	if [ -n "$stop_sim" ] && [ "$stop_sim" -eq "1" ]; then
+		echo "Skip to detect SIM..."
+		exit 0
+	fi
+
+	modem_enable=`nvram get modem_enable`
+	simdetect=`nvram get usb_modem_act_simdetect`
+	if [ -z "$simdetect" ]; then
+		modem_status.sh simdetect
+	fi
+
 	# check the SIM status.
 	at_ret=`$at_lock modem_at.sh '+CPIN?' 2>/dev/null`
 	sim_inserted1=`echo "$at_ret" |grep "READY" 2>/dev/null`
 	sim_inserted2=`echo "$at_ret" |grep "SIM" |awk '{FS=": "; print $2}' 2>/dev/null`
 	sim_inserted3=`echo "$at_ret" |grep "+CME ERROR: " |awk '{FS=": "; print $2}' 2>/dev/null`
 	sim_inserted4=`echo "$sim_inserted2" |cut -c 1-3`
-	if [ -n "$sim_inserted1" ]; then
+	if [ "$modem_enable" == "2" ]; then
+		echo "Detected CDMA2000's SIM"
+		act_sim=1
+	elif [ -n "$sim_inserted1" ]; then
 		echo "Got SIM."
 		act_sim=1
 	elif [ "$sim_inserted2" == "SIM PIN" ]; then
@@ -245,13 +300,8 @@ elif [ "$1" == "sim" ]; then
 			echo "SIM not inserted."
 			act_sim=-1
 		else
-			if [ "$modem_enable" == "2" -a "$sim_inserted3" == "SIM busy" ]; then
-				echo "Detected CDMA2000's SIM"
-				act_sim=1
-			else
-				echo "CME ERROR: $sim_inserted3"
-				act_sim=-2
-			fi
+			echo "CME ERROR: $sim_inserted3"
+			act_sim=-2
 		fi
 	else
 		echo "No or unknown response."
@@ -265,8 +315,13 @@ elif [ "$1" == "sim" ]; then
 
 	echo "done."
 elif [ "$1" == "signal" ]; then
-	at_ret=`$at_lock modem_at.sh '+CSQ' 2>/dev/null`
-	ret=`echo "$at_ret" |grep "+CSQ: " |awk '{FS=": "; print $2}' |awk '{FS=",99"; print $1}' 2>/dev/null`
+	stop_sig=`nvram get stop_sig`
+	if [ -n "$stop_sig" ] && [ "$stop_sig" -eq "1" ]; then
+		echo "Skip to detect signal..."
+		exit 0
+	fi
+
+	ret=`$at_lock modem_at.sh '+CSQ' |grep "+CSQ: " |awk '{FS=": "; print $2}' |awk '{FS=",99"; print $1}' 2>/dev/null`
 	if [ "$ret" == "" ]; then
 		echo "Fail to get the signal from $modem_act_node."
 		exit 3
@@ -303,44 +358,129 @@ elif [ "$1" == "signal" ]; then
 
 	echo "$signal"
 	echo "done."
+elif [ "$1" == "fullsignal" ]; then
+	if [ "$is_gobi" -eq "1" ]; then
+		fullstr=`$at_lock modem_at.sh '+CGCELLI' |grep "+CGCELLI:" |awk '{FS="CGCELLI:"; print $2}' 2>/dev/null`
+		if [ "$fullstr" == "" ]; then
+			echo "Fail to get the full signal information from $modem_act_node."
+			exit 3
+		fi
+
+		plmn_end=`echo -n "$fullstr" |awk '{FS="PLMN:"; print $2}' 2>/dev/null`
+		reg_type=`echo -n "$plmn_end" |awk '{FS=","; print $2}' 2>/dev/null`
+		reg_status=`echo -n "$plmn_end" |awk '{FS=","; print $3}' 2>/dev/null`
+
+		if [ "$reg_status" -eq "1" ]; then
+			plmn_head=`echo -n "$fullstr" |awk '{FS="PLMN:"; print $1}' 2>/dev/null`
+			cellid=`echo -n "$plmn_head" |awk '{FS="Cell_ID:"; print $2}' |awk '{FS=","; print $1}' 2>/dev/null`
+
+			if [ "$reg_type" -eq "8" ]; then
+				rsrq=`echo -n "$plmn_head" |awk '{FS="RSRQ:"; print $2}' |awk '{FS=","; print $1}' 2>/dev/null`
+				rsrp=`echo -n "$plmn_head" |awk '{FS="RSRP:"; print $2}' |awk '{FS=","; print $1}' 2>/dev/null`
+				lac=0
+				rssi=`echo -n "$plmn_head" |awk '{FS="RSSI:"; print $2}' |awk '{FS=","; print $1}' 2>/dev/null`
+			else
+				rsrq=0
+				rsrp=0
+				lac=`echo -n "$plmn_head" |awk '{FS="LAC:"; print $2}' |awk '{FS=","; print $1}' 2>/dev/null`
+				rssi=`echo -n "$plmn_end" |awk '{FS="RSSI:"; print $2}' |awk '{FS=","; print $1}' 2>/dev/null`
+			fi
+		fi
+
+		bearer_type=`echo -n "$plmn_end" |awk '{FS="BEARER:"; print $2}' |awk '{FS=","; print $1}' 2>/dev/null`
+
+		operation=
+		if [ "$bearer_type" == "0x01" ]; then
+			operation=GPRS
+		elif [ "$bearer_type" == "0x02" ]; then
+			operation=EDGE
+		elif [ "$bearer_type" == "0x03" ]; then
+			operation=HSDPA
+		elif [ "$bearer_type" == "0x04" ]; then
+			operation=HSUPA
+		elif [ "$bearer_type" == "0x05" ]; then
+			operation=WCDMA
+		elif [ "$bearer_type" == "0x06" ]; then
+			operation=CDMA
+		elif [ "$bearer_type" == "0x07" ]; then
+			operation="EV-DO REV 0"
+		elif [ "$bearer_type" == "0x08" ]; then
+			operation="EV-DO REV A"
+		elif [ "$bearer_type" == "0x09" ]; then
+			operation=GSM
+		elif [ "$bearer_type" == "0x0a" -o "$bearer_type" == "0x0A" ]; then
+			operation="EV-DO REV B"
+		elif [ "$bearer_type" == "0x0b" -o "$bearer_type" == "0x0B" ]; then
+			operation=LTE
+		elif [ "$bearer_type" == "0x0c" -o "$bearer_type" == "0x0C" ]; then
+			operation="HSDPA+"
+		elif [ "$bearer_type" == "0x0d" -o "$bearer_type" == "0x0D" ]; then
+			operation="DC-HSDPA+"
+		else
+			echo "Can't identify the operation type: $bearer_type."
+			exit 6
+		fi
+
+		echo "cellid=$cellid."
+		echo "lac=$lac."
+		echo "rsrq=$rsrq."
+		echo "rsrp=$rsrp."
+		echo "rssi=$rssi."
+		echo "reg_type=$reg_type."
+		echo "operation=$operation"
+
+		nvram set usb_modem_act_cellid=$cellid
+		nvram set usb_modem_act_lac=$lac
+		nvram set usb_modem_act_rsrq=$rsrq
+		nvram set usb_modem_act_rsrp=$rsrp
+		nvram set usb_modem_act_rssi=$rssi
+		nvram set usb_modem_act_operation="$operation"
+
+		echo "done."
+	fi
 elif [ "$1" == "operation" ]; then
-	if [ "$modem_vid" == "1478" -a "$modem_pid" == "36902" ]; then
-		at_ret=`$at_lock modem_at.sh '$CBEARER' 2>/dev/null`
-		ret=`echo "$at_ret" |grep '$CBEARER:' |awk '{FS=":"; print $2}' 2>/dev/null`
-		if [ "$ret" == "" ]; then
+	if [ "$is_gobi" -eq "1" ]; then
+		stop_op=`nvram get stop_op`
+		if [ -n "$stop_op" ] && [ "$stop_op" -eq "1" ]; then
+			echo "Skip to detect operation..."
+			exit 0
+		fi
+
+		bearer_type=`$at_lock modem_at.sh '$CBEARER' |grep 'BEARER:' |awk '{FS=":"; print $2}' 2>/dev/null`
+		if [ "$bearer_type" == "" ]; then
 			echo "Fail to get the operation type from $modem_act_node."
 			exit 5
 		fi
 
 		operation=
-		if [ "$ret" == "0x01" ]; then
+		if [ "$bearer_type" == "0x01" ]; then
 			operation=GPRS
-		elif [ "$ret" == "0x02" ]; then
+		elif [ "$bearer_type" == "0x02" ]; then
 			operation=EDGE
-		elif [ "$ret" == "0x03" ]; then
+		elif [ "$bearer_type" == "0x03" ]; then
 			operation=HSDPA
-		elif [ "$ret" == "0x04" ]; then
+		elif [ "$bearer_type" == "0x04" ]; then
 			operation=HSUPA
-		elif [ "$ret" == "0x05" ]; then
+		elif [ "$bearer_type" == "0x05" ]; then
 			operation=WCDMA
-		elif [ "$ret" == "0x06" ]; then
+		elif [ "$bearer_type" == "0x06" ]; then
 			operation=CDMA
-		elif [ "$ret" == "0x07" ]; then
+		elif [ "$bearer_type" == "0x07" ]; then
 			operation="EV-DO REV 0"
-		elif [ "$ret" == "0x08" ]; then
+		elif [ "$bearer_type" == "0x08" ]; then
 			operation="EV-DO REV A"
-		elif [ "$ret" == "0x09" ]; then
+		elif [ "$bearer_type" == "0x09" ]; then
 			operation=GSM
-		elif [ "$ret" == "0x0a" -o "$ret" == "0x0A" ]; then
+		elif [ "$bearer_type" == "0x0a" -o "$bearer_type" == "0x0A" ]; then
 			operation="EV-DO REV B"
-		elif [ "$ret" == "0x0b" -o "$ret" == "0x0B" ]; then
+		elif [ "$bearer_type" == "0x0b" -o "$bearer_type" == "0x0B" ]; then
 			operation=LTE
-		elif [ "$ret" == "0x0c" -o "$ret" == "0x0C" ]; then
+		elif [ "$bearer_type" == "0x0c" -o "$bearer_type" == "0x0C" ]; then
 			operation="HSDPA+"
-		elif [ "$ret" == "0x0d" -o "$ret" == "0x0D" ]; then
+		elif [ "$bearer_type" == "0x0d" -o "$bearer_type" == "0x0D" ]; then
 			operation="DC-HSDPA+"
 		else
-			echo "Can't identify the operation type: $ret."
+			echo "Can't identify the operation type: $bearer_type."
 			exit 6
 		fi
 
@@ -350,7 +490,7 @@ elif [ "$1" == "operation" ]; then
 		echo "done."
 	fi
 elif [ "$1" == "setmode" ]; then
-	if [ "$modem_vid" == "1478" -a "$modem_pid" == "36902" ]; then
+	if [ "$is_gobi" -eq "1" ]; then
 		mode=
 		if [ "$2" == "0" ]; then	# Auto
 			mode=10
@@ -378,7 +518,7 @@ elif [ "$1" == "setmode" ]; then
 		echo "done."
 	fi
 elif [ "$1" == "getmode" ]; then
-	if [ "$modem_vid" == "1478" -a "$modem_pid" == "36902" ]; then
+	if [ "$is_gobi" -eq "1" ]; then
 		mode=
 
 		at_ret=`$at_lock modem_at.sh '+CGETPREFNET' 2>/dev/null`
@@ -409,7 +549,7 @@ elif [ "$1" == "imsi" ]; then
 	at_ret=`$at_lock modem_at.sh '+CIMI' 2>/dev/null`
 	ret=`echo "$at_ret" |grep "^[0-9].*$" 2>/dev/null`
 	if [ "$ret" == "" ]; then
-		echo "Fail to get the IMEI from $modem_act_node."
+		echo "Fail to get the IMSI from $modem_act_node."
 		exit 11
 	fi
 
@@ -496,7 +636,7 @@ elif [ "$1" == "imei" ]; then
 
 	echo "done."
 elif [ "$1" == "iccid" ]; then
-	if [ "$modem_vid" == "1478" -a "$modem_pid" == "36902" ]; then
+	if [ "$is_gobi" -eq "1" ]; then
 		echo -n "Getting ICCID..."
 		at_ret=`$at_lock modem_at.sh '+ICCID' 2>/dev/null`
 		ret=`echo "$at_ret" |grep "ICCID: " |awk '{FS="ICCID: "; print $2}' 2>/dev/null`
@@ -510,14 +650,14 @@ elif [ "$1" == "iccid" ]; then
 		echo "done."
 	fi
 elif [ "$1" == "rate" ]; then
-	if [ "$modem_vid" == "1478" -a "$modem_pid" == "36902" ]; then
+	if [ "$is_gobi" -eq "1" ]; then
 		echo -n "Getting Rate..."
 		qcqmi=`_get_qcqmi_by_usbnet $modem_dev 2>/dev/null`
 		at_ret=`gobi_api $qcqmi rate |grep "Max Tx" 2>/dev/null`
 		max_tx=`echo "$at_ret" |awk '{FS=","; print $1}' |awk '{FS=" "; print $3}' 2>/dev/null`
 		max_rx=`echo "$at_ret" |awk '{FS=","; print $2}' |awk '{FS=" "; print $2}' |awk '{FS="."; print $1}' 2>/dev/null`
 		if [ "$max_tx" == "" -o "$max_rx" == "" ]; then
-			echo "Fail to get the IMEI from $modem_act_node."
+			echo "Fail to get the rate from $modem_act_node."
 			exit 14
 		fi
 
@@ -527,7 +667,7 @@ elif [ "$1" == "rate" ]; then
 		echo "done."
 	fi
 elif [ "$1" == "hwver" ]; then
-	if [ "$modem_vid" == "1478" -a "$modem_pid" == "36902" ]; then
+	if [ "$is_gobi" -eq "1" ]; then
 		echo -n "Getting HWVER..."
 		at_ret=`$at_lock modem_at.sh '$HWVER' 2>/dev/null`
 		ret=`echo "$at_ret" |grep "^[0-9].*$" 2>/dev/null`
@@ -541,8 +681,23 @@ elif [ "$1" == "hwver" ]; then
 
 		echo "done."
 	fi
+elif [ "$1" == "swver" ]; then
+	if [ "$is_gobi" -eq "1" ]; then
+		echo -n "Getting SWVER..."
+		at_ret=`$at_lock modem_at.sh I 2>/dev/null`
+		ret=`echo -n "$at_ret" |grep "^WW" 2>/dev/null`
+		if [ "$ret" == "" ]; then
+			nvram set usb_modem_act_swver=
+			echo "Fail to get the software version from $modem_act_node."
+			exit 15
+		fi
+
+		nvram set usb_modem_act_swver=$ret
+
+		echo "done."
+	fi
 elif [ "$1" == "band" ]; then
-	if [ "$modem_vid" == "1478" -a "$modem_pid" == "36902" ]; then
+	if [ "$is_gobi" -eq "1" ]; then
 		echo -n "Getting Band..."
 		at_ret=`$at_lock modem_at.sh '$CRFI' 2>/dev/null`
 		ret=`echo "$at_ret" |grep '$CRFI:' |awk '{FS=":"; print $2}' 2>/dev/null`
@@ -555,12 +710,52 @@ elif [ "$1" == "band" ]; then
 
 		echo "done."
 	fi
+elif [ "$1" == "setband" ]; then
+	if [ "$is_gobi" -eq "1" ]; then
+		echo -n "Setting Band..."
+		mode=11
+		if [ "$2" == "B3" ]; then
+			bandnum="0000000000000004"
+		elif [ "$2" == "B7" ]; then
+			bandnum="0000000000000040"
+		elif [ "$2" == "B20" ]; then
+			bandnum="0000000000080000"
+		elif [ "$2" == "B38" ]; then
+			bandnum="0000002000000000"
+		else # auto
+			mode=10
+			bandnum="0000002000080044"
+		fi
+
+		at_ret=`$at_lock modem_at.sh '$NV65633='$bandnum |grep "OK" 2>/dev/null`
+		if [ "$at_ret" == "" ]; then
+			echo "Fail to set the band from $modem_act_node."
+			exit 16
+		fi
+
+		at_ret=`$at_lock modem_at.sh '+CSETPREFNET='$mode |grep "OK" 2>/dev/null`
+		if [ "$at_ret" == "" ]; then
+			echo "Fail to set the band from $modem_act_node."
+			exit 16
+		fi
+
+		at_ret=`$at_lock modem_at.sh '+CFUN=1,1' |grep "OK" 2>/dev/null`
+		if [ "$at_ret" == "" ]; then
+			echo "Fail to set the band from $modem_act_node."
+			exit 16
+		fi
+
+		echo "done."
+	fi
 elif [ "$1" == "scan" ]; then
 	echo "Start to scan the stations:"
+	modem_roaming_scantime=`nvram get modem_roaming_scantime`
+	modem_roaming_scanlist=`nvram get modem_roaming_scanlist`
 	nvram set usb_modem_act_scanning=2
 	at_ret=`$at_lock modem_at.sh '+COPS=2' |grep "OK" 2>/dev/null`
 
 	echo "Scanning the stations."
+	nvram set freeze_duck=$modem_roaming_scantime
 	at_ret=`$at_lock modem_at.sh '+COPS=?' $modem_roaming_scantime 2>/dev/null`
 	ret=`echo "$at_ret" |grep '+COPS: ' |awk '{FS=": "; print $2}' |awk '{FS=",,"; print $1}' 2>/dev/null`
 	echo "Finish the scan."
@@ -618,7 +813,8 @@ elif [ "$1" == "scan" ]; then
 
 	echo "done."
 elif [ "$1" == "station" ]; then
-	$at_lock modem_at.sh "+COPS=1,0,\"$2\"" 1,2>/dev/null
+	modem_reg_time=`nvram get modem_reg_time`
+	$at_lock modem_at.sh "+COPS=1,0,\"$2\"" "$modem_reg_time" 1,2>/dev/null
 	if [ $? -ne 0 ]; then
 		echo "19:Fail to set the station: $2."
 		exit 19
@@ -626,7 +822,7 @@ elif [ "$1" == "station" ]; then
 
 	echo "done."
 elif [ "$1" == "simauth" ]; then
-	if [ "$modem_vid" == "1478" -a "$modem_pid" == "36902" ]; then
+	if [ "$is_gobi" -eq "1" ]; then
 		nvram set usb_modem_act_auth=
 		nvram set usb_modem_act_auth_pin=
 		nvram set usb_modem_act_auth_puk=
@@ -694,6 +890,7 @@ elif [ "$1" == "simpin" ]; then
 	nvram set g3err_pin=0
 	echo "done."
 elif [ "$1" == "simpuk" ]; then
+	# $2: the original PUK. $3: the new PIN.
 	if [ "$2" == "" ]; then
 		echo "26:Need to input the PUK code."
 		exit 26
@@ -710,6 +907,7 @@ elif [ "$1" == "simpuk" ]; then
 
 	echo "done."
 elif [ "$1" == "lockpin" ]; then
+	# $2: 1, lock; 0, unlock. $3: the original PIN.
 	simauth=`nvram get usb_modem_act_auth`
 	if [ "$simauth" == "1" ]; then
 		echo "29:SIM need to input the PIN code first."
@@ -732,27 +930,24 @@ elif [ "$1" == "lockpin" ]; then
 		exit 33
 	fi
 
-	if [ "$2" == "1" ]; then # lock
-		if [ "$simauth" == "2" ]; then
+	if [ "$2" == "1" -a "$simauth" == "1" ] || [ "$2" == "1" -a "$simauth" == "2" ] || [ "$2" == "0" -a "$simauth" == "3" ]; then # lock
+		if [ "$simauth" == "1" -o "$simauth" == "2" ]; then
 			echo "had locked."
-			echo "done."
-			exit 0
+		elif [ "$simauth" == "3" ]; then
+			echo "had unlocked."
 		fi
 
-		at_ret=`$at_lock modem_at.sh '+CLCK="SC",1,"'$3'"' |grep "OK" 2>/dev/null`
-		if [ "$at_ret" == "2" ]; then
+		echo "done."
+		exit 0
+	fi
+
+	at_ret=`$at_lock modem_at.sh '+CLCK="SC",'$2',"'$3'"' 2>/dev/null`
+	ok_ret=`echo -n $at_ret |grep "OK" 2>/dev/null`
+	if [ -z "$ok_ret" ]; then
+		if [ "$2" == "1" ]; then
 			echo "34:Fail to lock PIN."
 			exit 34
-		fi
-	else
-		if [ "$simauth" == "3" ]; then
-			echo "had unlocked."
-			echo "done."
-			exit 0
-		fi
-
-		at_ret=`$at_lock modem_at.sh '+CLCK="SC",0,"'$3'"' |grep "OK" 2>/dev/null`
-		if [ "$at_ret" == "2" ]; then
+		else
 			echo "35:Fail to unlock PIN."
 			exit 35
 		fi
@@ -776,7 +971,7 @@ elif [ "$1" == "pwdpin" ]; then
 
 	echo "done."
 elif [ "$1" == "gnws" ]; then
-	if [ "$modem_vid" == "1478" -a "$modem_pid" == "36902" ]; then
+	if [ "$is_gobi" -eq "1" ]; then
 		at_cgnws=`$at_lock modem_at.sh '+CGNWS' |grep "+CGNWS:" |awk '{FS=":"; print $2}' 2>/dev/null`
 		if [ "$at_cgnws" == "" ]; then
 			echo "Fail to get the CGNWS."
@@ -804,5 +999,99 @@ elif [ "$1" == "gnws" ]; then
 		echo " ISP Short=$isp_short."
 		echo "done."
 	fi
+elif [ "$1" == "send_sms" ]; then
+	# $2: phone number, $3: sended message.
+	at_ret=`$at_lock modem_at.sh +CMGF? 2>/dev/null`
+	at_ret_ok=`echo -n "$at_ret" |grep "OK" 2>/dev/null`
+	msg_format=`echo -n "$at_ret" |grep "+CMGF:" |awk '{FS=" "; print $2}' 2>/dev/null`
+	if [ -z "$at_ret_ok" ] || [ "$msg_format" != "1" ]; then
+		#echo "Changing the message format to the Text mode..."
+		at_ret=`$at_lock modem_at.sh +CMGF=1 |grep "OK" 2>/dev/null`
+		if [ "$at_ret" == "" ]; then
+			echo "40:Fail to set the message format to the Text mode."
+			exit 40
+		fi
+	fi
+
+	if [ -z "$2" -o -z "$3" ]; then
+		echo "41:Usage: $0 $1 <phone number> <sended message>"
+		exit 41
+	fi
+
+	at_ret=`$at_lock modem_at.sh +CMGS=\"$2\" |grep ">" 2>/dev/null`
+	at_ret1=`echo -n "$at_ret" |grep ">" 2>/dev/null`
+	if [ -z "at_ret1" ]; then
+		echo "42:Fail to execute +CMGS."
+		exit 42
+	fi
+
+	nvram set freeze_duck=10
+	at_ret=`$at_lock chat -t 10 -e '' "$3^z" OK >> /dev/$modem_act_node < /dev/$modem_act_node 2>/tmp/at_ret`
+	at_ret_ok=`echo -n "$at_ret" |grep "OK" 2>/dev/null`
+	if [ -z "at_ret_ok" ]; then
+		echo "43:Fail to send the message: $3."
+		exit 43
+	fi
+
+	echo "done."
+elif [ "$1" == "simdetect" ]; then
+	if [ "$is_gobi" -eq "1" ] && [ "$usb_gobi2" != "1" ]; then
+		# $2: 0: disable, 1: enable.
+		at_ret=`$at_lock modem_at.sh '$NV70210' 2>/dev/null`
+		ret=`echo -n $at_ret |grep "OK" 2>/dev/null`
+		if [ -z "$ret" ]; then
+			echo "44:Fail to get the value of SIM detect."
+			exit 44
+		fi
+
+		current=`echo -n $at_ret |awk '{print $2}'`
+
+		if [ -z "$2" ]; then
+			echo "$current"
+			nvram set usb_modem_act_simdetect=$current
+		elif [ "$2" == "1" -a "$current" == "0" ] || [ "$2" == "0" -a "$current" == "1" ]; then
+			at_ret=`$at_lock modem_at.sh '$NV70210='$2 |grep "OK" 2>/dev/null`
+			if [ -z "$at_ret" ]; then
+				echo "45:Fail to set the SIM detect to be $2."
+				exit 45
+			fi
+			nvram set usb_modem_act_simdetect=$2
+
+			# Use reboot to replace this.
+			#at_ret=`$at_lock modem_at.sh '+CFUN=1,1' |grep "OK" 2>/dev/null`
+			#if [ -z "$at_ret" ]; then
+			#	echo "45:Fail to reset the Gobi."
+			#	exit 46
+			#fi
+		fi
+
+		echo "done."
+	fi
+elif [ "$1" == "number" ]; then
+	echo "Getting Phone number..."
+	at_ret=`$at_lock modem_at.sh '+CNUM' 2>/dev/null`
+	ret=`echo "$at_ret" |grep "^[0-9+].*$" 2>/dev/null`
+	if [ "$ret" == "" ]; then
+		echo "47:Fail to get the Phone number from $modem_act_node."
+		exit 47
+	fi
+
+	nvram set usb_modem_act_num=$ret
+
+	echo "done."
+elif [ "$1" == "smsc" ]; then
+	echo "Getting SMS centre..."
+	at_ret=`$at_lock modem_at.sh '+CSCA?' |grep "+CSCA: " 2>/dev/null`
+	if [ "$at_ret" == "" ]; then
+		echo "48:Fail to get the SMSC from $modem_act_node."
+		exit 48
+	fi
+
+	smsc=`echo -n "$at_ret" |awk '{FS="\""; print $2}' 2>/dev/null`
+
+	nvram set usb_modem_act_smsc=$smsc
+
+	echo "smsc=$smsc."
+	echo "done."
 fi
 

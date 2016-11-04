@@ -19,15 +19,15 @@
 
 #include <iwlib.h>
 
+#define NAWDS_SH_FMT	"/etc/Wireless/sh/nawds_%s.sh"
 
-#define WIF	"ath0"
 extern const char WIF_2G[];
 extern const char WIF_5G[];
 extern const char WDSIF_5G[];
 extern const char STA_2G[];
 extern const char STA_5G[];
-extern const char VAP_2G[];
-extern const char VAP_5G[];
+extern const char VPHY_2G[];
+extern const char VPHY_5G[];
 #define URE	"apcli0"
 
 #ifndef ETHER_ADDR_LEN
@@ -269,8 +269,24 @@ enum ASUS_IOCTL_SUBCMD {
  * associated with parallel NOR Flash and SPI Flash.
  */
 
+#if defined(RTCONFIG_SOC_QCA9557) || defined(RTCONFIG_QCA953X) || defined(RTCONFIG_QCA956X)
 #define ETH0_MAC_OFFSET			0x1002
 #define ETH1_MAC_OFFSET			0x5006
+#elif defined(RTCONFIG_SOC_IPQ8064)
+
+#if defined(RTAC88Q) || defined(RTAC88S)
+#define ETH0_MAC_OFFSET			0x1006	/* 2G EEPROM */
+#define ETH1_MAC_OFFSET			0x5006	/* 5G EEPROM */
+#elif defined(RTAC88N)
+#define ETH0_MAC_OFFSET			0x1006	/* 5G EEPROM */
+#define ETH1_MAC_OFFSET			0x5006	/* 2G EEPROM */
+#else
+#error
+#endif
+
+#else
+#error Define MAC address offset.
+#endif
 
 #define MTD_FACTORY_BASE_ADDRESS	0x40000
 
@@ -281,6 +297,7 @@ enum ASUS_IOCTL_SUBCMD {
 #define OFFSET_COUNTRY_CODE		(MTD_FACTORY_BASE_ADDRESS + 0x0D188)	/* 0x40188 -> 0x4D188 */
 #define	FACTORY_COUNTRY_CODE_LEN	2
 
+#if defined(RTCONFIG_WIFI_QCA9557_QCA9882) || defined(RTCONFIG_QCA953X) || defined(RTCONFIG_QCA956X)
 /* WAN: eth0
  * LAN: eth1
  * 2G: follow WAN
@@ -292,10 +309,46 @@ enum ASUS_IOCTL_SUBCMD {
 #define	QCA9557_EEPROM_MAC_OFFSET	(OFFSET_MAC_ADDR_2G & 0xFFF) // 2
 #define	QC98XX_EEPROM_SIZE_LARGEST	2116 // sync with driver
 #define	QC98XX_EEPROM_MAC_OFFSET	(OFFSET_MAC_ADDR & 0xFFF) // 6
+#elif defined(RTCONFIG_WIFI_QCA9990_QCA9990) || defined(RTCONFIG_WIFI_QCA9994_QCA9994)
+
+/* WAN: eth0	(FIXME)
+ * LAN: eth1	(FIXME)
+ * 2G: follow WAN
+ * 5G: follow LAN
+ */
+#if defined(RTAC88Q) || defined(RTAC88S)
+#define OFFSET_MAC_ADDR_2G		(MTD_FACTORY_BASE_ADDRESS + ETH0_MAC_OFFSET)
+#define OFFSET_MAC_ADDR			(MTD_FACTORY_BASE_ADDRESS + ETH1_MAC_OFFSET)
+#elif defined(RTAC88N)
+#define OFFSET_MAC_ADDR_2G		(MTD_FACTORY_BASE_ADDRESS + ETH1_MAC_OFFSET)
+#define OFFSET_MAC_ADDR			(MTD_FACTORY_BASE_ADDRESS + ETH0_MAC_OFFSET)
+#else
+#error
+#endif
+
+#define	QC98XX_EEPROM_SIZE_LARGEST	12064 // sync with driver
+#define	QC98XX_EEPROM_MAC_OFFSET	(OFFSET_MAC_ADDR & 0xFFF) // 6
+#else
+#error Define EEPROM offset and size
+#endif
 
 #define OFFSET_PIN_CODE			(MTD_FACTORY_BASE_ADDRESS + 0x0D180)	/* 0x40180 -> 0x4D180 */
-
+#define OFFSET_PSK			(MTD_FACTORY_BASE_ADDRESS + 0x0ff60)    /* 15 bytes */  
 #define OFFSET_TERRITORY_CODE		(MTD_FACTORY_BASE_ADDRESS + 0x0ff90)	/* 5 bytes, e.g., US/01, US/02, TW/01, etc. */
+/*
+ * PIB parameters of Powerline Communication (PLC)
+ */
+#ifdef RTCONFIG_QCA_PLC_UTILS
+#define OFFSET_PLC_MAC			(MTD_FACTORY_BASE_ADDRESS + 0x0D18E)	// 6
+#define OFFSET_PLC_NMK			(MTD_FACTORY_BASE_ADDRESS + 0x0D194)	// 16
+#endif
+/*
+ * disable DHCP client and DHCP override during ATE
+ */
+#ifdef RTCONFIG_DEFAULT_AP_MODE
+#define OFFSET_FORCE_DISABLE_DHCP	(MTD_FACTORY_BASE_ADDRESS + 0x0D1AA)	// 1
+#endif
+
 #define OFFSET_DEV_FLAGS		(MTD_FACTORY_BASE_ADDRESS + 0x0ffa0)	//device dependent flags
 #define OFFSET_ODMPID			(MTD_FACTORY_BASE_ADDRESS + 0x0ffb0)	//the shown model name (for Bestbuy and others)
 #define OFFSET_FAIL_RET			(MTD_FACTORY_BASE_ADDRESS + 0x0ffc0)
@@ -321,6 +374,20 @@ enum ASUS_IOCTL_SUBCMD {
 
 #define GPIO_DIR_OUT		1
 #define GPIO_DIR_IN		0
+
+/*
+ * interface of CPU to LAN
+ */
+#if defined(RTCONFIG_SOC_QCA9557) || defined(RTCONFIG_QCA956X)
+#define MII_IFNAME	"eth0"
+#elif defined(RTCONFIG_SOC_IPQ8064)
+#define MII_IFNAME	"switch0"
+#elif defined(RTCONFIG_QCA953X)
+#define MII_IFNAME	"eth1"
+#else
+#error Define MII_IFNAME interface!
+#endif
+
 
 unsigned long task_mask;
 

@@ -50,6 +50,20 @@ int is_wan_connect(int unit){
 		return 0;
 }
 
+int is_phy_connect(int unit){
+	char tmp[100], prefix[]="wanXXXXXX_";
+	int wan_state, wan_sbstate, wan_auxstate;
+
+	snprintf(prefix, sizeof(prefix), "wan%d_", unit);
+
+	wan_auxstate = nvram_get_int(strcat_r(prefix, "auxstate_t", tmp));
+
+	if(wan_auxstate == 0 || wan_auxstate == 2)
+		return 1;
+	else
+		return 0;
+}
+
 int get_wan_state(int unit)
 {
 	char tmp[100], prefix[]="wanXXXXXX_";
@@ -130,10 +144,10 @@ int get_wan_unit(char *ifname)
 char *get_wanx_ifname(int unit)
 {
 	char *wan_ifname;
-	char tmp[100], prefix[]="wanXXXXXXXXXX_";
+	char tmp[100], prefix[sizeof("wanXXXXXXXXXX_")];
 	
 	snprintf(prefix, sizeof(prefix), "wan%d_", unit);
-	wan_ifname=nvram_safe_get(strcat_r(prefix, "ifname", tmp));
+	wan_ifname = nvram_safe_get(strcat_r(prefix, "ifname", tmp));
 
 	return wan_ifname;
 }
@@ -142,70 +156,65 @@ char *get_wanx_ifname(int unit)
 char *get_wan_ifname(int unit)
 {
 	char *wan_proto, *wan_ifname;
-	char tmp[100], prefix[]="wanXXXXXXXXXX_";
-	
+	char tmp[100], prefix[sizeof("wanXXXXXXXXXX_")];
+
 	snprintf(prefix, sizeof(prefix), "wan%d_", unit);
 	wan_proto = nvram_safe_get(strcat_r(prefix, "proto", tmp));
 
-	//_dprintf("wan_proto: %s\n", wan_proto);
-
 #ifdef RTCONFIG_USB_MODEM
 	if (dualwan_unit__usbif(unit)) {
-		if(!strcmp(wan_proto, "dhcp"))
+		if (strcmp(wan_proto, "dhcp") == 0)
 			wan_ifname = nvram_safe_get(strcat_r(prefix, "ifname", tmp));
 		else
 			wan_ifname = nvram_safe_get(strcat_r(prefix, "pppoe_ifname", tmp));
-	}
-	else
+	} else
 #endif
-	if(strcmp(wan_proto, "pppoe") == 0 ||
-		strcmp(wan_proto, "pptp") == 0 ||
-		strcmp(wan_proto, "l2tp") == 0)
+	if (strcmp(wan_proto, "pppoe") == 0 ||
+	    strcmp(wan_proto, "pptp") == 0 ||
+	    strcmp(wan_proto, "l2tp") == 0) {
 		wan_ifname = nvram_safe_get(strcat_r(prefix, "pppoe_ifname", tmp));
-	else
+	} else
 		wan_ifname = nvram_safe_get(strcat_r(prefix, "ifname", tmp));
-
-	//_dprintf("wan_ifname: %s\n", wan_ifname);
 
 	return wan_ifname;
 }
 
+// Get wan ipv6 ifname of working connection
 #ifdef RTCONFIG_IPV6
-
 char *get_wan6_ifname(int unit)
 {
 	char *wan_proto, *wan_ifname;
-	char tmp[100], prefix[]="wanXXXXXXXXXX_";
-	
+	char tmp[100], prefix[sizeof("wanXXXXXXXXXX_")];
+
 	snprintf(prefix, sizeof(prefix), "wan%d_", unit);
 	wan_proto = nvram_safe_get(strcat_r(prefix, "proto", tmp));
 
-
-	if(strcmp(nvram_safe_get("ipv6_ifdev"), "eth")==0) {
-		wan_ifname=nvram_safe_get(strcat_r(prefix, "ifname", tmp));
-//		dbG("wan6_ifname: %s\n", wan_ifname);
-		return wan_ifname;
-	}
-
 #ifdef RTCONFIG_USB_MODEM
 	if (dualwan_unit__usbif(unit)) {
-		if(!strcmp(wan_proto, "dhcp"))
+		if (strcmp(wan_proto, "dhcp") == 0)
 			wan_ifname = nvram_safe_get(strcat_r(prefix, "ifname", tmp));
 		else
 			wan_ifname = nvram_safe_get(strcat_r(prefix, "pppoe_ifname", tmp));
-	}
-	else
+	} else
 #endif
-	if(strcmp(wan_proto, "pppoe") == 0 ||
-		strcmp(wan_proto, "pptp") == 0 ||
-		strcmp(wan_proto, "l2tp") == 0)
-		wan_ifname = nvram_safe_get(strcat_r(prefix, "pppoe_ifname", tmp));
-	else wan_ifname=nvram_safe_get(strcat_r(prefix, "ifname", tmp));
+	if (strcmp(wan_proto, "pppoe") == 0 ||
+	    strcmp(wan_proto, "pptp") == 0 ||
+	    strcmp(wan_proto, "l2tp") == 0) {
+		int service = get_ipv6_service_by_unit(unit);
+		if (((service == IPV6_NATIVE_DHCP || service == IPV6_MANUAL) &&
+			nvram_match(ipv6_nvname("ipv6_ifdev"), "eth"))
+#ifdef RTCONFIG_6RELAYD
+		    || (service == IPV6_PASSTHROUGH)
+#endif
+		)
+			wan_ifname = nvram_safe_get(strcat_r(prefix, "ifname", tmp));
+		else
+			wan_ifname = nvram_safe_get(strcat_r(prefix, "pppoe_ifname", tmp));
+	} else
+		wan_ifname = nvram_safe_get(strcat_r(prefix, "ifname", tmp));
 
-//	dbG("wan6_ifname: %s\n", wan_ifname);
 	return wan_ifname;
 }
-
 #endif
 
 // OR all lan port status
@@ -500,16 +509,15 @@ int get_dualwan_by_unit(int unit)
 
 	if(wans_dualwan == NULL)	//default value
 	{
-		if(unit == 0)
-		{
-#ifdef RTCONFIG_DSL
-			return WANSCAP_DSL;
-#else
-			return WANS_DUALWAN_IF_WAN;
-#endif
-		}
-		wans_dualwan = DEF_SECOND_WANIF;
+		wans_dualwan = nvram_default_get("wans_dualwan");
 	}
+
+#ifdef RTCONFIG_MULTICAST_IPTV
+	if(unit == WAN_UNIT_IPTV)
+		return WAN_UNIT_IPTV;
+        if(unit == WAN_UNIT_VOIP)
+                return WAN_UNIT_VOIP;
+#endif
 
 	i = 0;
 	foreach(word, wans_dualwan, next) {

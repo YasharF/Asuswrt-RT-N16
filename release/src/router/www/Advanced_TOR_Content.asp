@@ -12,13 +12,14 @@
 <title><#Web_Title#> - TOR Settings</title>
 <link rel="stylesheet" type="text/css" href="index_style.css"> 
 <link rel="stylesheet" type="text/css" href="form_style.css">
+<link rel="stylesheet" type="text/css" href="device-map/device-map.css">
 <script language="JavaScript" type="text/javascript" src="/state.js"></script>
 <script language="JavaScript" type="text/javascript" src="/help.js"></script>
 <script language="JavaScript" type="text/javascript" src="/general.js"></script>
 <script language="JavaScript" type="text/javascript" src="/popup.js"></script>
 <script language="JavaScript" type="text/javascript" src="/client_function.js"></script>
 <script language="JavaScript" type="text/javascript" src="/validator.js"></script>
-<script type="text/javascript" src="/jquery.js"></script>
+<script type="text/javascript" src="/js/jquery.js"></script>
 <script type="text/javascript" src="/switcherplugin/jquery.iphone-switch.js"></script>
 <style>
 #pull_arrow{
@@ -28,45 +29,9 @@
  	background-color:#CCC;
  	padding:3px 2px 4px 0px;
 }
-#TORMACList{
-	border:1px outset #999;
-	background-color:#576D73;
-	position:absolute;
-	margin-top:24px;
-	margin-left:220px;
-	*margin-left:-150px;
-	width:255px;
-	*width:259px;
-	text-align:left;
-	height:auto;
-	overflow-y:auto;
-	z-index:200;
-	padding: 1px;
-	display:none;
-}
-#TORMACList div{
-	background-color:#576D73;
-	height:20px;
-	line-height:20px;
-	text-decoration:none;
-	padding-left:2px;
-}
-#TORMACList a{
-	background-color:#EFEFEF;
-	color:#FFF;
-	font-size:12px;
-	font-family:Arial, Helvetica, sans-serif;
-	text-decoration:none;	
-}
-
-#TORMACList div:hover, #ClientList_Block a:hover{
-	background-color:#3366FF;
-	color:#FFFFFF;
-	cursor:default;
-}
 </style>
 <script>
-var $j = jQuery.noConflict();
+
 
 var Tor_redir_list_str = '<% nvram_get("Tor_redir_list"); %>';
 var Tor_enable = '<% nvram_get("Tor_enable"); %>';
@@ -75,7 +40,7 @@ function initial(){
 	show_menu();
 	show_tor_settings(Tor_enable);
 	show_tor_redir_list();
-	setTimeout("showLANMacList();", 1000);		
+	setTimeout("showDropdownClientList('setClientMac', 'mac', 'all', 'TORMACList', 'pull_arrow', 'all');", 1000);	
 }
 
 function show_tor_redir_list(){
@@ -189,36 +154,15 @@ function check_macaddr(obj,flag){ //control hint of input mac address
 function setClientMac(num){
 	document.form.tor_maclist_0.value = num;
 	hideClients_Block();
-	over_var = 0;
 }
 
-function showLANMacList(){
-	var htmlCode = "";
-	for(var i=0; i<clientList.length;i++){
-		var clientObj = clientList[clientList[i]];
-
-		if(clientObj.mac == "offline") clientObj.mac = "";
-		if(clientObj.name.length > 30) clientObj.name = clientObj.name.substring(0, 28) + "..";
-
-		htmlCode += '<a><div onmouseover="over_var=1;" onmouseout="over_var=0;" onclick="setClientMac(\'';
-		htmlCode += clientObj.mac;
-		htmlCode += '\');"><strong>'+clientObj.name+'</strong>';
-		htmlCode += ' ( '+clientObj.mac+' )';
-		htmlCode += '</div></a><!--[if lte IE 6.5]><iframe class="hackiframe2"></iframe><![endif]-->';	
-	}
-
-	$("TORMACList").innerHTML = htmlCode;
-}
-
-var over_var = 0;
-var isMenuopen = 0;
-
-function pullLANMacList(obj){	
+function pullLANMacList(obj){
+	var element = document.getElementById('TORMACList');
+	var isMenuopen = element.offsetWidth > 0 || element.offsetHeight > 0;	
 	if(isMenuopen == 0){		
 		obj.src = "/images/arrow-top.gif"
-		document.getElementById("TORMACList").style.display = 'block';		
+		element.style.display = 'block';		
 		document.form.tor_maclist_0.focus();		
-		isMenuopen = 1;
 	}
 	else
 		hideClients_Block();
@@ -227,7 +171,6 @@ function pullLANMacList(obj){
 function hideClients_Block(){
 	document.getElementById("pull_arrow").src = "/images/arrow-down.gif";
 	document.getElementById('TORMACList').style.display='none';
-	isMenuopen = 0;
 }
 
 function check_macaddr(obj,flag){ //control hint of input mac address
@@ -384,8 +327,8 @@ function show_tor_settings(value){
 						<tr>
 							<td width="80%">
 								<input type="text" style="margin-left:220px;float:left;" maxlength="17" class="input_macaddr_table" name="tor_maclist_0" onKeyPress="return validator.isHWAddr(this,event)">
-								<img style="float:left;" id="pull_arrow" height="14px;" src="/images/arrow-down.gif" onclick="pullLANMacList(this);" title="Select the MAC address of the device." onmouseover="over_var=1;" onmouseout="over_var=0;">
-								<div id="TORMACList" class="TORMACList"></div>
+								<img style="float:left;" id="pull_arrow" height="14px;" src="/images/arrow-down.gif" onclick="pullLANMacList(this);" title="Select the MAC address of the device.">
+								<div id="TORMACList" class="clientlist_dropdown" style="margin-left:220px;margin-top:25px;"></div>
 								</div>
 							</td>
 							<td width="20%">	

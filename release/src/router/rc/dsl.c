@@ -28,6 +28,7 @@ extern struct nvram_tuple router_defaults[];
 #define IN_CLASSB_HOST          (0xffffffff & ~IN_CLASSB_NET)
 // from net.h
 #define LINKLOCAL_ADDR	0xa9fe0000
+
 // from zcip.c and revised
 // Pick a random link local IP address on 169.254/16, except that
 // the first and last 256 addresses are reserved.
@@ -138,7 +139,9 @@ void convert_dsl_wan()
 		if (nvram_match("dslx_transmode","ptm")) {
 			if (nvram_match("dsl8_proto","pppoe")) {
 				nvram_set("wan0_proto", "pppoe");
-				nvram_set_int("wan0_dhcpenable_x", 2);
+				/* Turn off DHCP on MAN interface */
+				nvram_set("wan0_dhcpenable_x", "1");
+				nvram_set("wan0_vpndhcp", "0");
 			}
 			else if (nvram_match("dsl8_proto","bridge")) {
 				nvram_set("wan0_nat_x","0");
@@ -152,7 +155,8 @@ void convert_dsl_wan()
 			if (nvram_match("dsl0_proto","pppoe") || nvram_match("dsl0_proto","pppoa")) {
 				nvram_set("wan0_proto","pppoe");
 				/* Turn off DHCP on MAN interface */
-				nvram_set_int("wan0_dhcpenable_x", 2);
+				nvram_set("wan0_dhcpenable_x", "1");
+				nvram_set("wan0_vpndhcp", "0");
 			}
 			else if (nvram_match("dsl0_proto","ipoa")) {
 				nvram_set("wan0_proto","static");
@@ -268,13 +272,11 @@ void dsl_configure(int req)
 
 	if (req == 1)
 	{
-		check_and_set_comm_if();
 		convert_dsl_wan();
 	}
 
 	if (req == 2)
 	{
-		check_and_set_comm_if();
 #ifdef RTCONFIG_DSL_TCLINUX
 		eval("req_dsl_drv", "rmvlan", nvram_safe_get("dslx_rmvlan"));
 
@@ -355,7 +357,7 @@ void start_dsl()
 
 	/* Paul comment 2012/7/25, the "never overcommit" policy would cause Ralink WiFi driver kernel panic when configure DUT through external registrar. *
 	 * So let this value be the default which is 0, the kernel will estimate the amount of free memory left when userspace requests more memory. */
-	//system("echo 2 > /proc/sys/vm/overcommit_memory");
+	//f_write_string("/proc/sys/vm/overcommit_memory", "2", 0, 0);
 
 #ifdef RTCONFIG_DSL_TCLINUX
 	check_and_set_comm_if();
@@ -395,13 +397,13 @@ void start_dsl()
 			sprintf(wan_if, "eth2.1.%d", x);
 			eval("vconfig", "add", "eth2.1", wan_num);
 #else
-			/* create IPTV PVC interface and begin from eth0.101 */
-			sprintf(wan_num, "%d", (100 + x -1));
+			/* create IPTV PVC interface and begin from eth0.3881 */
+			sprintf(wan_num, "%d", (DSL_WAN_VID + x -1));
 			sprintf(wan_if, "vlan%s", wan_num);
 			eval("vconfig", "set_name_type", "VLAN_PLUS_VID_NO_PAD");
 			eval("vconfig", "add", "eth0", wan_num);
 			//Set switch
-			sprintf(wan_num, "0x%04x", (100 + x -1));
+			sprintf(wan_num, "0x%04x", (DSL_WAN_VID + x -1));
 			eval("et", "robowr", "0x05", "0x83", "0x0021");
 			eval("et", "robowr", "0x05", "0x81", wan_num);
 			eval("et", "robowr", "0x05", "0x80", "0x0000");
@@ -444,11 +446,20 @@ void start_dsl()
 		_eval(argv_auto_det, NULL, 0, &pid);
 	}
 #endif	//nRTCONFIG_DSL_TCLINUX
+
+#ifdef RTCONFIG_DSL_TCLINUX
+	if(nvram_match("dslx_diag_enable", "1") && nvram_match("dslx_diag_state", "1"))
+		start_dsl_diag();
+#endif
 }
 
 void stop_dsl()
 {
-	// dsl service need not to stop
+#ifdef RTCONFIG_DSL_TCLINUX
+	eval("req_dsl_drv", "runtcc");
+	eval("req_dsl_drv", "dumptcc");
+#endif
+	eval("adslate", "quitdrv");
 }
 
 // a workaround handler, can be removed after bug found

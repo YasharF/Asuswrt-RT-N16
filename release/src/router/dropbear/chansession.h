@@ -22,8 +22,8 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE. */
 
-#ifndef _CHANSESSION_H_
-#define _CHANSESSION_H_
+#ifndef DROPBEAR_CHANSESSION_H_
+#define DROPBEAR_CHANSESSION_H_
 
 #include "loginrec.h"
 #include "channel.h"
@@ -39,17 +39,24 @@ struct exitinfo {
 
 struct ChanSess {
 
-	unsigned char * cmd; /* command to exec */
+	char * cmd; /* command to exec */
 	pid_t pid; /* child process pid */
 
 	/* pty details */
 	int master; /* the master terminal fd*/
 	int slave;
-	unsigned char * tty;
-	unsigned char * term;
+	char * tty;
+	char * term;
 
 	/* exit details */
 	struct exitinfo exit;
+
+
+	/* These are only set temporarily before forking */
+	/* Used to set $SSH_CONNECTION in the child session.  */
+	char *connection_string;
+	/* Used to set $SSH_CLIENT in the child session. */
+	char *client_string;
 	
 #ifndef DISABLE_X11FWD
 	struct Listener * x11listener;
@@ -60,10 +67,14 @@ struct ChanSess {
 	unsigned char x11singleconn;
 #endif
 
-#ifndef DISABLE_AGENTFWD
+#ifdef ENABLE_SVR_AGENTFWD
 	struct Listener * agentlistener;
 	char * agentfile;
 	char * agentdir;
+#endif
+
+#ifdef ENABLE_SVR_PUBKEY_OPTIONS
+	char *original_command;
 #endif
 };
 
@@ -75,14 +86,14 @@ struct ChildPid {
 
 void addnewvar(const char* param, const char* var);
 
-void cli_send_chansess_request();
-void cli_tty_cleanup();
-void cli_chansess_winchange();
+void cli_send_chansess_request(void);
+void cli_tty_cleanup(void);
+void cli_chansess_winchange(void);
 #ifdef ENABLE_CLI_NETCAT
-void cli_send_netcat_request();
+void cli_send_netcat_request(void);
 #endif
 
-void svr_chansessinitialise();
+void svr_chansessinitialise(void);
 extern const struct ChanType svrchansess;
 
 struct SigMap {
@@ -92,4 +103,4 @@ struct SigMap {
 
 extern const struct SigMap signames[];
 
-#endif /* _CHANSESSION_H_ */
+#endif /* DROPBEAR_CHANSESSION_H_ */

@@ -24,9 +24,12 @@ span{
 	margin-left: 10px;
 }
 </style>
-<script type="text/JavaScript" src="/jquery.js"></script>
+<script type="text/JavaScript" src="/js/jquery.js"></script>
 <script>
 <% wanlink(); %>
+var sw_mode = '<% nvram_get("sw_mode"); %>';
+if((sw_mode == 2 || sw_mode == 3) && '<% nvram_get("wlc_psta"); %>' == 1)
+	sw_mode = 4;
 var w_Setting = "<% nvram_get("w_Setting"); %>";
 var auth_mode2 = '<% nvram_get("wl0_auth_mode_x"); %>';
 var wep_x2 = '<% nvram_get("wl0_wep_x"); %>';
@@ -39,14 +42,82 @@ var wpa_mode = '<% nvram_get("wl1_wpa_mode"); %>';
 var reIP = '<% nvram_get("lan_ipaddr"); %>';
 var band5g_support = ("<% nvram_get("rc_support"); %>".search("5G") == -1) ? false : true;
 var transfer_mode = "<% nvram_get("dsltmp_transmode"); %>";
+var dsltmp_cfg_th3bb = "<% nvram_get("dsltmp_cfg_th3bb"); %>";
+var dsltmp_cfg_modulation = "<% nvram_get("dsltmp_cfg_modulation"); %>";
+var dsltmp_cfg_annex = "<% nvram_get("dsltmp_cfg_annex"); %>";
+var dsltmp_cfg_de17a = "<% nvram_get("dsltmp_cfg_de17a"); %>";
+var dsltmp_cfg_vdslprofile = "<% nvram_get("dsltmp_cfg_vdslprofile"); %>";
+var cfg_iptv_enable = "<%nvram_get("dsltmp_cfg_iptv_enable");%>";
 
+var iptv_atm_pvc_str_title = "";
+var iptv_atm_pvc_str = "";
+var iptv_ptm_pvc_str_title = "";
+var iptv_ptm_pvc_str = "";
+var dsltmp_cfg_iptv_pvclist = decodeURIComponent('<%nvram_char_to_ascii("", "dsltmp_cfg_iptv_pvclist");%>');
+var iptv_num_pvc_val = "<% nvram_get("dsltmp_cfg_iptv_num_pvc"); %>";
+
+//udpate iptv information
+if (iptv_num_pvc_val != "0" && iptv_num_pvc_val != "") {
+	var dsltmp_cfg_iptv_pvclist_row;
+	var dsltmp_cfg_iptv_pvclist_col;
+	var i, j;
+
+	iptv_atm_pvc_str_title = iptv_num_pvc_val + " IPTV PVC(s)";
+	iptv_ptm_pvc_str_title = iptv_num_pvc_val + " IPTV service(s)";
+
+	//<vpi>vci>proto>encap>vlanid
+	if(dsltmp_cfg_iptv_pvclist.charAt(0) == "<")	//rempve the 1st "<"
+		dsltmp_cfg_iptv_pvclist = dsltmp_cfg_iptv_pvclist.substr(1,dsltmp_cfg_iptv_pvclist.length);
+	dsltmp_cfg_iptv_pvclist_row = dsltmp_cfg_iptv_pvclist.split('<');
+
+	for(i=0; i<dsltmp_cfg_iptv_pvclist_row.length; i++) {
+		if(i > 0) {
+			iptv_atm_pvc_str += " + ";
+			iptv_ptm_pvc_str += " + ";
+		}
+		dsltmp_cfg_iptv_pvclist_col = dsltmp_cfg_iptv_pvclist_row[i].split('>');
+		for(j=0; j<dsltmp_cfg_iptv_pvclist_col.length; j++){
+			switch(j) {
+				case 0:	//vpi
+					iptv_atm_pvc_str += dsltmp_cfg_iptv_pvclist_col[j] + "/";
+					break;
+				case 1:	//vci
+					iptv_atm_pvc_str += dsltmp_cfg_iptv_pvclist_col[j] + ",";
+					break;
+				case 2:	//proto
+					if(dsltmp_cfg_iptv_pvclist_col[j] == 3) {
+						iptv_atm_pvc_str += "Bridged, ";
+						iptv_ptm_pvc_str += "Bridged, ";
+					}
+					else {
+						iptv_atm_pvc_str += ", ";
+						iptv_ptm_pvc_str += ", ";
+					}
+					break;
+				case 3:	//encap
+					if(dsltmp_cfg_iptv_pvclist_col[j] == 1)
+						iptv_atm_pvc_str += "VC-Mux";
+					else
+						iptv_atm_pvc_str += "LLC";
+					break;
+				case 4:	//vlan id
+					if(dsltmp_cfg_iptv_pvclist_col[j] != "") {
+						iptv_atm_pvc_str += "VLAN ID " + dsltmp_cfg_iptv_pvclist_col[j];
+						iptv_ptm_pvc_str += "VLAN ID " + dsltmp_cfg_iptv_pvclist_col[j];
+					}
+					break;
+			}
+		}
+	}
+}
 
 function QKfinish_load_body(){
 	parent.document.title = "<#Web_Title#> - <#QKSet_all_title#>";
 	parent.set_step("t3");
-	parent.$("LoadingBar").style.visibility = 'hidden';
+	parent.document.getElementById("LoadingBar").style.visibility = 'hidden';
+	parent.document.getElementById("btn_gotoindex").style.visibility = "hidden";
 
-	if('<% nvram_get("sw_mode"); %>' == '2'){
+	if(sw_mode == "2"){
 		if('<% nvram_get("wlc_band"); %>' == 0){
 			auth_mode2 = '<% nvram_get("wl0.1_auth_mode_x"); %>';
 			wep_x2 = '<% nvram_get("wl0.1_wep_x"); %>';
@@ -224,6 +295,11 @@ function QKfinish_load_body(){
 
 			$("#wanvpivci")[0].innerHTML = tmp_str;
 
+			if(iptv_num_pvc_val >0){	//iptv information
+				document.getElementById("iptv_service").style.display = "";
+				document.getElementById("iptv_pvc_item").innerHTML = iptv_atm_pvc_str_title;
+				document.getElementById("iptv_pvc").innerHTML = iptv_atm_pvc_str;
+			}
 		}
 		else{	//transmode "ptm"
 
@@ -240,16 +316,16 @@ function QKfinish_load_body(){
 			else if (pvc_type == "static")
 				wanlink_type_conv = "<#BOP_ctype_title5#>";
 
-
 			if("<% nvram_get("dsltmp_cfg_vid"); %>" != ""){
 				$("#wanvpivci_item")[0].innerHTML = "<#WANVLANIDText#>";
-
-			//Viz hide tmp seems useless if(with_wan_setting == "")
-				//$("#wanvpivci")[0].innerHTML = "";
-			//else
 				$("#wanvpivci")[0].innerHTML = "<% nvram_get("dsltmp_cfg_vid"); %>";
-                	}
+			}
 
+			if(iptv_num_pvc_val >0){	//iptv information
+				document.getElementById("iptv_service").style.display = "";
+				document.getElementById("iptv_pvc_item").innerHTML = iptv_ptm_pvc_str_title;
+				document.getElementById("iptv_pvc").innerHTML = iptv_ptm_pvc_str;
+			}
 		}
 	}
 
@@ -277,7 +353,38 @@ function gotoASUS(){
 }
 
 function goto_index(){
-	parent.location.href = "/index.asp";
+	parent.document.getElementById("btn_gotoindex").onclick = "";
+	parent.document.getElementById("btn_gotoindex").style.cursor = "";
+	parent.document.getElementById("btn_gotoindex").className = "m_qis_r_blocked";
+	
+	var wait_time = 40;
+	if(parent.sysReboot) {
+		wait_time = parent.rebootTime;
+	}
+	else {
+		document.restartForm.action_script.value = "restart_dsl_wireless 0;";
+		if(document.restartForm.dslx_transmode.value != transfer_mode) {
+			document.restartForm.dslx_transmode.value = transfer_mode;
+			parent.restartDSLSetting = true;
+		}
+		if(dsltmp_cfg_th3bb == 1) {
+			document.restartForm.dslx_modulation.value = dsltmp_cfg_modulation;
+			document.restartForm.dslx_annex.value = dsltmp_cfg_annex;
+			parent.restartDSLSetting = true;
+		}
+		if(dsltmp_cfg_de17a == 1) {
+			document.restartForm.dslx_vdsl_profile.value = dsltmp_cfg_vdslprofile;
+			parent.restartDSLSetting = true;
+		}
+		if(parent.restartDSLSetting) {
+			document.restartForm.action_script.value = "restart_dsl_setting;".concat(document.restartForm.action_script.value);
+			wait_time += 45;
+		}
+	}
+	parent.showLoading(wait_time);
+	document.restartForm.action_wait.value = wait_time;
+	document.restartForm.flag.value = "";
+	document.restartForm.submit();
 }
 
 function gotoAdvSetting(){
@@ -415,6 +522,12 @@ function redirect_page(redirect_flag){
 	  </td>
 	</tr>
 -->
+	<tr id="iptv_service" style="display:none;">
+		<th width="180"><span id="iptv_pvc_item"></span></th>
+		<td class="QISformtd">
+			<span id="iptv_pvc"></span>
+		</td>
+	</tr>
 	<tr>
 		<td align="left" colspan="4" style="color:#5AD;font-size:16px; border-bottom:1px dashed #AAA;">LAN</td>
 	</tr>
@@ -455,5 +568,23 @@ function redirect_page(redirect_flag){
 <input type="hidden" name="wl0_wpa_psk" value="<% nvram_char_to_ascii("WLANConfig11b", "wl0_wpa_psk"); %>">
 <input type="hidden" name="wl1_wpa_psk" value="<% nvram_char_to_ascii("WLANConfig11b", "wl1_wpa_psk"); %>">
 </form>
+
+<iframe name="hidden_frame" id="hidden_frame" width="0" height="0" frameborder="0"></iframe>
+
+<form method="post" name="restartForm" action="/start_apply2.htm" target="hidden_frame">
+	<input type="hidden" name="flag" value="finishQIS">
+	<input type="hidden" name="current_page" value="/qis/QIS_finish.htm">
+	<input type="hidden" name="next_page" value="/index.asp">
+	<input type="hidden" name="action_mode" value="apply">
+	<input type="hidden" name="action_script" value="reboot">
+	<input type="hidden" name="action_wait" value="0">
+	<input type="hidden" name="x_Setting" value="1">
+	<input type="hidden" name="dslx_transmode" value="<% nvram_get("dslx_transmode"); %>">
+	<input type="hidden" name="dslx_ginp" value="<% nvram_get("dsltmp_cfg_ginp"); %>">
+	<input type="hidden" name="dslx_modulation" value="<% nvram_get("dslx_modulation"); %>">
+	<input type="hidden" name="dslx_annex" value="<% nvram_get("dslx_annex"); %>">
+	<input type="hidden" name="dslx_vdsl_profile" value="<% nvram_get("dslx_vdsl_profile"); %>">
+</form>
+
 </body>
 </html>

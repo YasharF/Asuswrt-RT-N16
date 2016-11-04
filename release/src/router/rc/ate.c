@@ -2,7 +2,7 @@
 #include <shutils.h>
 #ifdef RTCONFIG_RALINK
 #include <ralink.h>
-#if defined(RTN14U) || defined(RTAC52U) || defined(RTAC51U) || defined(RTN54U) || defined(RTAC1200HP) || defined(RTN56UB1)|| defined(RTAC54U)
+#if defined(RTN14U) || defined(RTAC52U) || defined(RTAC51U) || defined(RTN54U) || defined(RTAC1200HP) || defined(RTN56UB1) || defined(RTN56UB2) || defined(RTAC54U)
 #include <linux/if_packet.h>
 #include <linux/if_ether.h>
 #endif
@@ -11,8 +11,11 @@
 #include <qca.h>
 #endif
 #include "ate.h"
-#ifdef RT4GAC55U
+#ifdef RTCONFIG_INTERNAL_GOBI
 #include <at_cmd.h>
+#endif
+#ifdef RTCONFIG_QCA_PLC_UTILS
+#include <plc_utils.h>
 #endif
 
 
@@ -142,7 +145,7 @@ isValidChannel(int is_2G, char *channel)
 int
 pincheck(const char *a)
 {
-	unsigned char *c = (char *) a;
+	unsigned char *c = (unsigned char *) a;
 	unsigned long int uiPINtemp = atoi(a);
 	unsigned long int uiAccum = 0;
 	int i = 0;
@@ -181,7 +184,7 @@ int isValidSN(const char *sn)
 	if(strlen(sn) != SERIAL_NUMBER_LENGTH)
 		return 0;
 
-	c = (char *)sn;
+	c = (unsigned char *)sn;
 	/* [1]year: C~Z (2012=C, 2013=D, ...) */
 	if(*c<0x43 || *c>0x5A)
 		return 0;
@@ -251,7 +254,6 @@ Get_USB_Port_Folder(const char *port_x)
 	return 1;
 }
 
-#if defined (RTCONFIG_USB_XHCI)
 int
 Get_USB_Port_DataRate(const char *port_x)
 {
@@ -266,7 +268,6 @@ Get_USB_Port_DataRate(const char *port_x)
 		puts("N/A");
 	return 1;
 }
-#endif	/* RTCONFIG_USB_XHCI */
 
 int
 Get_SD_Card_Info(void)
@@ -364,8 +365,19 @@ int asus_ate_command(const char *command, const char *value, const char *value2)
 			stop_logger();
 			stop_wanduck();
 			stop_dnsmasq();
+#ifdef RTCONFIG_MDNS
+			stop_mdns();
+#endif
 			stop_ots();
 			stop_networkmap();
+#ifdef RTCONFIG_DISK_MONITOR
+			stop_diskmon();
+#endif
+#ifdef RTCONFIG_BWDPI
+			stop_bwdpi_check();
+#endif
+			stop_ntpc();
+			stop_udhcpc(-1);
 #ifdef RTCONFIG_USB
 			stop_usbled();
 #ifdef RTCONFIG_USB_PRINTER
@@ -374,18 +386,34 @@ int asus_ate_command(const char *command, const char *value, const char *value2)
 #endif
 #endif
 			platform_start_ate_mode();
+#ifdef RTCONFIG_QCA_PLC_UTILS
+			ate_ctl_plc_led();
+#endif
+#ifdef SW_DEVLED
+			stop_sw_devled();
+#endif
+#if defined(RTCONFIG_CFEZ) && defined(RTCONFIG_BCMARM)
+			start_envrams();
+#endif
+
 		}
 		else
 			puts("ATE_ERROR");
 		return 0;
 	}
 	else if (!strcmp(command, "Set_AllLedOn")) {
+#ifdef RTCONFIG_QCA_PLC_UTILS
+		set_plc_all_led_onoff(1);
+#endif
 		return setAllLedOn();
 	}
 	else if (!strcmp(command, "Set_AllLedOn2")) {
 		return setAllLedOn2();
 	}
 	else if (!strcmp(command, "Set_AllLedOff")) {
+#ifdef RTCONFIG_QCA_PLC_UTILS
+		set_plc_all_led_onoff(0);
+#endif
 		return setAllLedOff();
 	}
 	else if (!strcmp(command, "Set_AllLedOn_Half")) {
@@ -393,12 +421,35 @@ int asus_ate_command(const char *command, const char *value, const char *value2)
 		return EINVAL;
 	}
 #ifdef RTCONFIG_BCMARM
+	else if (!strcmp(command, "Set_WanLedMode1")) {
+		return setWanLedMode1();
+	}
+	else if (!strcmp(command, "Set_WanLedMode2")) {
+		return setWanLedMode2();
+	}
 	else if (!strcmp(command, "Set_AteModeLedOn")) {
 		return setATEModeLedOn();
 	}
 #endif
 	else if (!strcmp(command, "Set_MacAddr_2G")) {
-		if( !setMAC_2G(value) )
+#if defined(RTCONFIG_CFEZ) && defined(RTCONFIG_BCMARM)
+		if (!chk_envrams_proc())
+			return EINVAL;
+#endif
+		//Andy Chiu, 2016/02/04.
+		char *p = value;
+		char UpperMac[20] = {0};
+		int i;
+		for(i = 0; p[i]; ++i)
+		{
+			UpperMac[i] = toupper(p[i]);
+		}
+
+		char tmp[256];
+		snprintf(tmp, sizeof(tmp), "<%s;%s>", value, UpperMac);
+		puts(tmp);
+		
+		if( !setMAC_2G(UpperMac) )
 		{
 			puts("ATE_ERROR_INCORRECT_PARAMETER");
 			return EINVAL;
@@ -407,10 +458,23 @@ int asus_ate_command(const char *command, const char *value, const char *value2)
 	}
 #if defined(RTCONFIG_HAS_5G)
 	else if (!strcmp(command, "Set_MacAddr_5G")) {
+#if defined(RTCONFIG_CFEZ) && defined(RTCONFIG_BCMARM)
+		if (!chk_envrams_proc())
+			return EINVAL;
+#endif
+		//Andy Chiu, 2016/02/04.
+		char *p = value;
+		char UpperMac[20] = {0};
+		int i;
+		for(i = 0; p[i]; ++i)
+		{
+			UpperMac[i] = toupper(p[i]);
+		}
+
 #ifdef RTCONFIG_QTN
-		if( !setMAC_5G_qtn(value))
+		if( !setMAC_5G_qtn(UpperMac))
 #else
-		if( !setMAC_5G(value))
+		if( !setMAC_5G(UpperMac))
 #endif
 		{
 			puts("ATE_ERROR_INCORRECT_PARAMETER");
@@ -418,9 +482,23 @@ int asus_ate_command(const char *command, const char *value, const char *value2)
 		}
 		return 0;
 	}
-#ifdef RTAC3200
+#if defined(RTAC3200) || defined(RTAC5300)|| defined(RTAC5300R)
 	else if (!strcmp(command, "Set_MacAddr_5G_2")) {
-		if( !setMAC_5G_2(value))
+#if defined(RTCONFIG_CFEZ) && defined(RTCONFIG_BCMARM)
+		if (!chk_envrams_proc())
+			return EINVAL;
+
+#endif
+		//Andy Chiu, 2016/02/04.
+		char *p = value;
+		char UpperMac[20] = {0};
+		int i;
+		for(i = 0; p[i]; ++i)
+		{
+			UpperMac[i] = toupper(p[i]);
+		}
+
+		if( !setMAC_5G_2(UpperMac))
                 {
                         puts("ATE_ERROR_INCORRECT_PARAMETER");
                         return EINVAL;
@@ -443,7 +521,7 @@ int asus_ate_command(const char *command, const char *value, const char *value2)
 #endif	
 #if defined(RTCONFIG_NEW_REGULATION_DOMAIN)
 	else if (!strcmp(command, "Set_RegSpec")) {
-		if (setRegSpec(value) < 0)
+		if (setRegSpec(value, 1) < 0)
 		{
 			puts("ATE_ERROR_INCORRECT_PARAMETER");
 			return EINVAL;
@@ -452,6 +530,10 @@ int asus_ate_command(const char *command, const char *value, const char *value2)
 		return 0;
 	}
 	else if (!strcmp(command, "Set_RegulationDomain_2G")) {
+#if defined(RTCONFIG_CFEZ) && defined(RTCONFIG_BCMARM)
+		if (!chk_envrams_proc())
+			return EINVAL;
+#endif
 		if (setRegDomain_2G(value) == -1) {
 			puts("ATE_ERROR_INCORRECT_PARAMETER");
 			return EINVAL;
@@ -461,6 +543,10 @@ int asus_ate_command(const char *command, const char *value, const char *value2)
 	}
 #if defined(RTCONFIG_HAS_5G)
 	else if (!strcmp(command, "Set_RegulationDomain_5G")) {
+#if defined(RTCONFIG_CFEZ) && defined(RTCONFIG_BCMARM)
+		if (!chk_envrams_proc())
+			return EINVAL;
+#endif
 		if (setRegDomain_5G(value) == -1) {
 			puts("ATE_ERROR_INCORRECT_PARAMETER");
 			return EINVAL;
@@ -471,6 +557,10 @@ int asus_ate_command(const char *command, const char *value, const char *value2)
 #endif	/* RTCONFIG_HAS_5G */
 #else	/* ! RTCONFIG_NEW_REGULATION_DOMAIN */
 	else if (!strcmp(command, "Set_RegulationDomain_2G")) {
+#if defined(RTCONFIG_CFEZ) && defined(RTCONFIG_BCMARM)
+		if (!chk_envrams_proc())
+			return EINVAL;
+#endif
 		if ( !setCountryCode_2G(value))
 		{
 			puts("ATE_ERROR_INCORRECT_PARAMETER");
@@ -485,6 +575,11 @@ int asus_ate_command(const char *command, const char *value, const char *value2)
 #endif /* RTCONFIG_NEW_REGULATION_DOMAIN */
 #ifdef CONFIG_BCMWL5
 	else if (!strcmp(command, "Set_RegulationDomain_5G")) {
+#if defined(RTCONFIG_CFEZ) && defined(RTCONFIG_BCMARM)
+		if (!chk_envrams_proc())
+			return EINVAL;
+#endif
+
 #ifdef RTCONFIG_QTN
 		if ( !setCountryCode_5G_qtn(value))
 #else
@@ -497,6 +592,11 @@ int asus_ate_command(const char *command, const char *value, const char *value2)
 		return 0;
 	}
 	else if (!strcmp(command, "Set_Regrev_2G")) {
+#if defined(RTCONFIG_CFEZ) && defined(RTCONFIG_BCMARM)
+		if (!chk_envrams_proc())
+			return EINVAL;
+#endif
+
 		if( !setRegrev_2G(value) )
 		{
 			puts("ATE_ERROR_INCORRECT_PARAMETER");
@@ -505,6 +605,11 @@ int asus_ate_command(const char *command, const char *value, const char *value2)
 		return 0;
 	}
 	else if (!strcmp(command, "Set_Regrev_5G")) {
+#if defined(RTCONFIG_CFEZ) && defined(RTCONFIG_BCMARM)
+		if (!chk_envrams_proc())
+			return EINVAL;
+#endif
+
 #ifdef RTCONFIG_QTN
 		if( !setRegrev_5G_qtn(value))
 #else
@@ -517,6 +622,10 @@ int asus_ate_command(const char *command, const char *value, const char *value2)
 		return 0;
 	}
 	else if (!strcmp(command, "Set_Commit")) {
+#if defined(RTCONFIG_CFEZ) && defined(RTCONFIG_BCMARM)
+		if (!chk_envrams_proc())
+			return EINVAL;
+#endif
 		setCommit();
 		return 0;
 	}
@@ -563,6 +672,11 @@ int asus_ate_command(const char *command, const char *value, const char *value2)
  	}
 #endif
 	else if (!strcmp(command, "Set_SerialNumber")) {
+#if defined(RTCONFIG_CFEZ) && defined(RTCONFIG_BCMARM)
+		if (!chk_envrams_proc())
+			return EINVAL;
+#endif
+
 		if(!setSN(value))
 		{
 			puts("ATE_ERROR_INCORRECT_PARAMETER");
@@ -572,6 +686,11 @@ int asus_ate_command(const char *command, const char *value, const char *value2)
  	}
 #ifdef RTCONFIG_ODMPID
 	else if (!strcmp(command, "Set_ModelName")) {
+#if defined(RTCONFIG_CFEZ) && defined(RTCONFIG_BCMARM)
+		if (!chk_envrams_proc())
+			return EINVAL;
+#endif
+
 		if(!setMN(value))
 		{
 			puts("ATE_ERROR_INCORRECT_PARAMETER");
@@ -581,6 +700,11 @@ int asus_ate_command(const char *command, const char *value, const char *value2)
 	}
 #endif
 	else if (!strcmp(command, "Set_PINCode")) {
+#if defined(RTCONFIG_CFEZ) && defined(RTCONFIG_BCMARM)
+		if (!chk_envrams_proc())
+			return EINVAL;
+#endif
+
 		if (!setPIN(value))
 		{
 			puts("ATE_ERROR_INCORRECT_PARAMETER");
@@ -607,9 +731,25 @@ int asus_ate_command(const char *command, const char *value, const char *value2)
 	}
 #endif	/* RTCONFIG_HAS_5G */
 	else if (!strcmp(command, "Set_RestoreDefault")) {
+#ifdef RTAC87U
+		int ret_reset;
+#endif
 		nvram_set("restore_defaults", "1");
-		ResetDefault();
 		nvram_set(ASUS_STOP_COMMIT, "1");
+#ifdef RTAC87U
+		ret_reset = ResetDefault();
+		if(ret_reset == 0){
+			logmessage("ATE", "Set_RestoreDefault OK");
+			sleep(3);
+			puts("1");
+		}else{
+			logmessage("ATE", "Set_RestoreDefault failed");
+			sleep(3);
+			puts("0");
+		}
+#else
+		ResetDefault();
+#endif
 		return 0;
 	}
 	else if (!strcmp(command, "Set_Eject")) {
@@ -631,6 +771,11 @@ int asus_ate_command(const char *command, const char *value, const char *value2)
 #endif
 #ifdef CONFIG_BCMWL5
 	else if (!strcmp(command, "Set_WaitTime")) {
+#if defined(RTCONFIG_CFEZ) && defined(RTCONFIG_BCMARM)
+		if (!chk_envrams_proc())
+			return EINVAL;
+#endif
+
 		if( !setWaitTime(value) )
 		{
 			puts("ATE_ERROR_INCORRECT_PARAMETER");
@@ -670,11 +815,11 @@ int asus_ate_command(const char *command, const char *value, const char *value2)
 	   	set_wantolan();
 		modprobe_r("hw_nat");
 		modprobe("hw_nat");
-		system("killall -9 wanduck");
-		system("killall -9 udhcpc");
+		stop_wanduck();
+		stop_udhcpc(-1);
 		return 0;
 	}
-#if defined(RTAC1200HP) || defined(RTN56UB1)
+#if defined(RTAC1200HP) || defined(RTN56UB1) || defined(RTN56UB2)
         else if (!strcmp(command, "Set_FixChannel")) {
 	   	 FWrite("1", OFFSET_FIX_CHANNEL, 1);	
                  puts("1");
@@ -721,18 +866,20 @@ int asus_ate_command(const char *command, const char *value, const char *value2)
 		puts(nvram_safe_get("btn_ez"));
 		return 0;
 	}
-#ifdef RT4GAC55U
-	else if (!strcmp(command, "Get_LteButtonStatus")) {
-		puts(nvram_safe_get("btn_lte"));
-		return 0;
-	}
-#endif
 #ifdef RTCONFIG_WIFI_TOG_BTN
 	else if (!strcmp(command, "Get_WirelessButtonStatus")) {
 		puts(nvram_safe_get("btn_wifi_toggle"));
 		return 0;
 	}
 #endif
+#ifdef RTCONFIG_SWMODE_SWITCH
+#if defined(PLAC66U)
+	else if (!strcmp(command, "Get_SwitchStatus")) {
+		puts(nvram_safe_get("switch_mode"));
+		return 0;
+	}
+#endif  /* Model */
+#endif  /* RTCONFIG_SWMODE_SWITCH */
 	else if (!strcmp(command, "Get_SWMode")) {
 		puts(nvram_safe_get("sw_mode"));
 		return 0;
@@ -750,18 +897,18 @@ int asus_ate_command(const char *command, const char *value, const char *value2)
 #endif
 		return 0;
 	}
-#ifdef RTAC3200
+#if defined(RTAC3200) || defined(RTAC5300)|| defined(RTAC5300R)
 	else if (!strcmp(command, "Get_MacAddr_5G_2")) {
 		getMAC_5G_2();
 		return 0;
 	}
 #endif
 #endif	/* RTCONFIG_HAS_5G */
-	else if (!strcmp(command, "Get_Usb2p0_Port1_Infor")) {
+	else if (!strcmp(command, "Get_Usb2p0_Port1_Infor") || !strcmp(command, "Get_Usb_Port1_Infor")) {
 		Get_USB_Port_Info("1");
 		return 0;
 	}
-	else if (!strcmp(command, "Get_Usb2p0_Port1_Folder")) {
+	else if (!strcmp(command, "Get_Usb2p0_Port1_Folder") || !strcmp(command, "Get_Usb_Port1_Folder")) {
 		Get_USB_Port_Folder("1");
 		return 0;
 	}
@@ -773,6 +920,29 @@ int asus_ate_command(const char *command, const char *value, const char *value2)
 		Get_USB_Port_Folder("2");
 		return 0;
 	}
+	else if (!strcmp(command, "Get_Usb_Port1_DataRate")) {
+		if (!Get_USB_Port_DataRate("1"))
+			puts("ATE_ERROR");
+		return 0;
+	}
+#if defined(RTCONFIG_M2_SSD)
+	/* Because M.2 SSD is assigned to port 3 and BRT-AC828M2 doesn't have SD card.
+	 * It's safe to call functions for SD card here.
+	 */
+	else if (!strcmp(command, "Get_M2Ssd_Infor")) {
+		Get_SD_Card_Info();
+		return 0;
+	}
+	else if (!strcmp(command, "Get_M2Ssd_Folder")) {
+		Get_SD_Card_Folder();
+		return 0;
+	}
+	else if (!strcmp(command, "Get_M2Ssd_DataRate")) {
+		if (!Get_USB_Port_DataRate("3"))
+			puts("ATE_ERROR");
+		return 0;
+	}
+#endif
 	else if (!strcmp(command, "Get_SD_Infor")) {
 		Get_SD_Card_Info();
 		return 0;
@@ -841,8 +1011,13 @@ int asus_ate_command(const char *command, const char *value, const char *value2)
 		return 0;
 	}
 	else if (!strcmp(command, "Get_WanLanStatus")) {
-		if( !GetPhyStatus())
+#if defined(RTCONFIG_EXT_RTL8365MB) || defined(RTCONFIG_EXT_RTL8370MB)
+		GetPhyStatus(1);
+#else
+		if( !GetPhyStatus(1))
 			puts("ATE_ERROR");
+#endif
+
 		return 0;
 	}
 	else if (!strcmp(command, "Get_FwReadyStatus")) {
@@ -880,7 +1055,7 @@ int asus_ate_command(const char *command, const char *value, const char *value2)
 			puts("ATE_ERROR");
 		return 0;
 	}
-#ifdef RTAC3200
+#if defined(RTAC3200) || defined(RTAC5300)|| defined(RTAC5300R)
 	else if (!strcmp(command, "Get_ChannelList_5G_2")) {
 		if (!Get_ChannelList_5G_2())
 			puts("ATE_ERROR");
@@ -945,7 +1120,7 @@ int asus_ate_command(const char *command, const char *value, const char *value2)
 		return 0;
 	}
 #ifdef RTCONFIG_RALINK
-#if !defined(RTN14U) && !defined(RTAC52U) && !defined(RTAC51U) && !defined(RTN11P) && !defined(RTN54U) && !defined(RTAC1200HP) && !defined(RTN56UB1) && !defined(RTAC54U)
+#if !defined(RTN14U) && !defined(RTAC52U) && !defined(RTAC51U) && !defined(RTN11P) && !defined(RTN300) && !defined(RTN54U) && !defined(RTAC1200HP) && !defined(RTN56UB1) && !defined(RTAC54U) && !defined(RTN56UB2)
 	else if (!strcmp(command, "Ra_FWRITE")) {
 		return FWRITE(value, value2);
 	}
@@ -1116,20 +1291,19 @@ int asus_ate_command(const char *command, const char *value, const char *value2)
 /*
 	else if (!strcmp(command, "Set_ART2")) {
 		// temp solution
-		system("killall rstats");
-		system("killall udhcpc");
-		system("killall wanduck");
-		system("killall networkmap");
-		system("killall -9 hostapd");
-		system("ifconfig ath0 down");
-		system("ifconfig ath1 down");
-		system("killall -9 hostapd");
-		system("brctl delif br0 ath0");
-		system("brctl delif br0 ath1");
-		system("wlanconfig ath0 destroy");
-		system("wlanconfig ath1 destroy");
-		system("ifconfig wifi0 down");
-		system("ifconfig wifi1 down");
+		killall_tk("rstats");
+		stop_wanduck();
+		stop_udhcpc(-1);
+		killall_tk("networkmap");
+		killall_tk("hostapd");
+		ifconfig("ath0", 0, NULL, NULL);
+		ifconfig("ath1", 0, NULL, NULL);
+		eval("brctl", "delif", "br0", "ath0");
+		eval("brctl", "delif", "br0", "ath1");
+		eval("wlanconfig", "ath0", "destroy");
+		eval("wlanconfig", "ath1", "destroy");
+		ifconfig("wifi0", 0, NULL, NULL);
+		ifconfig("wifi1", 0, NULL, NULL);
 		modprobe_r("umac");
 		modprobe_r("ath_dfs");
 		modprobe_r("ath_dev");
@@ -1213,7 +1387,11 @@ int asus_ate_command(const char *command, const char *value, const char *value2)
 	}
 #endif
 #endif	/* RTCONFIG_QCA */
-#ifdef RT4GAC55U
+#ifdef RTCONFIG_INTERNAL_GOBI
+	else if(!strcmp(command, "Get_LteButtonStatus")) {
+		puts(nvram_safe_get("btn_lte"));
+		return 0;
+	}
 	else if(!strcmp(command, "Get_GobiSimCard")) {
 		char line[128];
 		if (!Gobi_SimCardReady(Gobi_SimCard(line, sizeof(line))))
@@ -1297,20 +1475,125 @@ int asus_ate_command(const char *command, const char *value, const char *value2)
 		}
 		printf("FINISH\n");
 	}
-#endif	/* RT4GAC55U */
-#if defined(RTCONFIG_TCODE)
-	else if (!strcmp(command, "Set_TerritoryCode")) {
-		if (setTerritoryCode(value) < 0)
+	else if(!strcmp(command, "Get_GobiBand")) {
+		char line[128];
+		char *band;
+		if ((band = Gobi_BandChannel(line, sizeof(line))) == NULL)
 		{
+			puts("FAIL");
+			return EINVAL;
+		}
+		cprintf("line(%p) band(%p)\n", line, band);
+		printf("%s\n", band);
+	}
+#endif	/* RTCONFIG_INTERNAL_GOBI */
+#if defined(RTCONFIG_TCODE)
+        else if (!strcmp(command, "Set_TerritoryCode")) {
+#if defined(RTCONFIG_CFEZ) && defined(RTCONFIG_BCMARM)
+		if (!chk_envrams_proc())
+			return EINVAL;
+#endif
+
+                if (setTerritoryCode(value) < 0)
+                {
+                        puts("ATE_ERROR_INCORRECT_PARAMETER");
+                        return EINVAL;
+                }
+#ifndef CONFIG_BCMWL5
+                getTerritoryCode();
+#endif
+                return 0;
+        }
+        else if (!strcmp(command, "Get_TerritoryCode")) {
+                getTerritoryCode();
+                return 0;
+        }
+#if defined(CONFIG_BCMWL5) || defined(RTCONFIG_QCA) || defined(RTCONFIG_RALINK)
+        else if (!strcmp(command, "Set_PSK")) {
+#if defined(RTCONFIG_CFEZ) && defined(RTCONFIG_BCMARM)
+		if (!chk_envrams_proc())
+			return EINVAL;
+#endif
+
+                if (setPSK(value) < 0)
+                {
 			puts("ATE_ERROR_INCORRECT_PARAMETER");
 			return EINVAL;
 		}
-		getTerritoryCode();
+#ifndef CONFIG_BCMWL5
+		getPSK();
+#endif
+	        return 0;
+	}
+	else if (!strcmp(command, "Get_PSK")) {
+	        getPSK();
+	        return 0;
+	}
+#endif
+#endif
+#ifdef RTCONFIG_QCA_PLC_UTILS
+        else if(!strcmp(command, "Set_MacAddr_Plc")) {
+               if (!setPLC_para(value, OFFSET_PLC_MAC))
+               {
+                       puts("ATE_ERROR_INCORRECT_PARAMETER");
+                       return EINVAL;
+               }
+               return 0;
+        }
+        else if(!strcmp(command, "Get_MacAddr_Plc")) {
+               getPLC_para(OFFSET_PLC_MAC);
+               return 0;
+        }
+        else if(!strcmp(command, "Set_NMK_Plc")) {
+               if (!setPLC_para(value, OFFSET_PLC_NMK))
+               {
+                       puts("ATE_ERROR_INCORRECT_PARAMETER");
+                       return EINVAL;
+	       }
+	       return 0;
+	}
+	else if(!strcmp(command, "Get_NMK_Plc")) {
+	       getPLC_para(OFFSET_PLC_NMK);
+	       return 0;
+	}
+	else if(!strcmp(command, "Get_PWD_Plc")) {
+		if (!getPLC_PWD()) {
+			puts("ATE_ERROR");
+			return EINVAL;
+		}
 		return 0;
 	}
-	else if (!strcmp(command, "Get_TerritoryCode")) {
-		getTerritoryCode();
+#endif
+#ifdef RTCONFIG_DEFAULT_AP_MODE
+	else if(!strcmp(command, "Set_ForceDisableDHCP")) {
+		FWrite("1", OFFSET_FORCE_DISABLE_DHCP, 1);
+		puts("1");
 		return 0;
+	}
+	else if(!strcmp(command, "Set_FreeDisableDHCP")) {
+		char buf[2];
+		FWrite("0", OFFSET_FORCE_DISABLE_DHCP, 1);
+		if (FRead(buf, OFFSET_FORCE_DISABLE_DHCP, 1) < 0)
+			puts("ATE_ERROR");
+		else {
+			buf[1] = '\0';
+			puts(buf);
+		}
+		return 0;
+	}
+#endif
+#ifdef CONFIG_BCMWL5
+	else if (!strcmp(command, "Get_SSID_2G")) {
+	        getSSID(0);
+	        return 0;
+	}
+	else if (!strcmp(command, "Get_SSID_5G")) {
+	        getSSID(1);
+	        return 0;
+	}
+	else if (!strcmp(command, "Get_SSID_5G_2")) {
+	        getSSID(2);
+	        return 0;
 	}
 #endif
 	else 
@@ -1357,3 +1640,23 @@ int ate_dev_status(void)
 	nvram_set("Ate_dev_status",dev_chk_buf);
 	return ret;
 }
+
+#if defined(RTCONFIG_CFEZ) && defined(RTCONFIG_BCMARM)
+int chk_envrams_proc(void)
+{
+	if (!pids("envrams"))
+	{
+		puts("ATE_ERROR_NOT_ALLOWED");
+		return 0;
+	}
+
+	return 1;
+}
+
+int start_envrams(void){
+
+        int ret=eval("/usr/sbin/envrams");
+        return ret;
+}
+
+#endif

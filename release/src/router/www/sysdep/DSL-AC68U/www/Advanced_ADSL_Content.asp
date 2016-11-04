@@ -16,13 +16,49 @@
 <script type="text/javascript" src="/general.js"></script>
 <script type="text/javascript" src="/popup.js"></script>
 <script type="text/javascript" src="/help.js"></script>
-
+<script type="text/javascript" src="/js/jquery.js"></script>
 <script>
+
+var log_xDSLmode;
+var log_lineState;
+var log_SNRMarginDown;
 
 function initial(){
 	show_menu();
 	change_dla("<% nvram_get("dslx_dla_enable"); %>");
 	hide_nonstd_vectoring(<% nvram_get("dslx_vdsl_vectoring"); %>);
+	hide_vdtxpwrtestmode("<% nvram_get("dslx_vdtxpwrtestmode"); %>");
+	setTimeout("update_current_SNR_margin();", 3000);
+}
+
+function update_current_SNR_margin(){
+	$.ajax({
+		url: 'ajax_AdslSetting.asp',
+		dataType: 'script',
+		error: function(xhr){
+				setTimeout("update_current_SNR_margin();", 1000);
+			},
+
+		success: function(){
+				if(log_lineState == "up")
+				{
+					if(log_xDSLmode == "ADSL"){
+						document.getElementById("id_sta_adj_adsl").style.display = "";
+						document.getElementById("id_sta_adj_adsl").innerHTML = "Current SNR Margin: "+log_SNRMarginDown;
+					}
+					else if(log_xDSLmode == "VDSL"){
+						document.getElementById("id_sta_adj_vdsl").style.display = "";
+						document.getElementById("id_sta_adj_vdsl").innerHTML = "Current SNR Margin: "+log_SNRMarginDown;
+					}
+				}
+				else{
+					document.getElementById("id_sta_adj_adsl").style.display = "none";
+					document.getElementById("id_sta_adj_vdsl").style.display = "none";
+				}
+
+				setTimeout("update_current_SNR_margin();", 5000);
+			}
+	});
 }
 
 function applyRule(){
@@ -42,11 +78,22 @@ function change_dla(enable){
 		document.form.dslx_snrm_offset.disabled = true;		
 		document.getElementById("dslx_snrm_offset_read").style.display = "";
 		document.getElementById("dslx_snrm_offset_read").innerHTML = get_snrm_offset();
+		document.getElementById("dslx_snrm_offset_read").title = "Auto configured by Dynamic Line Adjustment(DLA)";
+
+		document.form.dslx_vdsl_esnp.style.display = "none";
+		document.form.dslx_vdsl_esnp.disabled = true;
+		document.getElementById("dslx_vdsl_esnp_read").style.display = "";
+		document.getElementById("dslx_vdsl_esnp_read").innerHTML = get_vdsl_esnp();
+		document.getElementById("dslx_vdsl_esnp_read").title = "Auto configured by Dynamic Line Adjustment(DLA)";
 	}
 	else {
 		document.form.dslx_snrm_offset.style.display = "";
 		document.form.dslx_snrm_offset.disabled = false;
 		document.getElementById("dslx_snrm_offset_read").style.display = "none";
+
+		document.form.dslx_vdsl_esnp.style.display = "";
+		document.form.dslx_vdsl_esnp.disabled = false;
+		document.getElementById("dslx_vdsl_esnp_read").style.display = "none";
 	}
 }
 
@@ -123,8 +170,37 @@ function get_snrm_offset(){
 
 }
 
+function get_vdsl_rx_agc(){
+	var dslx_vdsl_rx_agc="<%nvram_get("dslx_vdsl_rx_agc");%>";
+	switch(dslx_vdsl_rx_agc){
+		case "394":
+			return "Stable";
+		case "550":
+			return "High Performance";
+		case "65535":
+		default:
+			return "Default";
+	}
+}
+
+function get_vdsl_esnp(){
+	var dslx_vdsl_esnp="<%nvram_get("dslx_vdsl_esnp");%>";
+	switch(dslx_vdsl_esnp){
+		case "1":
+			return "Stable";
+		case "0":
+		default:
+			return "Default";
+	}
+}
+
+
 function hide_nonstd_vectoring(_value){
-$("nonstd_vectoring").style.display = (_value == "0") ? "none" : "";
+document.getElementById("nonstd_vectoring").style.display = (_value == "0") ? "none" : "";
+}
+
+function hide_vdtxpwrtestmode(_value){
+document.getElementById("id_vdtxpwrtestmode").style.display = (_value == "1") ? "" : "none";
 }
 
 </script>
@@ -185,7 +261,7 @@ $("nonstd_vectoring").style.display = (_value == "0") ? "none" : "";
 	<tr>
 		  <td bgcolor="#4D595D" valign="top"  >
 		  <div>&nbsp;</div>
-		  <div class="formfonttitle"><#menu5_6_adv#> - <#menu_dsl_setting#></div>
+		  <div class="formfonttitle"><#menu5_6#> - <#menu_dsl_setting#></div>
       <div style="margin-left:5px;margin-top:10px;margin-bottom:10px"><img src="/images/New_ui/export/line_export.png"></div>
       <div class="formfontdesc"><#dslsetting_disc0#></div>
 
@@ -224,7 +300,7 @@ $("nonstd_vectoring").style.display = (_value == "0") ? "none" : "";
 			</tr>
 			<tr>
 				<th>
-					<a class="hintstyle" href="javascript:void(0);" onClick="openHint(25,10);">Dynamic Line Adjustment (ADSL)</a>
+					<a class="hintstyle" href="javascript:void(0);" onClick="openHint(25,10);">Dynamic Line Adjustment (DLA)</a>
 				</th>
 				<td>
 					<select id="" class="input_option" name="dslx_dla_enable" onchange='change_dla(this.value);'>
@@ -262,6 +338,7 @@ $("nonstd_vectoring").style.display = (_value == "0") ? "none" : "";
 						<option value="-4608" <% nvram_match("dslx_snrm_offset", "-4608", "selected"); %>>-9 dB</option>
 						<option value="-5120" <% nvram_match("dslx_snrm_offset", "-5120", "selected"); %>>-10 dB</option>
 					</select>
+					<span id="id_sta_adj_adsl" style="display:none;margin-left:10px;"></span>
 				</td>
 			</tr>
 
@@ -270,7 +347,7 @@ $("nonstd_vectoring").style.display = (_value == "0") ? "none" : "";
 					<a class="hintstyle" href="javascript:void(0);" onClick="openHint(25,13);">Rx AGC GAIN Adjustment (ADSL)</a>
 				</th>
 				<td>
-					<select id="" class="input_option" name="dslx_adsl_rx_agc">
+					<select id="dslx_adsl_rx_agc" class="input_option" name="dslx_adsl_rx_agc">
 						<option value="Default" <% nvram_match("dslx_adsl_rx_agc", "Default", "selected"); %>>Default</option>
 						<option value="Stable" <% nvram_match("dslx_adsl_rx_agc", "Stable", "selected"); %>>Stable</option>
 						<option value="High Performance" <% nvram_match("dslx_adsl_rx_agc", "High Performance", "selected"); %>>High Performance</option>
@@ -285,6 +362,7 @@ $("nonstd_vectoring").style.display = (_value == "0") ? "none" : "";
 				<td>
 					<select id="" class="input_option" name="dslx_vdsl_target_snrm">
 						<option value="32767" <% nvram_match("dslx_vdsl_target_snrm", "32767", "selected"); %>><#btn_Disabled#></option>
+						<option value="2048" <% nvram_match("dslx_vdsl_target_snrm", "2048", "selected"); %>>4 dB</option>
 						<option value="2560" <% nvram_match("dslx_vdsl_target_snrm", "2560", "selected"); %>>5 dB</option>
 						<option value="3072" <% nvram_match("dslx_vdsl_target_snrm", "3072", "selected"); %>>6 dB</option>
 						<option value="3584" <% nvram_match("dslx_vdsl_target_snrm", "3584", "selected"); %>>7 dB</option>
@@ -312,11 +390,12 @@ $("nonstd_vectoring").style.display = (_value == "0") ? "none" : "";
 						<option value="14848" <% nvram_match("dslx_vdsl_target_snrm", "14848", "selected"); %>>29 dB</option>
 						<option value="15360" <% nvram_match("dslx_vdsl_target_snrm", "15360", "selected"); %>>30 dB</option>
 					</select>
+					<span id="id_sta_adj_vdsl" style="display:none;margin-left:10px;"></span>
 				</td>
 			</tr>
 
 			<!--dslx_vdsl_tx_gain_off-->
-			<tr>
+			<tr id="id_vdtxpwrtestmode">
 				<th>
 					<a class="hintstyle" href="javascript:void(0);" onClick="openHint(25,5);">Tx Power Control (VDSL)</a>
 				</th>
@@ -344,7 +423,7 @@ $("nonstd_vectoring").style.display = (_value == "0") ? "none" : "";
 					<a class="hintstyle" href="javascript:void(0);" onClick="openHint(25,6);">Rx AGC GAIN Adjustment (VDSL)</a>
 				</th>
 				<td>
-					<select id="" class="input_option" name="dslx_vdsl_rx_agc">
+					<select id="dslx_vdsl_rx_agc" class="input_option" name="dslx_vdsl_rx_agc">
 						<option value="65535" <% nvram_match("dslx_vdsl_rx_agc", "65535", "selected"); %>>Default</option>
 						<option value="394" <% nvram_match("dslx_vdsl_rx_agc", "394", "selected"); %>>Stable</option>
 						<option value="476" <% nvram_match("dslx_vdsl_rx_agc", "476", "selected"); %>>Balance</option>
@@ -366,6 +445,31 @@ $("nonstd_vectoring").style.display = (_value == "0") ? "none" : "";
 					</select>
 				</td>
 			</tr>
+
+			<tr>
+				<th>
+					<a class="hintstyle" href="javascript:void(0);" onClick="openHint(25,16);">ESNP - Enhanced Sudden Noise Protection (ADSL)</a>
+				</th>
+				<td>
+					<select id="dslx_adsl_esnp" class="input_option" name="dslx_adsl_esnp">
+						<option value="0" <% nvram_match("dslx_adsl_esnp", "0", "selected"); %>>Default</option>
+						<option value="1" <% nvram_match("dslx_adsl_esnp", "1", "selected"); %>>Stable</option>
+					</select>
+				</td>
+			</tr>
+			<tr>
+				<th>
+					<a class="hintstyle" href="javascript:void(0);" onClick="openHint(25,16);">ESNP - Enhanced Sudden Noise Protection (VDSL)</a>
+				</th>
+				<td>
+					<span id="dslx_vdsl_esnp_read" name="dslx_vdsl_esnp_read" style="display:none;color:#FFFFFF;"></span>
+					<select id="dslx_vdsl_esnp" class="input_option" name="dslx_vdsl_esnp">
+						<option value="0" <% nvram_match("dslx_vdsl_esnp", "0", "selected"); %>>Default</option>
+						<option value="1" <% nvram_match("dslx_vdsl_esnp", "1", "selected"); %>>Stable</option>
+					</select>
+				</td>
+			</tr>
+			
 			<tr>
 				<th>
 					<a class="hintstyle" href="javascript:void(0);" onClick="openHint(25,2);"><#dslsetting_SRA#></a>
@@ -407,6 +511,8 @@ $("nonstd_vectoring").style.display = (_value == "0") ? "none" : "";
 					<select id="" class="input_option" name="dslx_vdsl_profile">
 						<option value="0" <% nvram_match("dslx_vdsl_profile", "0", "selected"); %>>30a multi mode</option>
 						<option value="1" <% nvram_match("dslx_vdsl_profile", "1", "selected"); %>>17a multi mode</option>
+						<option value="2" <% nvram_match("dslx_vdsl_profile", "2", "selected"); %>>12a multi mode</option>
+						<option value="3" <% nvram_match("dslx_vdsl_profile", "3", "selected"); %>>8a multi mode</option>
 					</select>
 				</td>
 			</tr>

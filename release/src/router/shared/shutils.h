@@ -251,6 +251,13 @@ static inline char * strcat_r(const char *s1, const char *s2, char *buf)
 /* Return NUL instead of NULL if undefined */
 #define safe_getenv(s) (getenv(s) ? : "")
 
+#define ONE_ENTRANT()                               \
+do {                                                            \
+	static int served = 0;  \
+	if(served ++ > 0)       \
+		return;         \
+} while (0)
+
 //#define dbg(fmt, args...) do { FILE *fp = fopen("/dev/console", "w"); if (fp) { fprintf(fp, fmt, ## args); fclose(fp); } else fprintf(stderr, fmt, ## args); } while (0)
 extern void dbg(const char * format, ...);
 #define dbG(fmt, args...) dbg("%s(0x%04x): " fmt , __FUNCTION__ , __LINE__, ## args)
@@ -340,4 +347,23 @@ int ure_any_enabled(void);
 #define vstrsep(buf, sep, args...) _vstrsep(buf, sep, args, NULL)
 extern int _vstrsep(char *buf, const char *sep, ...);
 
+/* Buffer structure for collecting string-formatted data
+ * using str_bprintf() API.
+ * Use str_binit() to initialize before use
+ */
+struct strbuf {
+        char *buf;              /* pointer to current position in origbuf */
+        unsigned int size;      /* current (residual) size in bytes */
+        char *origbuf;          /* unmodified pointer to orignal buffer */
+        unsigned int origsize;  /* unmodified orignal buffer size in bytes */
+};
+
+extern void str_binit(struct strbuf *b, char *buf, unsigned int size);
+extern int str_bprintf(struct strbuf *b, const char *fmt, ...);
+
 #endif /* _shutils_h_ */
+
+extern int strArgs(int argc, char **argv, char *fmt, ...);
+extern char *trimNL(char *str);
+extern pid_t get_pid_by_name(char *name);
+extern char *get_process_name_by_pid(const int pid);

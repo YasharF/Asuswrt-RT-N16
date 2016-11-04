@@ -15,7 +15,7 @@ LDFLAGS =  -L$(TOP)/curl-7.21.7/lib/.libs  -L$(TOP)/libxml2/.libs  -L$(TOP)/open
 LIBS = -lcurl -lxml2 -lssl -lcrypto -lpthread -ldl -lnvram -lm
 
 ifeq ($(RTCONFIG_BCMARM),y)
-CFLAGS += -DHAVE_TYPE_FLOAT
+CFLAGS += -DTYPEDEF_FLOAT_T
 endif
 
 ifeq ($(RTCONFIG_QTN),y)
@@ -29,7 +29,7 @@ else
 all: asuswebstorage
 endif
 
-asuswebstorage: asuswebstorage.o api.o function.o list.o
+asuswebstorage: asuswebstorage.o api.o function.o list.o mem_pool.o
 	$(CC) $(CFLAGS) $(LDFLAGS) $(LIBS)  $^ -o $@ 
 
 

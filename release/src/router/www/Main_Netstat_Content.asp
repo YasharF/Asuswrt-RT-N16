@@ -10,64 +10,20 @@
 <title><#Network_Tools#> - Netstat</title>
 <link rel="stylesheet" type="text/css" href="index_style.css"> 
 <link rel="stylesheet" type="text/css" href="form_style.css">
+<link rel="stylesheet" type="text/css" href="device-map/device-map.css">
 <script language="JavaScript" type="text/javascript" src="/state.js"></script>
 <script language="JavaScript" type="text/javascript" src="/general.js"></script>
 <script language="JavaScript" type="text/javascript" src="/popup.js"></script>
 <script language="JavaScript" type="text/javascript" src="/help.js"></script>
 <script language="JavaScript" type="text/javascript" src="/validator.js"></script>
-<script language="JavaScript" type="text/javascript" src="/jquery.js"></script>
+<script language="JavaScript" type="text/javascript" src="/js/jquery.js"></script>
 <script language="JavaScript" type="text/javascript" src="/client_function.js"></script>
-<style>
-#ClientList_Block_PC{
-	border:1px outset #999;
-	background-color:#576D73;
-	position:absolute;
-	*margin-top:26px;
-	margin-left:3px;
-	*margin-left:-129px;
-	width:255px;
-	text-align:left;	
-	height:auto;
-	overflow-y:auto;
-	z-index:200;
-	padding: 1px;
-	display:none;
-}
-#ClientList_Block_PC div{
-	background-color:#576D73;
-	height:auto;
-	*height:20px;
-	line-height:20px;
-	text-decoration:none;
-	font-family: Lucida Console;
-	padding-left:2px;
-}
-
-#ClientList_Block_PC a{
-	background-color:#EFEFEF;
-	color:#FFF;
-	font-size:12px;
-	font-family:Arial, Helvetica, sans-serif;
-	text-decoration:none;	
-}
-#ClientList_Block_PC div:hover, #ClientList_Block a:hover{
-	background-color:#3366FF;
-	color:#FFFFFF;
-	cursor:default;
-}	
-</style>	
 <script>
 option_netstat = new Array("<#sockets_all#>","<#sockets_TCP#>","<#sockets_UDP#>","<#sockets_RAW#>","<#sockets_UNIX#>","<#sockets_listening#>","<#Display_routingtable#>");
 optval_netstat = new Array("-a","-t","-u","-w","-x","-l","-r");
 option_netstat_nat = new Array("<#Netstatnat_option1#>", "<#Netstatnat_option2#>", "<#Netstatnat_option3#>");
 optval_netstat_nat = new Array("-L","-s","-S");
-	
-function key_event(evt){
-	if(evt.keyCode != 27 || isMenuopen == 0) 
-		return false;
-	pullLANIPList(document.getElementById("pull_arrow"));
-}	
-	
+
 function onSubmitCtrl(o, s) {
 	if(validForm()){
 			document.form.action_mode.value = s;
@@ -77,7 +33,7 @@ function onSubmitCtrl(o, s) {
 
 function init(){
 	show_menu();
-	showLANIPList();
+	showDropdownClientList('setClientIP', 'ip', 'all', 'ClientList_Block_PC', 'pull_arrow', 'online');
 
 	if(downsize_4m_support){
 		for (var i = 0; i < document.form.cmdMethod.options.length; i++) {
@@ -108,11 +64,11 @@ function updateOptions(){
 	setTimeout("checkCmdRet();", 500);
 }
 
-var $j = jQuery.noConflict();
+
 var _responseLen;
 var noChange = 0;
 function checkCmdRet(){
-	$j.ajax({
+	$.ajax({
 		url: '/cmdRet_check.htm',
 		dataType: 'html',
 		
@@ -159,17 +115,17 @@ function checkCmdRet(){
 
 function hideCNT(obj){
 	if(obj.value == "netstat-nat"){		
-		$("cmdDesc").innerHTML = "Display NAT connections.";
+		document.getElementById("cmdDesc").innerHTML = "Display NAT connections.";
 		addNetOption(document.form.NetOption, option_netstat_nat, optval_netstat_nat);
 		append_value(document.form.NetOption);
-		$('ExtOption_tr').style.display = "";
-		$('resolvename').style.display = "none";
+		document.getElementById('ExtOption_tr').style.display = "";
+		document.getElementById('resolvename').style.display = "none";
 	}
 	else{
-		$("cmdDesc").innerHTML = "<#NetworkTools_Info#>";	
+		document.getElementById("cmdDesc").innerHTML = "<#NetworkTools_Info#>";	
 		addNetOption(document.form.NetOption, option_netstat, optval_netstat);
-		$('ExtOption_tr').style.display = "none";
-		$('resolvename').style.display = "";
+		document.getElementById('ExtOption_tr').style.display = "none";
+		document.getElementById('resolvename').style.display = "";
 	}
 }
 
@@ -185,15 +141,13 @@ function addNetOption(obj, opt, val){
 function append_value(obj){
 	if(document.form.cmdMethod.value == "netstat-nat"
 			&& obj.value == "-s"){
-				$('targetip_tr').style.display = "";		
-				$('targetip').style.display = "";
+				document.getElementById('targetip_tr').style.display = "";		
+				document.getElementById('targetip').style.display = "";
 	}else{
-				$('targetip_tr').style.display = "none";
+				document.getElementById('targetip_tr').style.display = "none";
 	}
 }
 
-var over_var = 0;
-var isMenuopen = 0;
 function hideClients_Block(evt){
 	if(typeof(evt) != "undefined"){
 		if(!evt.srcElement)
@@ -204,49 +158,24 @@ function hideClients_Block(evt){
 		}
 	}	
 	
-	$("pull_arrow").src = "/images/arrow-down.gif";
-	$('ClientList_Block_PC').style.display='none';
-	isMenuopen = 0;
+	document.getElementById("pull_arrow").src = "/images/arrow-down.gif";
+	document.getElementById('ClientList_Block_PC').style.display='none';
 }
 
 function pullLANIPList(obj){
-	
+	var element = document.getElementById('ClientList_Block_PC');
+	var isMenuopen = element.offsetWidth > 0 || element.offsetHeight > 0;
 	if(isMenuopen == 0){		
 		obj.src = "/images/arrow-top.gif"
-		$("ClientList_Block_PC").style.display = 'block';		
-		isMenuopen = 1;
+		element.style.display = 'block';
 	}
 	else
 		hideClients_Block();
 }
 
-function showLANIPList(){
-	if(clientList.length == 0){
-		setTimeout("showLANIPList();", 500);
-		return false;
-	}
-
-	var htmlCode = "";
-	for(var i=0; i<clientList.length;i++){
-		var clientObj = clientList[clientList[i]];
-
-		if(clientObj.ip == "offline") clientObj.ip = "";
-		if(clientObj.name.length > 20) clientObj.name = clientObj.name.substring(0, 16) + "..";
-
-		htmlCode += '<a><div onmouseover="over_var=1;" onmouseout="over_var=0;" onclick="setClientIP(\'';
-		htmlCode += clientObj.ip;
-		htmlCode += '\');"><strong>';
-		htmlCode += clientObj.name;
-		htmlCode += '</strong></div></a><!--[if lte IE 6.5]><iframe class="hackiframe2"></iframe><![endif]-->';	
-	}
-
-	$("ClientList_Block_PC").innerHTML = htmlCode;
-}
-
 function setClientIP(ipaddr){
 	document.form.targetip.value = ipaddr;
 	hideClients_Block();
-	over_var = 0;
 }
 
 function validForm(){
@@ -262,7 +191,7 @@ function validForm(){
 }
 </script>
 </head>
-<body onkeydown="key_event(event);" onclick="if(isMenuopen){hideClients_Block(event)}" onload="init();">
+<body onload="init();">
 <div id="TopBanner"></div>
 <div id="Loading" class="popup_bg"></div>
 <iframe name="hidden_frame" id="hidden_frame" src="" width="0" height="0" frameborder="0"></iframe>
@@ -314,10 +243,10 @@ function validForm(){
 											<td>
 												<select id="NetOption" class="input_option" name="NetOption" onChange="append_value(this);">
 													<option value="-a"><#sockets_all#></option>
-													<option value="-t"><#sockets_TCP#></option>
-													<option value="-u"><#sockets_UDP#></option>
+													<option value="-ta"><#sockets_TCP#></option>
+													<option value="-ua"><#sockets_UDP#></option>
 													<option value="-w"><#sockets_RAW#></option>
-													<option value="-x"><#sockets_UNIX#></option>
+													<option value="-xa"><#sockets_UNIX#></option>
 													<option value="-l"><#sockets_listening#></option>
 													<option value="-r"><#Display_routingtable#></option>
  												</select>	
@@ -326,9 +255,9 @@ function validForm(){
 										<tr id="targetip_tr" style="display:none;">
 											<th width="20%"><#NetworkTools_target#> IP</th>
 											<td>
-													<input type="text" id="targetip" class="input_15_table" maxlength="15" name="targetip" onKeyPress="return validator.isIPAddr(this,event)" onClick="hideClients_Block();">
-												<img id="pull_arrow" height="14px;" src="/images/arrow-down.gif" style="position:absolute;*margin-left:-3px;*margin-top:1px;" onclick="pullLANIPList(this);" title="<#select_device_name#>" onmouseover="over_var=1;" onmouseout="over_var=0;">
-												<div id="ClientList_Block_PC" class="ClientList_Block_PC"></div>
+													<input type="text" id="targetip" class="input_15_table" maxlength="15" name="targetip" onKeyPress="return validator.isIPAddr(this,event)" onClick="hideClients_Block();" autocorrect="off" autocapitalize="off">
+												<img id="pull_arrow" height="14px;" src="/images/arrow-down.gif" style="position:absolute;*margin-left:-3px;*margin-top:1px;" onclick="pullLANIPList(this);" title="<#select_device_name#>">
+												<div id="ClientList_Block_PC" class="clientlist_dropdown" style="margin-left:2px;"></div>
 											</td>										
 										</tr>										
 										<tr id="ExtOption_tr" style="display:none;">
@@ -379,7 +308,6 @@ function validForm(){
 </body>
 <script type="text/javascript">
 <!--[if !IE]>-->
-	jQuery.noConflict();
 	(function($){
 		var textArea = document.getElementById('textarea');
 		textArea.scrollTop = textArea.scrollHeight;

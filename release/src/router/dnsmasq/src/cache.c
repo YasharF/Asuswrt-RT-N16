@@ -265,10 +265,11 @@ char *cache_get_name(struct crec *crecp)
 
 char *cache_get_cname_target(struct crec *crecp)
 {
-  if (crecp->addr.cname.uid != SRC_INTERFACE)
-    return cache_get_name(crecp->addr.cname.target.cache);
+  if ((crecp->flags & F_CONFIG) &&
+      crecp->addr.cname.uid == SRC_INTERFACE)
+    return crecp->addr.cname.target.int_name->name;
 
-  return crecp->addr.cname.target.int_name->name;
+  return cache_get_name(crecp->addr.cname.target.cache);
 }
 
 
@@ -481,7 +482,7 @@ struct crec *cache_insert(char *name, struct all_addr *addr,
 	 existing record is for an A or AAAA and
 	 the record we're trying to insert is the same, 
 	 just drop the insert, but don't error the whole process. */
-      if ((flags & (F_IPV4 | F_IPV6)) && (flags & F_FORWARD))
+      if ((flags & (F_IPV4 | F_IPV6)) && (flags & F_FORWARD) && addr)
 	{
 	  if ((flags & F_IPV4) && (new->flags & F_IPV4) &&
 	      new->addr.addr.addr.addr4.s_addr == addr->addr.addr4.s_addr)
@@ -1367,7 +1368,7 @@ int cache_make_stat(struct txt_record *t)
 		}
 	    port = prettyprint_addr(&serv->addr, daemon->addrbuff);
 	    lenp = p++; /* length */
-	    bytes_avail = (p - buff) + bufflen;
+	    bytes_avail = bufflen - (p - buff );
 	    bytes_needed = snprintf(p, bytes_avail, "%s#%d %u %u", daemon->addrbuff, port, queries, failed_queries);
 	    if (bytes_needed >= bytes_avail)
 	      {
@@ -1381,7 +1382,7 @@ int cache_make_stat(struct txt_record *t)
 		lenp = p - 1;
 		buff = new;
 		bufflen = newlen;
-		bytes_avail = (p - buff) + bufflen;
+		bytes_avail =  bufflen - (p - buff );
 		bytes_needed = snprintf(p, bytes_avail, "%s#%d %u %u", daemon->addrbuff, port, queries, failed_queries);
 	      }
 	    *lenp = bytes_needed;
@@ -1398,6 +1399,20 @@ int cache_make_stat(struct txt_record *t)
   *buff = len;
   return 1;
 }
+
+/* There can be names in the cache containing control chars, don't 
+   mess up logging or open security holes. */
+static char *sanitise(char *name)
+{
+  unsigned char *r;
+  if (name)
+    for (r = (unsigned char *)name; *r; r++)
+      if (!isprint((int)*r))
+	return "<name unprintable>";
+
+  return name;
+}
+
 
 void dump_cache(time_t now)
 {
@@ -1452,9 +1467,9 @@ void dump_cache(time_t now)
 	    *a = 0;
 	    if (strlen(n) == 0 && !(cache->flags & F_REVERSE))
 	      n = "<Root>";
-	    p += sprintf(p, "%-30.30s ", n);
+	    p += sprintf(p, "%-30.30s ", sanitise(n));
 	    if ((cache->flags & F_CNAME) && !is_outdated_cname_pointer(cache))
-	      a = cache_get_cname_target(cache);
+	      a = sanitise(cache_get_cname_target(cache));
 #ifdef HAVE_DNSSEC
 	    else if (cache->flags & F_DS)
 	      {
@@ -1586,6 +1601,8 @@ void log_query(unsigned int flags, char *name, struct all_addr *addr, char *arg)
   
   if (!option_bool(OPT_LOG))
     return;
+
+  name = sanitise(name);
 
   if (addr)
     {

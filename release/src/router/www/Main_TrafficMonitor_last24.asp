@@ -4,8 +4,7 @@
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 <meta HTTP-EQUIV="Pragma" CONTENT="no-cache">
 <meta HTTP-EQUIV="Expires" CONTENT="-1">
-<meta http-equiv="X-UA-Compatible" content="IE=EmulateIE7" />
-<meta name="svg.render.forceflash" content="false" />
+<meta http-equiv="X-UA-Compatible" content="IE=Edge" />
 <title><#Web_Title#> - <#traffic_monitor#> : <#menu4_2_2#></title>
 <link rel="stylesheet" type="text/css" href="index_style.css"> 
 <link rel="stylesheet" type="text/css" href="form_style.css">
@@ -14,7 +13,6 @@
 <link rel="shortcut icon" href="images/favicon.png">
 <link rel="icon" href="images/favicon.png">
 <script language="JavaScript" type="text/javascript" src="help.js"></script>
-<script src='svg.js' data-path="/svghtc/" data-debug="false"></script>	
 <script language="JavaScript" type="text/javascript" src="/state.js"></script>
 <script language="JavaScript" type="text/javascript" src="/general.js"></script>
 <script language="JavaScript" type="text/javascript" src="/tmmenu.js"></script>
@@ -173,6 +171,9 @@ function init()
 	initCommon(1, 0, 0, 1);	   //Viz 2010.09
 	ref.initX();
 	document.getElementById("faq0").href = "http://www.asus.com"+ href_lang +"support/Search-Result-Detail/69B50762-C9C0-15F1-A5B8-C7B652F50ACF/?keyword=ASUSWRT%20Traffic%20Monitor" ;
+	if(bwdpi_support){
+		document.getElementById('content_title').innerHTML = "<#menu5_3_2#> - <#traffic_monitor#>";
+	}	
 }
 
 function switchPage(page){
@@ -254,7 +255,7 @@ function Zoom(func){
 						<table width="100%" >
 							<tr>
 							<td  class="formfonttitle" align="left">								
-										<div style="margin-top:5px;"><#Menu_TrafficManager#> - <#traffic_monitor#></div>
+										<div id="content_title" style="margin-top:5px;"><#Menu_TrafficManager#> - <#traffic_monitor#></div>
 									</td>
 							<td>
      						<div align="right">

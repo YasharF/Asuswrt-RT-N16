@@ -21,7 +21,7 @@ function initial(){
 	show_menu();
 
 	if(!rrsut_support)
-		$("rrsLink").style.display = "none";
+		document.getElementById("rrsLink").style.display = "none";		
 }
 </script>
 </head>
@@ -32,8 +32,8 @@ function initial(){
 <form method="post" name="form" action="/start_apply.htm" target="hidden_frame">
 <input type="hidden" name="preferred_lang" id="preferred_lang" value="<% nvram_get("preferred_lang"); %>">
 <input type="hidden" name="firmver" value="<% nvram_get("firmver"); %>">
-<input type="hidden" name="current_page" value="cloud_settings.asp">
-<input type="hidden" name="next_page" value="cloud_settings.asp">
+<input type="hidden" name="current_page" value="cloud_syslog.asp">
+<input type="hidden" name="next_page" value="cloud_syslog.asp">
 <input type="hidden" name="action_mode" value="apply">
 <input type="hidden" name="action_script" value="restart_webdav">
 <input type="hidden" name="action_wait" value="3">
@@ -54,7 +54,7 @@ function initial(){
 							<a href="cloud_main.asp"><div class="tab"><span>AiCloud 2.0</span></div></a>
 						</td>
 						<td>
-							<a href="cloud_sync.asp"><div class="tab"><span><#smart_sync#></span></div></a>
+							<a id="smart_sync_link" href="cloud_sync.asp"><div class="tab"><span><#smart_sync#></span></div></a>
 						</td>
 						<td>
 							<a id="rrsLink" href="cloud_router_sync.asp"><div class="tab"><span><#Server_Sync#></span></div></a>

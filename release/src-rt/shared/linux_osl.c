@@ -611,8 +611,18 @@ osl_pktfastfree(osl_t *osh, struct sk_buff *skb)
 #endif
 
 	ctfpool = (ctfpool_t *)CTFPOOLPTR(osh, skb);
-//	ASSERT(ctfpool != NULL);
-	if (ctfpool == NULL) return;
+#if 0
+	ASSERT(ctfpool != NULL);
+#else
+	if (ctfpool == NULL) {
+		if (skb->destructor)
+			dev_kfree_skb_any(skb);
+		else
+			dev_kfree_skb(skb);
+
+		return;
+	}
+#endif
 
 	/* Add object to the ctfpool */
 	CTFPOOL_LOCK(ctfpool, flags);

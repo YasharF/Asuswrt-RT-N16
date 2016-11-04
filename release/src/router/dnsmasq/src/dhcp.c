@@ -225,10 +225,11 @@ void dhcp_packet(time_t now, int pxe_fd)
   strncpy(arp_req.arp_dev, ifr.ifr_name, 16);
 #endif 
 
-   /* One form of bridging on BSD has the property that packets
-      can be recieved on bridge interfaces which do not have an IP address.
-      We allow these to be treated as aliases of another interface which does have
-      an IP address with --dhcp-bridge=interface,alias,alias */
+  /* If the interface on which the DHCP request was received is an
+     alias of some other interface (as specified by the
+     --bridge-interface option), change ifr.ifr_name so that we look
+     for DHCP contexts associated with the aliased interface instead
+     of with the aliasing one. */
   for (bridge = daemon->bridges; bridge; bridge = bridge->next)
     {
       for (alias = bridge->alias; alias; alias = alias->next)
@@ -236,7 +237,9 @@ void dhcp_packet(time_t now, int pxe_fd)
 	  {
 	    if (!(iface_index = if_nametoindex(bridge->iface)))
 	      {
-		my_syslog(LOG_WARNING, _("unknown interface %s in bridge-interface"), ifr.ifr_name);
+		my_syslog(MS_DHCP | LOG_WARNING,
+			  _("unknown interface %s in bridge-interface"),
+			  bridge->iface);
 		return;
 	      }
 	    else 
@@ -449,8 +452,13 @@ void dhcp_packet(time_t now, int pxe_fd)
 #endif
   
   while(retry_send(sendmsg(fd, &msg, 0)));
+
+  /* This can fail when, eg, iptables DROPS destination 255.255.255.255 */
+  if (errno != 0)
+    my_syslog(MS_DHCP | LOG_WARNING, _("Error sending DHCP packet to %s: %s"),
+	      inet_ntoa(dest.sin_addr), strerror(errno));
 }
- 
+
 /* check against secondary interface addresses */
 static int check_listen_addrs(struct in_addr local, int if_index, char *label,
 			      struct in_addr netmask, struct in_addr broadcast, void *vparam)

@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
 <html xmlns:v>
 <head>
-<meta http-equiv="X-UA-Compatible" content="IE=EmulateIE7"/>
+<meta http-equiv="X-UA-Compatible" content="IE=Edge"/>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <meta HTTP-EQUIV="Pragma" CONTENT="no-cache">
 <meta HTTP-EQUIV="Expires" CONTENT="-1">
@@ -15,7 +15,7 @@
 <script language="JavaScript" type="text/javascript" src="/general.js"></script>
 <script language="JavaScript" type="text/javascript" src="/popup.js"></script>
 <script type="text/javascript" language="JavaScript" src="/help.js"></script>
-<script type="text/javascript" src="/jquery.js"></script>
+<script type="text/javascript" src="/js/jquery.js"></script>
 
 <style type="text/css">
 .contentM_qis{
@@ -34,10 +34,10 @@
 </style>
 
 <script>
-var $j = jQuery.noConflict();
+
 
 window.onresize = cal_panel_block;
-tr_enable = '<% nvram_get("tr_enable"); %>';
+var tr_discovery = '<% nvram_get("tr_discovery"); %>';
 
 var jffs2_support = isSupport("jffs2");
 
@@ -47,29 +47,58 @@ function initial(){
 	show_menu();
 	//load_body();
 
+	enable_discovery(document.form.tr_discovery.value != '0');
+
 	//if(based_modelid != "RT-AC68U" && based_modelid != "RT-AC66U" && based_modelid != "RT-N66U"
 	// && based_modelid != "RT-N18U")
 	if(!jffs2_support)
 		showhide("cert_text", false);
 }
 
+function validForm(){
+	if (document.form.tr_enable[0].checked &&
+	    document.form.tr_discovery.value == '0' &&
+	    document.form.tr_acs_url.value == "") {
+		alert("<#JS_fieldblank#>");
+		document.form.tr_acs_url.focus();
+		document.form.tr_acs_url.select();
+		return false;
+	}
+
+	return true;
+}
+
 function applyRule(){
-	showLoading();
-	document.form.submit();	
+	if (validForm()) {
+		if (document.form.tr_discovery.value != tr_discovery) {
+			if (document.form.tr_discovery.value != '0')
+				document.form.tr_acs_url.value = "";
+			document.form.action_script.value += ";restart_wan_if";
+		}
+
+		showLoading();
+		document.form.submit();	
+	}
 }
 
 function done_validating(action){
 	refreshpage();
 }
 
+function enable_discovery(flag){
+	document.form.tr_acs_url.disabled = flag ? true : false;
+	document.form.tr_acs_url.style.display = flag ? "none" : "";
+	document.getElementById('tr_acs_url_text').style.display = flag ? "" : "none";
+}
+
 function set_cert(){
 	cal_panel_block();
-	$j("#cert_panel").fadeIn(300);	
+	$("#cert_panel").fadeIn(300);	
 }
 
 function cancel_cert_panel(){
 	this.FromObject ="0";
-	$j("#cert_panel").fadeOut(300);	
+	$("#cert_panel").fadeOut(300);	
 	//setTimeout("document.getElementById('edit_tr_ca_cert').value = '<% nvram_clean_get("tr_ca_cert"); %>';", 300);
 	//setTimeout("document.getElementById('edit_tr_client_cert').value = '<% nvram_clean_get("tr_client_cert"); %>';", 300);
 	//setTimeout("document.getElementById('edit_tr_client_key').value = '<% nvram_clean_get("tr_client_key"); %>';", 300);
@@ -106,7 +135,7 @@ function cal_panel_block(){
 
 	}
 
-	$("cert_panel").style.marginLeft = blockmarginLeft+"px";
+	document.getElementById("cert_panel").style.marginLeft = blockmarginLeft+"px";
 }
 </script>
 </head>
@@ -213,7 +242,7 @@ function cal_panel_block(){
 	<tr>
 		  <td bgcolor="#4D595D" valign="top"  >
 		  <div>&nbsp;</div>
-		  <div class="formfonttitle"><#menu5_6#> - TR069</div>
+		  <div class="formfonttitle"><#menu5_6#> - TR-069</div>
 		  <div style="margin-left:5px;margin-top:10px;margin-bottom:10px"><img src="/images/New_ui/export/line_export.png"></div>
 		  <!--<div class="formfontdesc"><#FirewallConfig_display2_sectiondesc#></div>-->
 
@@ -225,7 +254,7 @@ function cal_panel_block(){
 				</thead>	
 
 				<tr>
-					<th>Enable TR069</th>
+					<th>Enable TR-069</th>
 					<td>
 						<input type="radio" name="tr_enable" class="input" value="1" <% nvram_match_x("", "tr_enable", "1", "checked"); %>>Enable
 						<input type="radio" name="tr_enable" class="input" value="0" <% nvram_match_x("", "tr_enable", "0", "checked"); %>>Disable
@@ -233,24 +262,34 @@ function cal_panel_block(){
 				</tr>
 
 				<tr>
-					<th>URL</th>
+					<th>Enable ACS Discovery</th>
 					<td>
-						<input type="text" maxlength="64" name="tr_acs_url" class="input_32_table" value="<% nvram_get("tr_acs_url"); %>" onKeyPress="return is_string(this,event);"/>
-						<span id="cert_text" onclick="set_cert();" style="text-decoration:underline;cursor:pointer;">Import Certificate</span>
+						<input type="radio" name="tr_discovery" class="input" value="1" <% nvram_match_x("", "tr_discovery", "1", "checked"); %> onclick="enable_discovery(1);">Enable
+						<input type="radio" name="tr_discovery" class="input" value="0" <% nvram_match_x("", "tr_discovery", "0", "checked"); %> onclick="enable_discovery(0);">Disable
+					</td>
+				</tr>
+
+
+				<tr>
+					<th>ACS URL</th>
+					<td>
+						<input type="text" maxlength="64" name="tr_acs_url" class="input_32_table" value="<% nvram_get("tr_acs_url"); %>" onKeyPress="return is_string(this,event);" autocorrect="off" autocapitalize="off"/>
+						<div id="tr_acs_url_text" class="input" style="color:#FFFFFF;margin-left: 8px;height: 23px;padding: 1px;"><% nvram_get("tr_acs_url"); %></div>
+						<span id="cert_text" onclick="set_cert();" style="float:right;margin-right:8px;height: 23px;padding: 1px;text-decoration:underline;cursor:pointer;">Import Certificate</span>
 					</td>
 				</tr>
 
 				<tr>
 					<th>User Name</th>
 					<td>
-						<input type="text" maxlength="32" name="tr_username" class="input_15_table" value="<% nvram_get("tr_username"); %>" onKeyPress="return is_string(this,event);"/>
+						<input type="text" maxlength="32" name="tr_username" class="input_15_table" value="<% nvram_get("tr_username"); %>" onKeyPress="return is_string(this,event);" autocorrect="off" autocapitalize="off"/>
 					</td>
 				</tr>
 
 				<tr>
 					<th>Password</th>
 					<td>
-						<input type="password" maxlength="32" name="tr_passwd" class="input_15_table" value="<% nvram_get("tr_passwd"); %>" onKeyPress="return is_string(this,event);"/>
+						<input type="password" maxlength="32" name="tr_passwd" class="input_15_table" value="<% nvram_get("tr_passwd"); %>" onKeyPress="return is_string(this,event);" autocorrect="off" autocapitalize="off"/>
 					</td>
 				</tr>
 			</table>
@@ -265,14 +304,14 @@ function cal_panel_block(){
 				<tr>
 					<th>User Name</th>
 					<td>
-						<input type="text" maxlength="32" name="tr_conn_username" class="input_15_table" value="<% nvram_get("tr_conn_username"); %>" onKeyPress="return is_string(this,event);"/>
+						<input type="text" maxlength="32" name="tr_conn_username" class="input_15_table" value="<% nvram_get("tr_conn_username"); %>" onKeyPress="return is_string(this,event);" autocorrect="off" autocapitalize="off"/>
 					</td>
 				</tr>
 
 				<tr>
 					<th>Password</th>
 					<td>
-						<input type="password" maxlength="32" name="tr_conn_passwd" class="input_15_table" value="<% nvram_get("tr_conn_passwd"); %>" onKeyPress="return is_string(this,event);"/>
+						<input type="password" maxlength="32" name="tr_conn_passwd" class="input_15_table" value="<% nvram_get("tr_conn_passwd"); %>" onKeyPress="return is_string(this,event);" autocorrect="off" autocapitalize="off"/>
 					</td>
 				</tr>
 			</table>
@@ -295,7 +334,7 @@ function cal_panel_block(){
 				<tr>
 					<th>Interval</th>
 					<td>
-						<input type="text" maxlength="10" name="tr_inform_interval" class="input_15_table" value="<% nvram_get("tr_inform_interval"); %>" onKeyPress="return is_number(this,event);"/>
+						<input type="text" maxlength="10" name="tr_inform_interval" class="input_15_table" value="<% nvram_get("tr_inform_interval"); %>" onKeyPress="return is_number(this,event);" autocorrect="off" autocapitalize="off"/>
 					</td>
 				</tr>	
         	</table>

@@ -4,8 +4,7 @@
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 <meta HTTP-EQUIV="Pragma" CONTENT="no-cache">
 <meta HTTP-EQUIV="Expires" CONTENT="-1">
-<meta http-equiv="X-UA-Compatible" content="IE=EmulateIE7" />
-<meta name="svg.render.forceflash" content="false" />	
+<meta http-equiv="X-UA-Compatible" content="IE=Edge" />
 <title><#Web_Title#> - <#traffic_monitor#> : <#menu4_2_1#></title>
 <link rel="stylesheet" type="text/css" href="index_style.css"> 
 <link rel="stylesheet" type="text/css" href="form_style.css">
@@ -14,13 +13,11 @@
 <link rel="shortcut icon" href="images/favicon.png">
 <link rel="icon" href="images/favicon.png">  
 <script language="JavaScript" type="text/javascript" src="help.js"></script>
-<script src='svg.js' data-path="/svghtc/" data-debug="false"></script>	
 <script language="JavaScript" type="text/javascript" src="state.js"></script>
 <script language="JavaScript" type="text/javascript" src="general.js"></script>
 <script language="JavaScript" type="text/javascript" src="tmmenu.js"></script>
 <script language="JavaScript" type="text/javascript" src="tmcal.js"></script>	
 <script language="JavaScript" type="text/javascript" src="popup.js"></script>
-
 <script type='text/javascript'>
 
 <% backup_nvram("wan_ifname,lan_ifname,wl_ifname,wan_proto,web_svg,rstats_colors"); %>
@@ -172,6 +169,9 @@ function init()
 	else{
 		document.getElementById("ctfLevelDesc").style.display = "";
 	}
+	if(bwdpi_support){
+		document.getElementById('content_title').innerHTML = "<#menu5_3_2#> - <#traffic_monitor#>";
+	}	
 }
 
 function switchPage(page){
@@ -231,7 +231,7 @@ function switchPage(page){
 							<table width="100%" >
 							<tr>
 							<td  class="formfonttitle" align="left">								
-										<div style="margin-top:5px;"><#Menu_TrafficManager#> - <#traffic_monitor#></div>
+										<div id="content_title" style="margin-top:5px;"><#Menu_TrafficManager#> - <#traffic_monitor#></div>
 									</td>
 							<td>
      						<div align="right">

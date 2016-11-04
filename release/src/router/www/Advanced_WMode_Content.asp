@@ -49,7 +49,7 @@
 	font-family:Arial, Helvetica, sans-serif;
 	text-decoration:none;	
 }
-#WDSAPList div:hover, #ClientList_Block a:hover{
+#WDSAPList div:hover {
 	background-color:#3366FF;
 	color:#FFFFFF;
 	cursor:default;
@@ -60,13 +60,13 @@
 <script language="JavaScript" type="text/javascript" src="/general.js"></script>
 <script language="JavaScript" type="text/javascript" src="/popup.js"></script>
 <script language="JavaScript" type="text/javascript" src="/validator.js"></script>
-<script language="JavaScript" type="text/JavaScript" src="/jquery.js"></script>
+<script language="JavaScript" type="text/JavaScript" src="/js/jquery.js"></script>
 <script>
 <% wl_get_parameter(); %>
 
 var wl_wdslist_array = '<% nvram_get("wl_wdslist"); %>';
 var wds_aplist = "";
-var $j = jQuery.noConflict();
+
 
 function initial(){
 	show_menu();
@@ -105,7 +105,7 @@ function initial(){
 	}
 
 	wl_bwch_hint();
-	if(based_modelid == "RT-AC55U" || based_modelid == "RT-AC55UHP" || based_modelid == "4G-AC55U")
+	if(Qcawifi_support)
 		wl_vht_hint();
 	setTimeout("wds_scan();", 500);
 }
@@ -234,7 +234,7 @@ function wds_scan(){
 	else if('<% nvram_get("wl_unit"); %>' == '2')
 		var ajaxURL = '/wds_aplist_5g_2.asp';
 
-	$j.ajax({
+	$.ajax({
 		url: ajaxURL,
 		dataType: 'script',
 		
@@ -262,16 +262,18 @@ function rescan(){
 function showLANIPList(){
 	var code = "";
 	var show_name = "";
+	var show_title = "";
 	if(wds_aplist != ""){
 		for(var i = 0; i < wds_aplist.length ; i++){
 			wds_aplist[i][0] = decodeURIComponent(wds_aplist[i][0]);
 			if(wds_aplist[i][0] && wds_aplist[i][0].length > 12)
-				show_name = wds_aplist[i][0].substring(0, 10) + "..";
+				show_name = wds_aplist[i][0].substring(0, 10) + "...";
 			else
 				show_name = wds_aplist[i][0];
-			
+			show_title = wds_aplist[i][0];
+
 			if(wds_aplist[i][1]){
-				code += '<a><div onmouseover="over_var=1;" onmouseout="over_var=0;" onclick="setClientIP('+i+');"><strong>'+show_name+'</strong>';
+				code += '<a><div onmouseover="over_var=1;" onmouseout="over_var=0;" onclick="setClientIP('+i+');" title="'+show_title+'"><strong>'+show_name+'</strong>';
 				if(show_name && show_name.length > 0)
 					code += '( '+wds_aplist[i][1]+')';
 				else
@@ -349,9 +351,9 @@ function wl_bwch_hint(){
 function wl_vht_hint(){ 
 	var u='<% nvram_get("wl_unit"); %>';	
    	if(u=='1')
-	   $("wlvht").style.display ="";  
+	   document.getElementById("wlvht").style.display ="";  
    	else
-	   $("wlvht").style.display ="none";  
+	   document.getElementById("wlvht").style.display ="none";  
 }
 
 </script>
@@ -425,19 +427,19 @@ function wl_vht_hint(){
 										<tr>
 											<th>2.4GHz MAC</th>
 											<td>
-												<input type="text" maxlength="17" class="input_20_table" id="wl0_hwaddr" name="wl0_hwaddr" value="<% nvram_get("wl0_hwaddr"); %>" readonly>
+												<input type="text" maxlength="17" class="input_20_table" id="wl0_hwaddr" name="wl0_hwaddr" value="<% nvram_get("wl0_hwaddr"); %>" readonly autocorrect="off" autocapitalize="off">
 											</td>		
 										</tr>					
 										<tr id="wl_5g_mac">
 											<th id="wl_5g_mac_th1">5GHz MAC</th>
 											<td>
-												<input type="text" maxlength="17" class="input_20_table" id="wl1_hwaddr" name="wl1_hwaddr" value="<% nvram_get("wl1_hwaddr"); %>" readonly>
+												<input type="text" maxlength="17" class="input_20_table" id="wl1_hwaddr" name="wl1_hwaddr" value="<% nvram_get("wl1_hwaddr"); %>" readonly autocorrect="off" autocapitalize="off">
 											</td>		
 										</tr>	
 										<tr id="wl_5g_mac_2" style="display:none">
 											<th>5GHz-2 MAC</th>
 											<td>
-												<input type="text" maxlength="17" class="input_20_table" id="wl2_hwaddr" name="wl2_hwaddr" value="<% nvram_get("wl2_hwaddr"); %>" readonly>
+												<input type="text" maxlength="17" class="input_20_table" id="wl2_hwaddr" name="wl2_hwaddr" value="<% nvram_get("wl2_hwaddr"); %>" readonly autocorrect="off" autocapitalize="off">
 											</td>		
 										</tr>			  
 										<tr id="wl_unit_field">
@@ -496,7 +498,7 @@ function wl_vht_hint(){
 										</tr>
 										<tr>
 											<td width="80%">
-												<input type="text" style="margin-left:220px;float:left;" maxlength="17" class="input_macaddr_table" name="wl_wdslist_0" onKeyPress="return validator.isHWAddr(this,event)">
+												<input type="text" style="margin-left:220px;float:left;" maxlength="17" class="input_macaddr_table" name="wl_wdslist_0" onKeyPress="return validator.isHWAddr(this,event)" autocorrect="off" autocapitalize="off">
 												<img style="float:left;" id="pull_arrow" height="14px;" src="/images/arrow-down.gif" onclick="pullLANIPList(this);" title="<#select_AP#>" onmouseover="over_var=1;" onmouseout="over_var=0;">
 												<div id="WDSAPList" class="WDSAPList">
 													<div style="width:98px">

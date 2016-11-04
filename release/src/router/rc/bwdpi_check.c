@@ -9,7 +9,7 @@ static int count = 0; // real count
 
 void stop_bwdpi_check()
 {
-	eval("killall", "-9", "bwdpi_check");
+	killall_tk("bwdpi_check");
 }
 
 void start_bwdpi_check()
@@ -46,6 +46,9 @@ static void check_dpi_alive()
 		count -= 3;
 		if(count <= 0){
 			stop_dpi_engine_service(1);
+			// force to rebuild traditional qos or bandwidth limtier
+			add_iQosRules(get_wan_ifname(wan_primary_ifunit()));
+			start_iQos();
 			// force to rebuild firewall to avoid some loopback issue
 			start_firewall(wan_primary_ifunit(), 0);
 			pause();

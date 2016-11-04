@@ -61,6 +61,10 @@ ifeq ($(RTCONFIG_BCM7)$(RTCONFIG_HSPOT),y)
 CFLAGS += -DD11AC_IOTYPES
 endif
 
+ifeq ($(RTAC68A), y)
+CFLAGS += -DRTAC68U
+endif
+
 OBJS = shutils.o linux_timer.o defaults.o model.o rtstate.o boardapi.o
 OBJS += misc.o version.o files.o strings.o process.o 
 OBJS += bin_sem_asus.o semaphore.o pids.o notify_rc.o discover.o
@@ -71,6 +75,12 @@ OBJS += et_linux.o bcmwifi_channels.o
 else ifeq ($(RTCONFIG_HSPOT),y)
 OBJS += bcmwifi_channels.o
 endif
+ifeq ($(RTCONFIG_BCM_7114),y)
+OBJS += confmtd_utils.o
+ifeq ($(RTCONFIG_GMAC3),y)
+OBJS += et_linux.o
+endif
+endif
 
 ifeq ($(RTCONFIG_RALINK),y)
 OBJS += $(TOP)/wireless_tools/iwlib.o
@@ -78,7 +88,7 @@ OBJS += flash_mtd.o api-ralink.o
 ifeq ($(RTCONFIG_RALINK_RT3052),y)
 OBJS += ra3052.o
 endif
-ifeq ($(RTN14U)$(RTAC52U)$(RTAC51U)$(RTN11P)$(RTN54U)$(RTAC1200HP)$(RTN56UB1)$(RTAC54U),y)
+ifeq ($(RTN14U)$(RTAC52U)$(RTAC51U)$(RTN11P)$(RTN300)$(RTN54U)$(RTAC1200HP)$(RTN56UB1)$(RTN56UB2)$(RTAC54U),y)
 CFLAGS += -DRA_ESW
 OBJS += mt7620.o
 else
@@ -97,6 +107,10 @@ ifeq ($(RTCONFIG_DSL_TCLINUX),y)
 OBJS += api-tclinux.o
 endif
 ifeq ($(RTCONFIG_EXT_RTL8365MB),y)
+CFLAGS += -I$(LINUXDIR)/drivers/char/rtl8365mb
+OBJS += rtl_8365mb.o
+endif
+ifeq ($(RTCONFIG_EXT_RTL8370MB),y)
 CFLAGS += -I$(LINUXDIR)/drivers/char/rtl8365mb
 OBJS += rtl_8365mb.o
 endif
@@ -129,6 +143,18 @@ endif
 ifeq ($(RTCONFIG_BLINK_LED),y)
 CFLAGS	+= -I$(TOP)/bled
 OBJS	+= bled.o
+endif
+
+ifeq ($(RTCONFIG_QCA_PLC_UTILS),y)
+OBJS	+= $(if $(wildcard plc_utils.c),plc_utils.o,prebuild/plc_utils.o)
+endif
+
+ifeq ($(RTCONFIG_TCODE),y)
+OBJS    += tcode.o
+endif
+
+ifeq ($(RTCONFIG_BCMWL6),y)
+OBJS    += private.o
 endif
 
 vpath %.c sysdeps $(SRCBASE)/shared/ $(WLAN_ComponentSrcDirs)
@@ -172,6 +198,20 @@ install: all
 clean:
 	rm -f *.o *.so *.a .*.depend sysdeps/*.o sysdeps/broadcom/*.o sysdeps/ralink/*.o sysdeps/qtn/*.o
 
+ifeq ($(RTCONFIG_TCODE),y)
+ifneq ($(wildcard ./prebuild/tcode.o),)
+tcode.o:
+	@-cp -f ./prebuild/tcode.o .
+endif
+endif
+
+ifeq ($(RTCONFIG_BCMWL6),y)
+ifneq ($(wildcard ./prebuild/private.o),)
+private.o:
+	@-cp -f ./prebuild/private.o .
+endif
+endif
+
 %.o: %.c .%.depend
 	@echo " [shared] CC $@"
 	@$(CC) $(CFLAGS) -o $@ -c $<
@@ -182,5 +222,5 @@ clean:
 .%.depend: %.c
 	@$(CC) $(CFLAGS) -M $< > $@
 
--include $(OBJS:%.o=.%.depend)
+#-include $(OBJS:%.o=.%.depend)
 

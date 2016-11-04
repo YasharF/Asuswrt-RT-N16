@@ -67,23 +67,26 @@
 <script type="text/javascript" language="JavaScript" src="/help.js"></script>
 <script language="JavaScript" type="text/javascript" src="/general.js"></script>
 <script language="JavaScript" type="text/javascript" src="/popup.js"></script>
-<script language="JavaScript" type="text/javascript" src="/jquery.js"></script>
+<script language="JavaScript" type="text/javascript" src="/js/jquery.js"></script>
 <script>
-
-var $j = jQuery.noConflict();
 var webs_state_update = '<% nvram_get("webs_state_update"); %>';
 var webs_state_upgrade = '<% nvram_get("webs_state_upgrade"); %>';
 var webs_state_error = '<% nvram_get("webs_state_error"); %>';
 var webs_state_info = '<% nvram_get("webs_state_info"); %>';
+var firmver_info = "<% nvram_get("firmver"); %>.<% nvram_get("buildno"); %>_<% nvram_get("extendno"); %>";
 
 var varload = 0;
 var helplink = "";
-
+var dpi_engine_status = <%bwdpi_engine_status();%>;
 function initial(){
 	show_menu();
-
-	if(bwdpi_support) {
-		document.getElementById("sig_ver_field").style.display="";
+	document.getElementById("firmver_word").innerHTML = firmver_info;
+	if(bwdpi_support){
+		if(dpi_engine_status.DpiEngine == 1)
+			document.getElementById("sig_ver_field").style.display="";
+		else
+			document.getElementById("sig_ver_field").style.display="none";
+			
 		var sig_ver = '<% nvram_get("bwdpi_sig_ver"); %>';
 		if(sig_ver == "")
 			document.getElementById("sig_ver_word").innerHTML = "1.008";
@@ -93,6 +96,7 @@ function initial(){
 
 	if(!live_update_support || !HTTPS_support){
 		document.getElementById("update").style.display = "none";
+		document.getElementById("linkpage_div").style.display = "";
 		document.getElementById("linkpage").style.display = "";
 		helplink = get_helplink();
 		document.getElementById("linkpage").href = helplink;
@@ -103,77 +107,66 @@ function initial(){
 		if('<% nvram_get("webs_state_update"); %>' != '')
 			detect_firmware("initial");
 	}
-}
 
-function get_helplink(){
-
-			var href_lang = get_supportsite_lang();
-			var model_name_supportsite = based_modelid.replace("-", "");
-			if(based_modelid =="RT-N12" || hw_ver.search("RTN12") != -1){   //MODELDEP : RT-N12
-				if( hw_ver.search("RTN12HP") != -1){    //RT-N12HP
-                                	var getlink="http://www.asus.com"+ href_lang +"Networking/RTN12HP/HelpDesk_Download/";
-				}else if(hw_ver.search("RTN12B1") != -1){ //RT-N12B1
-					var getlink="http://www.asus.com"+ href_lang +"Networking/RTN12_B1/HelpDesk_Download/";
-				}else if(hw_ver.search("RTN12C1") != -1){ //RT-N12C1
-					var getlink="http://www.asus.com"+ href_lang +"Networking/RTN12_C1/HelpDesk_Download/";
-				}else if(hw_ver.search("RTN12D1") != -1){ //RT-N12D1
-					var getlink="http://www.asus.com"+ href_lang +"Networking/RTN12_D1/HelpDesk_Download/";
-				}else{  //RT-N12
-					var getlink="http://www.asus.com"+ href_lang +"Networking/"+ model_name_supportsite +"/HelpDesk_Download/";
-				}
-			}
-			else if(productid == "DSL-N55U"){	//MODELDEP : DSL-N55U	US site
-				var getlink="http://www.asus.com/Networking/DSLN55U_Annex_A/HelpDesk_Download/";
-			}
-			else if(productid == "DSL-N55U-B"){	//MODELDEP : DSL-N55U-B   US site
-				var getlink="http://www.asus.com/Networking/DSLN55U_Annex_B/HelpDesk_Download/";
-			}
-			else{
-				if(based_modelid == "DSL-AC68U" || based_modelid == "DSL-AC68R" || based_modelid == "RT-N11P" || based_modelid == "RT-N12+")
-					href_lang = "/us/"; //MODELDEP:  US site
-				if(based_modelid == "RT-N12+")
-					model_name_supportsite = "RTN12Plus";	//MODELDEP: RT-N12+
-				var getlink="http://www.asus.com"+href_lang+"Networking/" +model_name_supportsite+ "/HelpDesk_Download/";
-			}
-		
-			return getlink;
+	if(based_modelid == "RT-AC68R"){	//MODELDEP	//id: asus_link is in string tag #FW_desc0#
+		document.getElementById("asus_link").href = "http://www.asus.com/us/supportonly/RT-AC68R/";
+		document.getElementById("asus_link").innerHTML = "http://www.asus.com/us/supportonly/RT-AC68R/";
+	}
+	
+	if(based_modelid == "RT-AC68A"){	//MODELDEP : Spec special fine tune
+		document.getElementById("fw_note2").style.display = "none";
+		document.getElementById("fw_note3").style.display = "none";
+		inputCtrl(document.form.file, 0);
+		inputCtrl(document.form.upload, 0);
+	}
+	else{
+		inputCtrl(document.form.file, 1);
+		inputCtrl(document.form.upload, 1);
+	}
 }
 
 var exist_firmver="<% nvram_get("firmver"); %>";
 var dead = 0;
 function detect_firmware(flag){
-
-	$j.ajax({
+	$.ajax({
 		url: '/detect_firmware.asp',
 		dataType: 'script',
-
 		error: function(xhr){
 			dead++;
 			if(dead < 30)
 				setTimeout("detect_firmware();", 1000);
 			else{
+					$("#update").show();
   				document.getElementById('update_scan').style.display="none";
-  				document.getElementById('update_states').innerHTML="<#connect_failed#>";
+  				document.getElementById('update_states').innerHTML="<#connect_failed#>";  				
 			}
 		},
 
 		success: function(){
   			if(webs_state_update==0){
-				setTimeout("detect_firmware();", 1000);
+					setTimeout("detect_firmware();", 1000);
   			}
   			else{	// got wlan_update.zip
-				if(webs_state_error==1){
+				if(webs_state_error == "1"){	//1:wget fail 
+					$("#update").show();
 					document.getElementById('update_scan').style.display="none";
 					if(flag == "initial")
 						document.getElementById('update_states').style.display="none";
 					else
 						document.getElementById('update_states').innerHTML="<#connect_failed#>";
 				}
+				else if(webs_state_error == "3"){	//3: FW check/RSA check fail
+					$("#update").show();
+					document.getElementById('update_scan').style.display="none";
+					document.getElementById('update_states').innerHTML="<#FIRM_fail_desc#><br><#FW_desc1#>";
+
+				}
 				else{
+					$("#update").show();
 					if(isNewFW(webs_state_info)){
 						document.getElementById('update_scan').style.display="none";
 						document.getElementById('update_states').style.display="none";
-						if(confirm("<#exist_new#>\n\nDo not power off <#Web_Title2#> while upgrade in progress.")){
+						if(confirm("<#exist_new#>\n\n<#Main_alert_proceeding_desc5#>")){
 							document.start_update.action_mode.value="apply";
 							document.start_update.action_script.value="start_webs_upgrade";
 							document.start_update.submit();
@@ -196,23 +189,25 @@ function detect_firmware(flag){
 }
 
 function detect_update(){
-		
-			if(sw_mode != "1" || (link_status == "2" && link_auxstatus == "0") || (link_status == "2" && link_auxstatus == "2")){
-					document.start_update.action_mode.value="apply";
-					document.start_update.action_script.value="start_webs_update";  	
-					document.getElementById('update_states').innerHTML="<#check_proceeding#>";
-					document.getElementById('update_scan').style.display="";
-					document.start_update.submit();				
-			}else{
-					document.getElementById('update_scan').style.display="none";
-					document.getElementById('update_states').innerHTML="<#connect_failed#>";
-					return false;	
-			}
+	if(sw_mode != 3 && document.getElementById("connect_status").className == "connectstatusoff"){
+		document.getElementById('update_scan').style.display="none";		
+		document.getElementById('update_states').innerHTML="<#connect_failed#>";
+		document.getElementById('update_states').style.display="";
+		return false;		
+	}
+	else{
+		$("#update").hide();
+		document.start_update.action_mode.value="apply";
+		document.start_update.action_script.value="start_webs_update";  	
+		document.getElementById('update_states').innerHTML="<#check_proceeding#>";
+		document.getElementById('update_scan').style.display="";
+		document.start_update.submit();					
+	}
 }
 
 var dead = 0;
 function detect_httpd(){
-	$j.ajax({
+	$.ajax({
 		url: '/httpd_check.xml',
 		dataType: 'xml',
 		timeout: 1500,
@@ -238,7 +233,7 @@ function detect_httpd(){
 
 var rebooting = 0;
 function isDownloading(){
-	$j.ajax({
+	$.ajax({
     		url: '/detect_firmware.asp',
     		dataType: 'script',
 				timeout: 1500,
@@ -265,7 +260,7 @@ function isDownloading(){
 								return false;
 						}
 						else if(webs_state_error == 2){
-								document.getElementById("drword").innerHTML = "Memory space is NOT enough to upgrade on internet. Please wait for rebooting.<br><#FW_desc1#>"; //Untranslated.fw_size_higher_mem
+								document.getElementById("drword").innerHTML = "Memory space is NOT enough to upgrade on internet. Please wait for rebooting.<br><#FW_desc1#>";	/* untranslated */ //Untranslated.fw_size_higher_mem
 								return false;						
 						}
 						else if(webs_state_error == 3){
@@ -309,9 +304,51 @@ function submitForm(){
 	else
 		onSubmitCtrlOnly(document.form.upload, 'Upload1');	
 }
+
+function sig_version_check(){
+	$("#sig_check").hide();
+	$("#sig_status").show();
+	document.sig_update.submit();
+	$("#sig_status").html("Signature checking ...");
+	setTimeout("sig_check_status();", 12000);
+}
+
+function sig_check_status(){
+	$.ajax({
+    	url: '/detect_firmware.asp',
+    	dataType: 'script',
+		timeout: 3000,
+    	error: function(xhr){					
+			setTimeout("sig_check_status();", 1000);				
+    	},
+    	success: function(){			
+			$("#sig_status").show();
+			if(sig_state_flag == 0){		// no need upgrade
+				$("#sig_status").html("Signature is up to date");
+				$("#sig_check").show();
+			}
+			else if(sig_state_flag == 1){
+				if(sig_state_error != 0){		// update error
+					$("#sig_status").html("Signature update failed");
+					$("#sig_check").show();					
+				}
+				else{
+					if(sig_state_upgrade == 1){		//update complete
+						$("#sig_status").html("Signature update completely");
+						$("#sig_ver").html(sig_ver);
+						$("#sig_check").show();
+					}
+					else{		//updating
+						$("#sig_status").html("Signature is updating");
+						setTimeout("sig_check_status();", 1000);
+					}				
+				}			
+			}
+  		}
+  	});
+}
 </script>
 </head>
-
 <body onload="initial();">
 
 <div id="TopBanner"></div>
@@ -324,7 +361,7 @@ function submitForm(){
 			<span id="proceeding_img_text"></span>
 			<div id="proceeding_img"></div>
 		</div>
-		<div id="loading_block2" style="margin:5px auto; width:85%;"><#FIRM_ok_desc#><br>Do not power off <#Web_Title2#> while upgrade in progress.</div>
+		<div id="loading_block2" style="margin:5px auto; width:85%;"><#FIRM_ok_desc#><br><#Main_alert_proceeding_desc5#></div>
 		<div id="loading_block3" style="margin:5px auto;width:85%; font-size:12pt;"></div>
 		</td>
 	</tr>
@@ -376,14 +413,14 @@ function submitForm(){
 		<tr>
 		  <td bgcolor="#4D595D" valign="top"  >
 		  <div>&nbsp;</div>
-		  <div class="formfonttitle"><#menu5_6_adv#> - <#menu5_6_3#></div>
+		  <div class="formfonttitle"><#menu5_6#> - <#menu5_6_3#></div>
 		  <div style="margin-left:5px;margin-top:10px;margin-bottom:10px"><img src="/images/New_ui/export/line_export.png"></div>
 		  <div class="formfontdesc"><strong><#FW_note#></strong>
 				<ol>
 					<li><#FW_n0#></li>
 					<li><#FW_n1#></li>
-					<li><#FW_n2#></li>
-					<li><#FW_desc0#></li>
+					<li id="fw_note2"><#FW_n2#></li>
+					<li id="fw_note3"><#FW_desc0#></li>
 				</ol>
 		  </div>
 		  <br>
@@ -400,11 +437,11 @@ function submitForm(){
 {ADSL firmware version}
 			<tr>
 				<th><#adsl_fw_ver_itemname#></th>
-				<td><input type="text" class="input_15_table" value="<% nvram_dump("adsl/tc_fw_ver_short.txt",""); %>" readonly="1"></td>
+				<td><input type="text" class="input_15_table" value="<% nvram_dump("adsl/tc_fw_ver_short.txt",""); %>" readonly="1" autocorrect="off" autocapitalize="off"></td>
 			</tr>
 			<tr>
 				<th>RAS</th>
-				<td><input type="text" class="input_20_table" value="<% nvram_dump("adsl/tc_ras_ver.txt",""); %>" readonly="1"></td>
+				<td><input type="text" class="input_20_table" value="<% nvram_dump("adsl/tc_ras_ver.txt",""); %>" readonly="1" autocorrect="off" autocapitalize="off"></td>
 			</tr>
 [DSL-AC68U]
                         <tr>
@@ -420,24 +457,35 @@ function submitForm(){
 <!--###HTML_PREP_END###-->
 			<tr id="sig_ver_field" style="display:none">
 				<th>Signature Version</th>
-				<td id="sig_ver_word"></td>
-			</tr>
-			<tr>
-				<th><#FW_item2#></th>
-				<td><input type="text" name="firmver_table" class="input_20_table" value="<% nvram_get("firmver"); %>.<% nvram_get("buildno"); %>_<% nvram_get("extendno"); %>" readonly="1">&nbsp&nbsp&nbsp<!--/td-->
-						<input type="button" id="update" name="update" class="button_gen" style="display:none;" onclick="detect_update();" value="<#liveupdate#>" />
-						<div id="linkpage_div" class="button_helplink" style="margin-left:200px;margin-top:-25px;display:none;"><a id="linkpage" target="_blank"><div style="padding-top:5px;"><#liveupdate#></div></a></div>
-						<div id="check_states">
-								<span id="update_states"></span>
-								<img id="update_scan" style="display:none;" src="images/InternetScan.gif" />
+				<td >
+					<div id="sig_ver_word" style="padding-top:5px;"></div>
+					<div>
+						<div id="sig_check" class="button_helplink" style="margin-left:200px;margin-top:-25px;" onclick="sig_version_check();"><a target="_blank"><div style="padding-top:5px;"><#liveupdate#></div></a></div>
+						<div>
+							<span id="sig_status" style="display:none"></span>
 						</div>
+					</div>
 				</td>
 			</tr>
 			<tr>
+				<th><#FW_item2#></th>
+				<td>
+						<div id="firmver_word" style="padding-top:5px;"></div>						
+						<div>
+							<input type="button" id="update" name="update" class="button_gen" style="display:none;margin-left:200px;margin-top:-25px;" onclick="detect_update();" value="<#liveupdate#>">
+							<div id="linkpage_div" class="button_helplink" style="margin-left:200px;margin-top:-25px;display:none;"><a id="linkpage" target="_blank"><div style="padding-top:5px;"><#liveupdate#></div></a></div>
+							<div id="check_states">
+								<span id="update_states"></span>
+								<img id="update_scan" style="display:none;" src="images/InternetScan.gif" />
+							</div>
+						</div>	
+				</td>
+			</tr>
+			<tr style="display:none;">
 				<th><#FW_item5#></th>
 				<td><input type="file" name="file" class="input" style="color:#FFCC00;*color:#000;width: 300px;"></td>
 			</tr>
-			<tr align="center">
+			<tr align="center" style="display:none;">
 			  <td colspan="2"><input type="button" name="upload" class="button_gen" onclick="submitForm()" value="<#CTL_upload#>" /></td>
 			</tr>			
 		</table>
@@ -446,8 +494,6 @@ function submitForm(){
             </tbody>
             </table>
 		  </td>
-
-
         </tr>
       </table>
 		<!--===================================Ending of Main Content===========================================-->
@@ -467,6 +513,14 @@ function submitForm(){
 <input type="hidden" name="flag" value="liveUpdate">
 <input type="hidden" name="action_mode" value="">
 <input type="hidden" name="action_script" value="">
+<input type="hidden" name="action_wait" value="">
+</form>
+<form method="post" name="sig_update" action="/start_apply.htm" target="hidden_frame">
+<input type="hidden" name="productid" value="<% nvram_get("productid"); %>">
+<input type="hidden" name="current_page" value="Advanced_FirmwareUpgrade_Content.asp">
+<input type="hidden" name="next_page" value="Advanced_FirmwareUpgrade_Content.asp">
+<input type="hidden" name="action_mode" value="apply">
+<input type="hidden" name="action_script" value="start_sig_check">
 <input type="hidden" name="action_wait" value="">
 </form>
 </body>

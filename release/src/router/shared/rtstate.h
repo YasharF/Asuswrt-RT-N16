@@ -5,8 +5,8 @@
 enum {
 	SW_MODE_NONE=0,
 	SW_MODE_ROUTER,
-	SW_MODE_REPEATER,
-	SW_MODE_AP,
+	SW_MODE_REPEATER,	/* Ralink/MTK/QCA: if wlc_psta = 1, Media bridge mode. */
+	SW_MODE_AP,		/* Broadcom:       if wlc_psta = 1, Media bridge mode. */
 	SW_MODE_HOTSPOT
 };
 
@@ -15,6 +15,14 @@ enum {
 	WAN_UNIT_SECOND,
 	WAN_UNIT_MAX
 };
+
+#ifdef RTCONFIG_MULTICAST_IPTV
+enum {
+        WAN_UNIT_IPTV=10,
+        WAN_UNIT_VOIP,
+        WAN_UNIT_MULTICAST_IPTV_MAX
+};
+#endif
 
 enum {
 	WAN_STATE_INITIALIZING=0,
@@ -37,8 +45,9 @@ enum {
 	WAN_STOPPED_REASON_IPGATEWAY_CONFLICT,
 	WAN_STOPPED_REASON_METER_LIMIT,
 	WAN_STOPPED_REASON_PINCODE_ERR,
-	WAN_STOPPED_REASON_PPP_LACK_ACTIVITY,
-	WAN_STOPPED_REASON_DATALIMIT
+	WAN_STOPPED_REASON_PPP_LACK_ACTIVITY, // 10
+	WAN_STOPPED_REASON_DATALIMIT,
+	WAN_STOPPED_REASON_USBSCAN
 };
 
 enum {
@@ -53,8 +62,7 @@ enum {
 enum {
 	WAN_AUXSTATE_NONE=0,		// STATE FOR NO ERROR or OK
 	WAN_AUXSTATE_NOPHY,
-	WAN_AUXSTATE_NO_INTERNET_ACTIVITY,
-	WAN_AUXSTATE_PPP_AUTH_FAIL
+	WAN_AUXSTATE_NO_INTERNET_ACTIVITY
 };
 
 #ifdef RTCONFIG_IPV6
@@ -129,6 +137,15 @@ enum {
 
 // the following flag is used for noticing service that will be invoked after getting lan ip
 #define INVOKELATER_DMS	1
+
+enum {
+	FW_INIT=0,
+	FW_UPLOADING,
+	FW_UPLOADING_ERROR,
+	FW_WRITING,
+	FW_WRITING_ERROR,
+	FW_WRITE_SUCCESS
+};
 
 #ifdef RTCONFIG_USB
 enum {
@@ -272,9 +289,13 @@ enum {
 
 int wan_primary_ifunit(void);
 extern int is_wan_connect(int unit);
+extern int is_phy_connect(int unit);
 extern int get_wan_state(int unit);
 extern int get_wan_unit(char *ifname);
 extern char *get_wan_ifname(int unit);
+#ifdef RTCONFIG_IPV6
+extern char *get_wan6_ifname(int unit);
+#endif
 extern int get_wanports_status(int wan_unit);
 extern char *get_usb_ehci_port(int port);
 extern char *get_usb_ohci_port(int port);

@@ -8,7 +8,6 @@
 	JS_validclientname : "Client device name only accept alphanumeric characters, under line and dash symbol. The first character cannot be dash \"-\" or under line \"_\".",
 	ASUSGATE_act_feedback : "Feedback now",
 	ASUSGATE_DSL_setting : "Go setting DSL",
-	ISP_not_support : 'We currently do not support this location, please use "Manual".',
 	period_time_validation : 'The value of check period can\'t be less than',
 	filter_lw_date_valid : 'Please select at least one day or disable this feature.',
 	ctf_fa_hint : 'System will reboot automatically after enable AiProtection for function working fine. Please click apply to enable this function or click cancel to back to page.'
@@ -95,20 +94,28 @@ function suspendconn(wan_index, wanenable){
 	if(gobi_support && (wan_index == usb_index)){
 		document.internetForm_title.wan_enable.value = wanenable;
 		document.internetForm_title.wan_unit.value = wan_index;
-	}	
-	else{
-		document.internetForm_title.modem_enable.value = wanenable;
 	}
+	else if(wan_index == dsl_index) {
+		document.internetForm_title.dslx_link_enable.value = wanenable;
+		if(wanenable)
+			document.internetForm_title.action_script.value = "start_dslwan_if 0";
+		else
+			document.internetForm_title.action_script.value = "stop_dslwan_if 0";
+	}
+	else{
+		document.internetForm_title.wan_enable.value = wanenable;
+	}
+	
 	showLoading();
-	document.internetForm_title.submit();	
+	document.internetForm_title.submit();
 }
 
 function enableMonomode(){
-	showLoading(2);
 	document.titleForm.action = "/apply.cgi";
+	document.titleForm.current_page.value = top.location.pathname.split("/")[1];
 	document.titleForm.action_mode.value = "mfp_monopolize";
-	document.titleForm.current_page.value = "/device-map/printer.asp";
-	document.form.target = "hidden_frame";
+	document.titleForm.action_wait.value = "2";
+	showLoading(2);
 	document.titleForm.submit();
 }
 
@@ -128,6 +135,15 @@ function gotoguestnetwork(){
 function gotocooler(){
 	top.location.href = "/Advanced_PerformanceTuning_Content.asp";
 }
+
+function priority_change(){
+	top.location.href = "/QoS_EZQoS.asp";
+}
+
+function qos_disable(){	
+	document.qosDisableForm.submit();
+}
+
 // Viz add 2013.04 for dsl sync status
 function gotoDSL_log(){
 	top.location.href = "/Main_AdslStatus_Content.asp";
@@ -150,6 +166,25 @@ function gotoModem(){
 	}
 }
 
+function setTrafficLimit(){
+	document.titleForm.wan_unit.value = usb_index;
+	document.titleForm.current_page.value = "Advanced_MobileBroadband_Content.asp?af=data_limit;show=0";
+	document.titleForm.action_mode.value = "change_wan_unit";
+	document.titleForm.action = "apply.cgi";
+	document.titleForm.target = "hidden_frame";
+	document.titleForm.submit();
+}
+
+function upated_sim_record(){ //delete the oldest record and save the current data usage settings
+	document.titleForm.current_page.value = "Advanced_MobileBroadband_Content.asp";
+	document.titleForm.action_mode.value = "restart_sim_del";
+	document.titleForm.sim_order.value = "1";
+	document.titleForm.action = "apply.cgi";
+	document.titleForm.target = "";
+	document.titleForm.submit();
+}
+
+
 var debug_end_time = parseInt("<% nvram_get("dslx_diag_end_uptime"); %>");
 var wans_mode = '<%nvram_get("wans_mode");%>';
 var wans_lanport = '<% nvram_get("wans_lanport"); %>';
@@ -163,15 +198,26 @@ function overHint(itemNum){
 	if(itemNum == 50){
 		statusmenu ="<span>Enable PPTP or L2TP client (optional)</span>";
 	}
-	
-	if(itemNum == 90){
-		statusmenu ="<span>Enable this function allow you to block websites used to display banner or popup advertisement.</span>";		 
+		
+	if(itemNum == 85){
+		statusmenu ="<span>Manually prioritize apps category depending on your preference.</span>";		/* untranslated */
+	}
+	else if(itemNum == 86){
+		statusmenu ="<span>This mode is suitable for playing internet game and boost your gaming bandwidth.<br><#Adaptive_Category1#></span>";		/* untranslated */
+	}
+	else if(itemNum == 87){
+		statusmenu ="<span>This mode is suitable for playing video streaming and make sure your viewing experience.<br><#Adaptive_Category2#></span>";	/* untranslated */
+	}
+	else if(itemNum == 88){
+		statusmenu ="<span>This mode is suitable for general web browsing and avoid to networking latency whileﬁfile transferring.<br><#Adaptive_Category4#></span>";	/* untranslated */
 	}
 	else if(itemNum == 89){
-		statusmenu ="<span>Enable this function allow block advertisement in the streaming video.</span>";		 
+		statusmenu ="<span>Enable this function allow block advertisement in the streaming video.</span>";
 	}
-	
-	if(itemNum == 91){
+	else if(itemNum == 90){
+		statusmenu ="<span>Enable this function allow you to block websites used to display banner or popup advertisement.</span>";
+	}
+	else if(itemNum == 91){
 		statusmenu ="<span><#Adaptive_Category1#></span>";
 	}
 	else if(itemNum == 92){
@@ -186,8 +232,7 @@ function overHint(itemNum){
 	else if(itemNum == 95){
 		statusmenu ="<span><#Adaptive_Category5#></span>";
 	}
-	
-	if(itemNum == 96){
+	else if(itemNum == 96){
 		statusmenu ="<span><#Adaptive_Category6#></span>";
 	}
 	
@@ -235,41 +280,61 @@ function overHint(itemNum){
 	//for AiProtection-Router Security Assessment
 	if(itemNum == 25)
 		statusmenu += "<span>Disable Wi-Fi Protected Setup to avoid attacker to obtain the keys via an intelligent brute force </span>";
-	if(itemNum == 23)		
+	else if(itemNum == 23)		
 		statusmenu += "<span><#AiProtection_scan_note23#></span>";
-	if(itemNum == 22)		
+	else if(itemNum == 22)		
 		statusmenu += "<span><#AiProtection_scan_note22#></span>";
-	if(itemNum == 21)		
+	else if(itemNum == 21)		
 		statusmenu += "<span><#AiProtection_scan_note21#></span>";
-	if(itemNum == 20)		
+	else if(itemNum == 20)		
 		statusmenu += "<span><#AiProtection_scan_note20#></span>";
-	if(itemNum == 19)		
+	else if(itemNum == 19)		
 		statusmenu += "<span><#AiProtection_scan_note19#></span>";
-	if(itemNum == 18)		
+	else if(itemNum == 18)		
 		statusmenu += "<span><#AiProtection_scan_note18#></span>";
-	if(itemNum == 17)		
+	else if(itemNum == 17)		
 		statusmenu += "<span><#AiProtection_scan_note17#></span>";
-	if(itemNum == 16)		
+	else if(itemNum == 16)		
 		statusmenu += "<span><#AiProtection_scan_note16#></span>";
-	if(itemNum == 15)		
+	else if(itemNum == 15)		
 		statusmenu += "<span><#AiProtection_scan_note15#></span>";
-	if(itemNum == 14)		
+	else if(itemNum == 14)		
 		statusmenu += "<span><#AiProtection_scan_note14#></span>";
-	if(itemNum == 13)		
+	else if(itemNum == 13)		
 		statusmenu += "<span><#AiProtection_scan_note13#></span>";
-	if(itemNum == 12)		
+	else if(itemNum == 12)		
 		statusmenu += "<span><#AiProtection_scan_note12#></span>";
-	if(itemNum == 11)		
+	else if(itemNum == 11)		
 		statusmenu += "<span><#AiProtection_scan_note11#></span>";	
-	if(itemNum == 10)		
+	else if(itemNum == 10)		
 		statusmenu += "<span><#AiProtection_scan_note10#></span>";	
+	
+	// Viz add 2015.07 bwdpi : Adpative QoS mode start
+	if(itemNum == "A"){
+		statusmenu = "<div class='StatusHint'><#Adaptive_QoS#> :</div>";
+		if(bwdpi_app_rulelist == "9,20<8<4<0,5,6,15,17<13,24<1,3,14<7,10,11,21,23<<game"){
+			modeDesc = "Game mode";		/* untranslated */
+		}	
+		else if(bwdpi_app_rulelist == "9,20<4<0,5,6,15,17<8<13,24<1,3,14<7,10,11,21,23<<media"){
+			modeDesc = "Media Streaming mode";		/* untranslated */
+		}	
+		else if(bwdpi_app_rulelist == "9,20<13,24<4<0,5,6,15,17<8<1,3,14<7,10,11,21,23<<web"){
+			modeDesc = "Web Surfing mode";		/* untranslated */
+		}	
+		else{
+			modeDesc = "Customize mode";		/* untranslated */
+		}		
+		
+		statusmenu += "<span>" + modeDesc + "</span>";
+	}
+	// Viz add 2015.07 bwdpi : Adpative QoS mode end
 	
 	// Viz add 2013.04 for dsl sync status
 	if(itemNum == 9){		
 		statusmenu = "<div class='StatusHint'>DSL :</div>";
 		if(wan_diag_state == "1" && allUsbStatus.search("storage") >= 0){
 			lineDesc = "Diagnostic debug log capture in progress.<br>";
-			lineDesc += show_diagTime();
+			lineDesc += show_diagTime(boottime_update);
 		}
 		else if(wan_line_state == "up")
 			lineDesc = "Link up";
@@ -360,23 +425,27 @@ function overHint(itemNum){
 				var show_str = gn_array_2g[i][1];
 				show_str = decodeURIComponent(show_str);
 				show_str = handle_show_str(show_str);
-				statusmenu += "<span>" + show_str + " (";
+				statusmenu += "<span><b>" + show_str + "</b><br> (";
 
 				if(gn_array_2g[i][11] == 0)
 					statusmenu += "<#Limitless#>)</span><br>";
 				else{
-					var expire_hr = Math.floor(gn_array_2g[i][13]/3600);
+					var expire_day = Math.floor(gn_array_2g[i][13]/86400);
+					var expire_hr = Math.floor((gn_array_2g[i][13]%86400)/3600);
 					var expire_min = Math.floor((gn_array_2g[i][13]%3600)/60);
-					if(expire_hr > 0){
-						statusmenu += '<b id="expire_hr_'+i+'">'+ expire_hr + '</b> Hr <b id="expire_min_'+i+'">' + expire_min +'</b> Min(s)';
-					}
+					
+					statusmenu += '<#mssid_time_remaining#>: ';
+					if(expire_day > 0)
+						statusmenu += '<b id="expire_day_'+i+'">'+ expire_day + '</b> <#Day#> <b id="expire_hr_'+i+'">'+ expire_hr + '</b> <#Hour#> <b id="expire_min_'+i+'">' + expire_min +'</b> <#Minute#>';
+					else if(expire_hr > 0)
+						statusmenu += '<b id="expire_hr_'+i+'">'+ expire_hr + '</b> <#Hour#> <b id="expire_min_'+i+'">' + expire_min +'</b> <#Minute#>';
 					else{
 						if(expire_min > 0)
-								statusmenu += '<b id="expire_min_'+i+'">' + expire_min +'</b> Min(s)';
+								statusmenu += '<b id="expire_min_'+i+'">' + expire_min +'</b> <#Minute#>';
 						else	
-								statusmenu += '<b id="expire_min_'+i+'">< 1</b> Min(s)';
+								statusmenu += '<b id="expire_min_'+i+'">< 1</b> <#Minute#>';
 					}
-					statusmenu += " left)</span><br>";
+					statusmenu += ")</span><br>";
 				}
 			}
 		}
@@ -394,23 +463,27 @@ function overHint(itemNum){
 					var show_str = gn_array_5g[i][1];
 					show_str = decodeURIComponent(show_str);
 					show_str = handle_show_str(show_str);
-					statusmenu += "<span>" + show_str + " (";
-
+					statusmenu += "<span><b>" + show_str + "</b><br> (";
+					
 					if(gn_array_5g[i][11] == 0)
 						statusmenu += '<#Limitless#>)</span><br>';
 					else{
-						var expire_hr = Math.floor(gn_array_5g[i][13]/3600);
+						var expire_day = Math.floor(gn_array_5g[i][13]/86400);
+						var expire_hr = Math.floor((gn_array_5g[i][13]%86400)/3600);
 						var expire_min = Math.floor((gn_array_5g[i][13]%3600)/60);
-						if(expire_hr > 0){
-							statusmenu += '<b id="expire_hr_'+i+'">'+ expire_hr + '</b> Hr <b id="expire_min_'+i+'">' + expire_min +'</b> Min(s)';
-						}
+						
+						statusmenu += '<#mssid_time_remaining#>: ';						
+						if(expire_day > 0)
+							statusmenu += '<b id="expire_day_'+i+'">'+ expire_day + '</b> <#Day#> <b id="expire_hr_'+i+'">'+ expire_hr + '</b> <#Hour#> <b id="expire_min_'+i+'">' + expire_min +'</b> <#Minute#>';
+						else if(expire_hr > 0)
+							statusmenu += '<b id="expire_hr_'+i+'">'+ expire_hr + '</b> <#Hour#> <b id="expire_min_'+i+'">' + expire_min +'</b> <#Minute#>';
 						else{
 							if(expire_min > 0)
-								statusmenu += '<b id="expire_min_'+i+'">' + expire_min +'</b> Min(s)';
+								statusmenu += '<b id="expire_min_'+i+'">' + expire_min +'</b> <#Minute#>';
 							else	
-								statusmenu += '<b id="expire_min_'+i+'">< 1</b> Min(s)';
+								statusmenu += '<b id="expire_min_'+i+'">< 1</b> <#Minute#>';
 						}
-						statusmenu += " left)</span><br>";
+						statusmenu += ")</span><br>";
 					}
 				}
 			}
@@ -426,23 +499,27 @@ function overHint(itemNum){
 					var show_str = gn_array_5g_2[i][1];
 					show_str = decodeURIComponent(show_str);
 					show_str = handle_show_str(show_str);
-					statusmenu += "<span>" + show_str + " (";
+					statusmenu += "<span><b>" + show_str + "</b><br> (";
 
 					if(gn_array_5g_2[i][11] == 0)
 						statusmenu += '<#Limitless#>)</span><br>';
 					else{
-						var expire_hr = Math.floor(gn_array_5g_2[i][13]/3600);
+						var expire_day = Math.floor(gn_array_5g_2[i][13]/86400);
+						var expire_hr = Math.floor((gn_array_5g_2[i][13]%86400)/3600);
 						var expire_min = Math.floor((gn_array_5g_2[i][13]%3600)/60);
-						if(expire_hr > 0){
-							statusmenu += '<b id="expire_hr_'+i+'">'+ expire_hr + '</b> Hr <b id="expire_min_'+i+'">' + expire_min +'</b> Min(s)';
-						}
+						
+						statusmenu += '<#mssid_time_remaining#>: ';
+						if(expire_day > 0)
+							statusmenu += '<b id="expire_day_'+i+'">'+ expire_day + '</b> <#Day#> <b id="expire_hr_'+i+'">'+ expire_hr + '</b> <#Hour#> <b id="expire_min_'+i+'">' + expire_min +'</b> <#Minute#>';
+						else if(expire_hr > 0)
+							statusmenu += '<b id="expire_hr_'+i+'">'+ expire_hr + '</b> <#Hour#> <b id="expire_min_'+i+'">' + expire_min +'</b> <#Minute#>';
 						else{
 							if(expire_min > 0)
-								statusmenu += '<b id="expire_min_'+i+'">' + expire_min +'</b> Min(s)';
+								statusmenu += '<b id="expire_min_'+i+'">' + expire_min +'</b> <#Minute#>';
 							else	
-								statusmenu += '<b id="expire_min_'+i+'">< 1</b> Min(s)';
+								statusmenu += '<b id="expire_min_'+i+'">< 1</b> <#Minute#>';
 						}
-						statusmenu += " left)</span><br>";
+						statusmenu += ")</span><br>";
 					}
 				}
 			}
@@ -453,41 +530,53 @@ function overHint(itemNum){
 
 	// internet
 	if(itemNum == 3){
-		if(dualWAN_support && wans_dualwan_array.indexOf("none") == -1)
-			statusmenu = "<div class='StatusHint'><#dualwan_primary#>:</div>";			
-		else
-			statusmenu = "<div class='StatusHint'><#statusTitle_Internet#>:</div>";	
-
-		if( wans_dualwan_array[0] == "wan")
-			statusmenu += "<b><#Ethernet_wan#> -</b><br>";
-		else if( wans_dualwan_array[0] == "lan")
-			statusmenu += "<b><#menu5_2#>"+wans_lanport+" -</b><br>";
-		else if( wans_dualwan_array[0] == "usb"){
-			if(gobi_support)
-				statusmenu += "<b><#Mobile_title#> -</b><br>";
+		var eLAN_str = "<#Ethernet_wan#>".replace(/WAN/, "LAN");		
+		if(gobi_support){
+			if(dualWAN_support && wans_dualwan_array.indexOf("none") == -1){
+				if( wans_dualwan_array[0] == "wan")
+					statusmenu += "<div class='StatusHint'><#Ethernet_wan#>:</div>";
+				else if( wans_dualwan_array[0] == "lan")
+					//statusmenu += "<div class='StatusHint'><#Ethernet_wan#> (<#Port_Mapping_item1#> "+wans_lanport+"):</div>";
+					statusmenu += "<div class='StatusHint'>"+eLAN_str+" (<#Port_Mapping_item1#> "+wans_lanport+"):</div>";
+				else if( wans_dualwan_array[0] == "usb")
+					statusmenu += "<div class='StatusHint'><#Mobile_title#>:</div>";
+			}
 			else
-				statusmenu += "<b><#menu5_4_4#> -</b><br>";
-		}	
+				statusmenu = "<div class='StatusHint'><#statusTitle_Internet#>:</div>";
+		}
+		else{	
+			if(dualWAN_support && wans_dualwan_array.indexOf("none") == -1)
+				statusmenu = "<div class='StatusHint'><#dualwan_primary#>:</div>";			
+			else
+				statusmenu = "<div class='StatusHint'><#statusTitle_Internet#>:</div>";	
+
+			if( wans_dualwan_array[0] == "wan")
+				statusmenu += "<b><#Ethernet_wan#> -</b><br>";
+			else if( wans_dualwan_array[0] == "lan")
+				statusmenu += "<b><#Port_Mapping_item1#> "+wans_lanport+" -</b><br>";
+			else if( wans_dualwan_array[0] == "usb")
+					statusmenu += "<b><#menu5_4_4#> -</b><br>";
+		}
 
 		if(dualWAN_support && wans_dualwan_array.indexOf("none") == -1 ){
 			if(first_link_status == "1")
 				statusmenu += "<span><#web_redirect_reason2_2#></span>";
 			else if((first_link_status == "2" && first_link_auxstatus == "0") || (first_link_status == "2" && first_link_auxstatus == "2")){
 				if((wans_mode == "fo" || wans_mode == "fb") && active_wan_unit == "1")
-					statusmenu += "<span>Standby</span>";
-				else	
+					statusmenu += "<span><#Status_Standby#></span>";
+				else
 					statusmenu += "<span><#Connected#></span>";
 			}
 			else{
 				if(sw_mode == 1){
 					if( wans_dualwan_array[0] == "usb"){
-						if(modem_enable == "0"){
+						if(wan0_enable == "0"){
 							if(gobi_support)
-								statusmenu += "<div>Mobile Broadband is disabled.</div>";
+								statusmenu += "<div><#Mobile_disabled#></div>";
 							else
-								statusmenu += "<div>USB Modem is disabled.</div>";
+								statusmenu += "<div><#USB_disabled#></div>";
 						}
-						else{	
+						else{
 							if(sim_state != ""){
 								if(sim_state == "2"){
 									if( g3err_pin == "1" && pin_remaining_count < 3)
@@ -516,12 +605,12 @@ function overHint(itemNum){
 					}
 					else{
 						if(wan0_enable == 0){
-							statusmenu += "<span>WAN is disabled.</span>";
+							statusmenu += "<span><#WAN_disabled#></span>";
 						}
 						else{
 							if(first_link_auxstatus == "1"){
 								if( wans_dualwan_array[0] == "lan"){
-									statusmenu += "<span>Please check that the ethernet cable is connected properly to the <#menu5_2#>"+wans_lanport+" port.</span>";
+									statusmenu += "<span><#Check_cable#> : <#Port_Mapping_item1#> "+wans_lanport+"</span>";
 								}
 								else	
 									statusmenu += "<span><#QKSet_detect_wanconnfault#></span>";
@@ -554,17 +643,17 @@ function overHint(itemNum){
 			else{
 				if(sw_mode == 1){
 					if( wans_dualwan_array[0] == "usb"){
-						if(modem_enable == "0"){
+						if(wan0_enable == "0"){
 							if(gobi_support)
-								statusmenu += "<div>Mobile Broadband is disabled.</div>";
+								statusmenu += "<div><#Mobile_disabled#></div>";
 							else
-								statusmenu += "<div>USB Modem is disabled.</div>";							
+								statusmenu += "<div><#USB_disabled#></div>";							
 						}
 						else{	
 							if(sim_state != ""){
 								if(sim_state == "2"){
 									if( g3err_pin == "1" && pin_remaining_count < 3)
-										statusmenu += "<div>Wrong PIN code. Please input the correct PIN code.</div>";
+										statusmenu += "<div><#Mobile_wrong_pin#></div>";
 									else
 										statusmenu += "<div><#Mobile_need_pin#></div>";
 								}
@@ -589,12 +678,12 @@ function overHint(itemNum){
 					}
 					else{
 						if(wan0_enable == 0){
-							statusmenu += "<span>WAN is disabled.</span>";
+							statusmenu += "<span><#WAN_disabled#></span>";
 						}
 						else{
 							if(link_auxstatus == "1"){
 								if( wans_dualwan_array[0] == "lan"){
-									statusmenu += "<span>Please check that the ethernet cable is connected properly to the <#menu5_2#>"+wans_lanport+" port.</span>";
+									statusmenu += "<span><#Check_cable#> : <#Port_Mapping_item1#> "+wans_lanport+"</span>";
 								}
 								else	
 									statusmenu += "<span><#QKSet_detect_wanconnfault#></span>";
@@ -638,15 +727,21 @@ function overHint(itemNum){
 
 		if(sw_mode == 1){
 			if(dualWAN_support && wans_dualwan_array[1] != "none" ){
-				statusmenu += "<div class='StatusHint'><br><#dualwan_secondary#>:</div>";	
-				if( wans_dualwan_array[1] == "wan")
-					statusmenu += "<b><#Ethernet_wan#> -</b><br>";
-				else if( wans_dualwan_array[1] == "lan")
-					statusmenu += "<b><#menu5_2#>"+wans_lanport+" -</b><br>";
-				else if( wans_dualwan_array[1] == "usb"){
-					if(gobi_support)
-						statusmenu += "<b><#Mobile_title#> -</b><br>";
-					else
+				if(gobi_support){
+					if( wans_dualwan_array[1] == "wan")
+						statusmenu += "<div class='StatusHint'><br><#Ethernet_wan#>:</div>";
+					else if( wans_dualwan_array[1] == "lan")
+						statusmenu += "<div class='StatusHint'><br>"+eLAN_str+" (<#Port_Mapping_item1#> "+wans_lanport+"):</div>";
+					else if( wans_dualwan_array[1] == "usb")
+						statusmenu += "<div class='StatusHint'><br><#Mobile_title#>:</div>";
+				}
+				else{
+					statusmenu += "<div class='StatusHint'><br><#dualwan_secondary#>:</div>";	
+					if( wans_dualwan_array[1] == "wan")
+						statusmenu += "<b><#Ethernet_wan#> -</b><br>";
+					else if( wans_dualwan_array[1] == "lan")
+						statusmenu += "<b><#Port_Mapping_item1#> "+wans_lanport+" -</b><br>";
+					else if( wans_dualwan_array[1] == "usb")
 						statusmenu += "<b><#menu5_4_4#> -</b><br>";
 				}
 
@@ -654,17 +749,17 @@ function overHint(itemNum){
 					statusmenu += "<span><#web_redirect_reason2_2#></span>";
 				else if(secondary_link_status == "2" && (secondary_link_auxstatus == "0" || secondary_link_auxstatus == "2")){				
 					if((wans_mode == "fo" || wans_mode == "fb") && active_wan_unit == "0")
-						statusmenu += "<span>Standby</span>";
+						statusmenu += "<span><#Status_Standby#></span>";
 					else	
 						statusmenu += "<span><#Connected#></span>";
 				}
 				else{
 					if( wans_dualwan_array[1] == "usb"){
-						if(modem_enable == "0"){
+						if(wan1_enable == "0"){
 							if(gobi_support)
-								statusmenu += "<div>Mobile Broadband is disabled.</div>";
+								statusmenu += "<div><#Mobile_disabled#></div>";
 							else
-								statusmenu += "<div>USB Modem is disabled.</div>";							
+								statusmenu += "<div><#USB_disabled#></div>";							
 						}
 						else{
 							if(sim_state != ""){
@@ -695,12 +790,12 @@ function overHint(itemNum){
 					}
 					else{
 						if(wan1_enable == 0){
-							statusmenu += "<span>WAN is disabled.</span>";
+							statusmenu += "<span><#WAN_disabled#></span>";
 						}
 						else{
 							if(secondary_link_auxstatus == "1"){
 								if( wans_dualwan_array[1] == "lan"){
-									statusmenu += "<span>Please check that the ethernet cable is connected properly to the <#menu5_2#>"+wans_lanport+" port.</span>";
+									statusmenu += "<span><#Check_cable#> : <#Port_Mapping_item1#> "+wans_lanport+"</span>";
 								}
 								else	
 									statusmenu += "<span><#QKSet_detect_wanconnfault#></span>";
@@ -716,7 +811,7 @@ function overHint(itemNum){
 							else if(secondary_link_sbstatus == "5")
 								statusmenu += "<span><#web_redirect_reason5_1#></span>";
 							else if(secondary_link_sbstatus == "6")
-								statusmenu += "<span>System error. <#Reboot_manually#></span>";
+								statusmenu += "<span><#ALERT_OF_ERROR_System4#> <#Reboot_manually#></span>";
 							else
 								statusmenu += "<span><#Disconnected#></span>";
 						}		
@@ -761,13 +856,12 @@ function overHint(itemNum){
 		return overlib(statusmenu, OFFSETX, -160, LEFT, DELAY, 400);
 }
 
-function show_diagTime(){
+function show_diagTime(boottime_update){
 				
-	Etime = debug_end_time - boottime;
-	EHours = Math.floor((Etime / 3600) % 24);	
+	Etime = debug_end_time - boottime_update;
+	EHours = Math.floor(Etime / 3600);	
 	EMinutes = Math.floor(Etime % 3600 / 60);	
-	boottime += 1;
-	//setTimeout("show_diagTime();", 1000);
+	
 	if(EHours <= 0 && EMinutes <= 0)
 		return "<#mssid_time_remaining#> : <span>0</span> <#Hour#> <span>0</span> <#Minute#>";
 	else
@@ -783,19 +877,24 @@ function openHint(hint_array_id, hint_show_id, flag){
 	if(hint_array_id == 24){
 		var _caption = "";
 
-		if(hint_show_id == 8){	//2014.10 Viz add for dsl dslx_diag_state
+		if(hint_show_id == 9){	//2015.07 Viz add for bwdpi : Adaptive QoS mode
+			statusmenu = "<span class='StatusClickHint' onclick='priority_change();' onmouseout='this.className=\"StatusClickHint\"' onmouseover='this.className=\"StatusClickHint_mouseover\"'>Change priority mode</span><br>";	/* untranslated */
+			statusmenu += "<span class='StatusClickHint' onclick='qos_disable();' onmouseout='this.className=\"StatusClickHint\"' onmouseover='this.className=\"StatusClickHint_mouseover\"'>Disable QoS</span>";	/* untranslated */
+			_caption = "<#Adaptive_QoS#>";
+		}
+		else if(hint_show_id == 8){	//2014.10 Viz add for dsl dslx_diag_state
 			statusmenu = "<span class='StatusClickHint' onclick='cancel_diag();' onmouseout='this.className=\"StatusClickHint\"' onmouseover='this.className=\"StatusClickHint_mouseover\"'>Cancel debug capture</span>";
 			_caption = "DSL Line Diagnostic capture";
 		}
-		if(hint_show_id == 7){
+		else if(hint_show_id == 7){
 			statusmenu = "<span class='StatusClickHint' onclick='gotoModem();' onmouseout='this.className=\"StatusClickHint\"' onmouseover='this.className=\"StatusClickHint_mouseover\"'>";
 			if(usb_index == -1){
-				statusmenu += "Go to Dual WAN Setting, and activate USB modem.</span>"
+				statusmenu += "<#Activate_usb#></span>"
 				_caption = "<#dualwan#>";
 			}
 			else{
 				if(gobi_support){
-					statusmenu += "Go to Mobile Broadband Setting.</span>"
+					statusmenu += "<#Mobile_setting_page#></span>"
 					_caption = "<#Mobile_title#>";
 				}
 				else{		
@@ -817,6 +916,7 @@ function openHint(hint_array_id, hint_show_id, flag){
 			_caption = "Guest Network";
 		}
 		else if(hint_show_id == 3){
+			var eLAN_str = "<#Ethernet_wan#>".replace(/WAN/, "LAN");			
 			if(sw_mode == 1){				
 				if(!dualWAN_support || wans_dualwan_array[1] == "none"){
 					if((link_status == "2" && link_auxstatus == "0") || (link_status == "2" && link_auxstatus == "2"))
@@ -825,48 +925,80 @@ function openHint(hint_array_id, hint_show_id, flag){
 						statusmenu = "<span class='StatusClickHint' onclick='goToWAN(0);' onmouseout='this.className=\"StatusClickHint\"' onmouseover='this.className=\"StatusClickHint_mouseover\"'>";
 						if(usb_index == 0){
 							if(gobi_support)
-								statusmenu += "Go to Mobile Broadband Setting.</span>";
+								statusmenu += "<#Mobile_setting_page#></span>";
 							else
 								statusmenu += "<#GO_HSDPA_SETTING#></span>";
 						}	
 						else
-							statusmenu += "Go to WAN Setting.</span>";	
+							statusmenu += "<#WAN_setting_page#></span>";	
 					}
 				}	
 				else{
-					statusmenu = "<div class='StatusHint'><#dualwan_primary#>:</div>";			
+					if(gobi_support){
+						if( wans_dualwan_array[0] == "wan")
+							statusmenu += "<div class='StatusHint'><#Ethernet_wan#>:</div>";
+						else if( wans_dualwan_array[0] == "lan")
+							statusmenu += "<div class='StatusHint'>"+eLAN_str+" (<#Port_Mapping_item1#> "+wans_lanport+"):</div>";
+						else if( wans_dualwan_array[0] == "usb")
+							statusmenu += "<div class='StatusHint'><#Mobile_title#>:</div>";
+					}
+					else{
+						statusmenu = "<div class='StatusHint'><#dualwan_primary#>:</div>";
+						if( wans_dualwan_array[0] == "wan")
+							statusmenu += "<b><#Ethernet_wan#> -</b><br>";
+						else if( wans_dualwan_array[0] == "lan")
+							statusmenu += "<b><#Port_Mapping_item1#> "+wans_lanport+" -</b><br>";
+						else if( wans_dualwan_array[0] == "usb")
+							statusmenu += "<b><#menu5_4_4#> -</b><br>";
+					}
 					if((first_link_status == "2" && first_link_auxstatus == "0") || (first_link_status == "2" && first_link_auxstatus == "2"))
 						statusmenu += "<span class='StatusClickHint' onclick='suspendconn(0, 0);' onmouseout='this.className=\"StatusClickHint\"' onmouseover='this.className=\"StatusClickHint_mouseover\"'><#disconnect_internet#></span>";
 					else{
 						statusmenu += "<span class='StatusClickHint' onclick='goToWAN(0);' onmouseout='this.className=\"StatusClickHint\"' onmouseover='this.className=\"StatusClickHint_mouseover\"'>";
 						if(usb_index == 0){
 							if(gobi_support)
-								statusmenu += "Go to Mobile Broadband Setting.</span>";
+								statusmenu += "<#Mobile_setting_page#></span>";
 							else
 								statusmenu += "<#GO_HSDPA_SETTING#></span>";
 						}	
 						else
-							statusmenu += "Go to WAN Setting.</span>";							
+							statusmenu += "<#WAN_setting_page#></span>";							
 					}
 
-					statusmenu += "<div class='StatusHint'><br><#dualwan_secondary#>:</div>";
+					if(gobi_support){
+						if( wans_dualwan_array[1] == "wan")
+							statusmenu += "<div class='StatusHint'><br><#Ethernet_wan#>:</div>";
+						else if( wans_dualwan_array[1] == "lan")
+						statusmenu += "<div class='StatusHint'><br>"+eLAN_str+" (<#Port_Mapping_item1#> "+wans_lanport+"):</div>";
+						else if( wans_dualwan_array[1] == "usb")
+							statusmenu += "<div class='StatusHint'><br><#Mobile_title#>:</div>";
+					}
+					else{
+						statusmenu += "<div class='StatusHint'><br><#dualwan_secondary#>:</div>";
+						if( wans_dualwan_array[1] == "wan")
+							statusmenu += "<b><#Ethernet_wan#> -</b><br>";
+						else if( wans_dualwan_array[1] == "lan")
+							statusmenu += "<b><#Port_Mapping_item1#> "+wans_lanport+" -</b><br>";
+						else if( wans_dualwan_array[1] == "usb")
+							statusmenu += "<b><#menu5_4_4#> -</b><br>";						
+					}
 					if((secondary_link_status == "2" && secondary_link_auxstatus == "0") || (secondary_link_status == "2" && secondary_link_auxstatus == "2"))
 						statusmenu += "<span class='StatusClickHint' onclick='suspendconn(1, 0);' onmouseout='this.className=\"StatusClickHint\"' onmouseover='this.className=\"StatusClickHint_mouseover\"'><#disconnect_internet#></span>";
 					else{
 						statusmenu += "<span class='StatusClickHint' onclick='goToWAN(1);' onmouseout='this.className=\"StatusClickHint\"' onmouseover='this.className=\"StatusClickHint_mouseover\"'>";
 						if(usb_index == 1){
 							if(gobi_support)
-								statusmenu += "Go to Mobile Broadband Setting.</span>";
+								statusmenu += "<#Mobile_setting_page#></span>";
 							else
 								statusmenu += "<#GO_HSDPA_SETTING#></span>";
 						}	
 						else
-							statusmenu += "Go to WAN Setting.</span>";							
+							statusmenu += "<#WAN_setting_page#></span>";							
 					}				
 				}
 			}
 			else if(sw_mode == 2){
-				statusmenu = "<span class='StatusClickHint' onclick='top.location.href=\"http://"+ theUrl +"/QIS_wizard.htm?flag=sitesurvey\";' onmouseout='this.className=\"StatusClickHint\"' onmouseover='this.className=\"StatusClickHint_mouseover\"'><#APSurvey_action_search_again_hint2#></span>";
+				statusmenu = "<span class='StatusClickHint' onclick='top.location.href=\"http://"+ theUrl +"/QIS_wizard.htm?flag=sitesurvey_rep\";' onmouseout='this.className=\"StatusClickHint\"' onmouseover='this.className=\"StatusClickHint_mouseover\"'><#APSurvey_action_search_again_hint2#></span>";
 			}
 			else if(sw_mode == 4){
 				statusmenu = "<span class='StatusClickHint' onclick='top.location.href=\"/QIS_wizard.htm?flag=sitesurvey_mb\";' onmouseout='this.className=\"StatusClickHint\"' onmouseover='this.className=\"StatusClickHint_mouseover\"'><#APSurvey_action_search_again_hint2#></span>";
@@ -910,10 +1042,10 @@ function openHint(hint_array_id, hint_show_id, flag){
 	for (var i=0;i<tag_name.length;i++)
 		tag_name[i].onmouseout=nd;
 	
-	if(hint_array_id == 0 && hint_show_id > 21) // for status icon
-		return overlib(helpcontent[hint_array_id][hint_show_id], FIXX, 270, FIXY, 30);
-	else if(helpcontent == [] || helpcontent == "" || hint_array_id > helpcontent.length)
+	if(helpcontent == [] || helpcontent == "" || hint_array_id > helpcontent.length)
 		return overlib('<#defaultHint#>', HAUTO, VAUTO);
+	else if(hint_array_id == 0 && hint_show_id > 21 && hint_show_id < 24)
+		return overlib(helpcontent[hint_array_id][hint_show_id], FIXX, 270, FIXY, 30);
 	else{
 		if(hint_show_id > helpcontent[hint_array_id].length)
 			return overlib('<#defaultHint#>', HAUTO, VAUTO);
@@ -2420,12 +2552,59 @@ if ((olNs4 || olNs6 || olIe4)) {
 	ver3fix = true;
 }
 
+// ---------- Viz add common string check for password 2015.09 start--------
+function check_common_string(pwd, flag){
+	//Sequential
+	var termAlphas = "abcdefghijklmnopqrstuvwxyz";
+	var termNumerics = "01234567890";
+	var termSymbols = "~!@#$%^&*()_+";
+	var termKeyboards1 = "qwertyuiop";
+	var termKeyboards2 = "asdfghjkl";
+	var termKeyboards3 = "zxcvbnm";
+	var termCommon5 = ["123123","abc123","letmein","master","qazwsx","admin"];
+	var termCommon8 = ["adminpassword","loginpassword","passw0rd","password","useradmin","userpassword"];
+	var nSeqString = 0;
+	if(flag == "httpd_password"){	//at lease length 5		
+		if(termAlphas.toLowerCase().indexOf(pwd) != -1 || termAlphas.strReverse().toLowerCase().indexOf(pwd) != -1) { nSeqString++; }
+		if(termNumerics.toLowerCase().indexOf(pwd) != -1 || termNumerics.strReverse().toLowerCase().indexOf(pwd) != -1) { nSeqString++; }
+		if(termSymbols.toLowerCase().indexOf(pwd) != -1 || termSymbols.strReverse().toLowerCase().indexOf(pwd) != -1) { nSeqString++; }
+		if(termKeyboards1.toLowerCase().indexOf(pwd) != -1 || termKeyboards1.strReverse().toLowerCase().indexOf(pwd) != -1) { nSeqString++; }
+		if(termKeyboards2.toLowerCase().indexOf(pwd) != -1 || termKeyboards2.strReverse().toLowerCase().indexOf(pwd) != -1) { nSeqString++; }
+		if(termKeyboards3.toLowerCase().indexOf(pwd) != -1 || termKeyboards3.strReverse().toLowerCase().indexOf(pwd) != -1) { nSeqString++; }
+		for(var s=0;s<termCommon5.length;s++){
+			if(pwd == termCommon5[s])	{ nSeqString++; }	
+		}
+		for(var t=0;t<termCommon8.length;t++){
+			if(pwd == termCommon8[t])	{ nSeqString++; }	
+		}		
+	}
+	else if(flag == "wpa_key"){	//at lease length 8
+		if(termAlphas.toLowerCase().indexOf(pwd) != -1 || termAlphas.strReverse().toLowerCase().indexOf(pwd) != -1) { nSeqString++; }
+		if(termNumerics.toLowerCase().indexOf(pwd) != -1 || termNumerics.strReverse().toLowerCase().indexOf(pwd) != -1) { nSeqString++; }
+		if(termSymbols.toLowerCase().indexOf(pwd) != -1 || termSymbols.strReverse().toLowerCase().indexOf(pwd) != -1) { nSeqString++; }
+		if(termKeyboards1.toLowerCase().indexOf(pwd) != -1 || termKeyboards1.strReverse().toLowerCase().indexOf(pwd) != -1) { nSeqString++; }
+		if(termKeyboards2.toLowerCase().indexOf(pwd) != -1 || termKeyboards2.strReverse().toLowerCase().indexOf(pwd) != -1) { nSeqString++; }
+		for(var s=0;s<termCommon8.length;s++){
+			if(pwd == termCommon8[s])	{ nSeqString++; }	
+		}		
+	}
+	
+	//pure repeat character string
+	if(pwd == pwd.charAt(0).repeat(pwd.length)) { nSeqString++; }
+	
+	if(nSeqString > 0)
+		return true;
+	else		
+		return false;
+}
+// ---------- Viz add common string check for password 2015.09 end--------
+
 // ---------- Viz add for pwd strength check [Start] 2012.12 -----
 
 function chkPass(pwd, flag) {
 	var orig_pwd = "";
-	var oScorebar = $("scorebar");
-	var oScore = $("score");
+	var oScorebar = document.getElementById("scorebar");
+	var oScore = document.getElementById("score");
 
 	// Simultaneous variable declaration and value assignment aren't supported in IE apparently
 	// so I'm forced to assign the same value individually per var to support a crappy browser *sigh* 
@@ -2519,7 +2698,7 @@ function chkPass(pwd, flag) {
 	/* Modify overall score value based on usage vs requirements */
 
 		/* General point assignment */
-		//$("nLengthBonus").innerHTML = "+ " + nScore; 
+		//document.getElementById("nLengthBonus").innerHTML = "+ " + nScore; 
 		if (nAlphaUC > 0 && nAlphaUC < nLength) {	
 			nScore = parseInt(nScore + ((nLength - nAlphaUC) * 2));
 			sAlphaUC = "+ " + parseInt((nLength - nAlphaUC) * 2); 
@@ -2540,11 +2719,11 @@ function chkPass(pwd, flag) {
 			nScore = parseInt(nScore + (nMidChar * nMultMidChar));
 			sMidChar = "+ " + parseInt(nMidChar * nMultMidChar);
 		}
-		//$("nAlphaUCBonus").innerHTML = sAlphaUC; 
-		//$("nAlphaLCBonus").innerHTML = sAlphaLC;
-		//$("nNumberBonus").innerHTML = sNumber;
-		//$("nSymbolBonus").innerHTML = sSymbol;
-		//$("nMidCharBonus").innerHTML = sMidChar;
+		//document.getElementById("nAlphaUCBonus").innerHTML = sAlphaUC; 
+		//document.getElementById("nAlphaLCBonus").innerHTML = sAlphaLC;
+		//document.getElementById("nNumberBonus").innerHTML = sNumber;
+		//document.getElementById("nSymbolBonus").innerHTML = sSymbol;
+		//document.getElementById("nMidCharBonus").innerHTML = sMidChar;
 		
 		/* Point deductions for poor practices */
 		if ((nAlphaLC > 0 || nAlphaUC > 0) && nSymbol === 0 && nNumber === 0) {  // Only Letters
@@ -2605,15 +2784,15 @@ function chkPass(pwd, flag) {
 		
 		/* Display updated score criteria to client */
 		if(document.form.current_page.value != "AiProtection_HomeProtection.asp"){		//for Router weakness status, Jimeing added at 2014/06/07
-			$('scorebarBorder').style.display = "";
+			document.getElementById('scorebarBorder').style.display = "";
 			oScorebar.style.backgroundPosition = "-" + parseInt(nScore * 4) + "px";
 		}
 		else{
 			if(nScore >= 0 && nScore < 40){
-				$('score').className = "status_no";			
+				document.getElementById('score').className = "status_no";			
 			}
 			else if(nScore >= 40 && nScore <= 100){
-				$('score').className = "status_yes";		
+				document.getElementById('score').className = "status_yes";		
 			}
 		}
 		
@@ -2647,6 +2826,8 @@ function goToWAN(index){
 		else
 			document.titleForm.current_page.value = "Advanced_Modem_Content.asp";
 	}
+	else if(index == dsl_index)
+		document.titleForm.current_page.value = "Advanced_DSL_Content.asp";
 	else
 		document.titleForm.current_page.value = "Advanced_WAN_Content.asp";
 	document.titleForm.action_mode.value = "change_wan_unit";

@@ -17,6 +17,11 @@
 #endif
 #include <notify_rc.h>
 #include <usb_info.h>
+#include <disk_initial.h>
+
+#if defined(RTCONFIG_USB) && defined(RTCONFIG_NOTIFICATION_CENTER)
+#include <libnt.h>
+#endif
 
 #define MAX_RETRY_LOCK 1
 
@@ -298,36 +303,13 @@ int write_3g_conf(FILE *fp, int dno, int aut, const unsigned int vid, const unsi
 			fprintf(fp, "TargetProduct=0x%04x\n",	0x1464);
 			fprintf(fp, "MessageContent=%s\n",	"55534243123456780000000000000011060000000000000000000000000000");
 			break;
-		case SN_ZTE_MF620:
-			fprintf(fp, "DefaultVendor=0x%04x\n",	0x19d2);
-			fprintf(fp, "DefaultProduct=0x%04x\n",	0x2000);
-			fprintf(fp, "TargetVendor=0x%04x\n",	0x19d2);
-			fprintf(fp, "TargetProduct=0x%04x\n",	0x0001);
-			fprintf(fp, "MessageContent=%s\n",	"55534243123456780000000000000600000000000000000000000000000000");
-			break;
-		case SN_ZTE_MF622:
-			fprintf(fp, "DefaultVendor=0x%04x\n",	0x19d2);
-			fprintf(fp, "DefaultProduct=0x%04x\n",	0x2000);
-			fprintf(fp, "TargetVendor=0x%04x\n",	0x19d2);
-			fprintf(fp, "TargetProduct=0x%04x\n",	0x0002);
-			fprintf(fp, "MessageContent=%s\n",	"55534243f8f993882000000080000a85010101180101010101000000000000");
-			break;
-		case SN_ZTE_MF628:
-			fprintf(fp, "DefaultVendor=0x%04x\n",	0x19d2);
-			fprintf(fp, "DefaultProduct=0x%04x\n",	0x2000);
-			fprintf(fp, "TargetVendor=0x%04x\n",	0x19d2);
-			fprintf(fp, "TargetProduct=0x%04x\n",	0x0015);
-			fprintf(fp, "MessageContent=%s\n",	"5553424312345678000000000000061b000000030000000000000000000000");
-		/*	fprintf(fp, "NeedResponse=1\n");	// was ResponseNeeded=1 */
-			break;
 		case SN_ZTE_MF626:
 			fprintf(fp, "DefaultVendor=0x%04x\n",	0x19d2);
 			fprintf(fp, "DefaultProduct=0x%04x\n",	0x2000);
 			fprintf(fp, "TargetVendor=0x%04x\n",	0x19d2);
-			fprintf(fp, "TargetProduct=0x%04x\n",	0x0031);
-			fprintf(fp, "MessageContent=%s\n",	"5553424312345678000000000000061e000000000000000000000000000000");
-			fprintf(fp, "MessageContent2=%s\n",	"5553424312345679000000000000061b000000020000000000000000000000");
-			fprintf(fp, "NeedResponse=1\n");
+			fprintf(fp, "TargetProductList=%s\n",	"0001,0002,0015,0016,0017,0019,0031,0033,0037,0042,0052,0055,0061,0063,0064,0066,0091,0108,0117,0128,0151,0157,0177,1402,2002,2003");
+			fprintf(fp, "StandardEject=1\n");
+			fprintf(fp, "MessageContent=%s\n",	"55534243123456702000000080000c85010101180101010101000000000000");
 			break;
 		case SN_ZTE_AC8710:
 			fprintf(fp, "DefaultVendor=0x%04x\n",	0x19d2);
@@ -343,20 +325,6 @@ int write_3g_conf(FILE *fp, int dno, int aut, const unsigned int vid, const unsi
 			fprintf(fp, "TargetProduct=0x%04x\n",	0xffff);
 			fprintf(fp, "MessageContent=%s\n",	"5553424312345678c00000008000069f010000000000000000000000000000");
 			break;
-		case SN_ZTE6535_Z:
-			fprintf(fp, "DefaultVendor=0x%04x\n",	0x19d2);
-			fprintf(fp, "DefaultProduct=0x%04x\n",	0x2000);
-			fprintf(fp, "TargetVendor=0x%04x\n",	0x19d2);
-			fprintf(fp, "TargetProduct=0x%04x\n",	0x0052);
-			fprintf(fp, "MessageContent=%s\n",	"55534243123456782000000080000c85010101180101010101000000000000");
-			break;
-		case SN_ZTE_K3520_Z:
-			fprintf(fp, "DefaultVendor=0x%04x\n",	0x19d2);
-			fprintf(fp, "DefaultProduct=0x%04x\n",	0x2000);
-			fprintf(fp, "TargetVendor=0x%04x\n",	0x19d2);
-			fprintf(fp, "TargetProduct=0x%04x\n",	0x0055);
-			fprintf(fp, "MessageContent=%s\n",	"55534243123456782000000080000c85010101180101010101000000000000");
-			break;
 		case SN_ZTE_MF110:
 			fprintf(fp, "DefaultVendor=0x%04x\n",	0x19d2);
 			fprintf(fp, "DefaultProduct=0x%04x\n",	0x0053);
@@ -365,27 +333,6 @@ int write_3g_conf(FILE *fp, int dno, int aut, const unsigned int vid, const unsi
 			fprintf(fp, "MessageContent=%s\n",	"5553424312345678000000000000061b000000020000000000000000000000");
 			fprintf(fp, "MessageContent2=%s\n",	"55534243876543212000000080000c85010101180101010101000000000000");
 			fprintf(fp, "NeedResponse=1\n");
-			break;
-		case SN_ZTE_K3565:
-			fprintf(fp, "DefaultVendor=0x%04x\n",	0x19d2);
-			fprintf(fp, "DefaultProduct=0x%04x\n",	0x2000);
-			fprintf(fp, "TargetVendor=0x%04x\n",	0x19d2);
-			fprintf(fp, "TargetProduct=0x%04x\n",	0x0063);
-			fprintf(fp, "MessageContent=%s\n",	"5553424312345678000000000000061b000000020000000000000000000000");
-			break;
-		case SN_ONDA_MT503HS:
-			fprintf(fp, "DefaultVendor=0x%04x\n",	0x19d2);
-			fprintf(fp, "DefaultProduct=0x%04x\n",	0x2000);
-			fprintf(fp, "TargetVendor=0x%04x\n",	0x19d2);
-			fprintf(fp, "TargetProduct=0x%04x\n",	0x0002);
-			fprintf(fp, "MessageContent=%s\n",	"55534243b0c8dc812000000080000a85010101180101010101000000000000");
-			break;
-		case SN_ONDA_MT505UP:
-			fprintf(fp, "DefaultVendor=0x%04x\n",	0x19d2);
-			fprintf(fp, "DefaultProduct=0x%04x\n",	0x2000);
-			fprintf(fp, "TargetVendor=0x%04x\n",	0x19d2);
-			fprintf(fp, "TargetProduct=0x%04x\n",	0x0002);
-			fprintf(fp, "MessageContent=%s\n",	"55534243123456780000010080000a28000000001c00002000000000000000");
 			break;
 		case SN_Novatel_Wireless_Ovation_MC950D:
 			fprintf(fp, "DefaultVendor=0x%04x\n",	0x1410);
@@ -1041,15 +988,6 @@ int write_3g_conf(FILE *fp, int dno, int aut, const unsigned int vid, const unsi
 			fprintf(fp, "TargetClass=0x%02x\n",	0xff);
 			fprintf(fp, "MessageContent=%s\n",	"55534243123456780000000000000606f50402527000000000000000000000");
 			break;
-		case SN_ZTE_WCDMA_from_BNSL:
-			fprintf(fp, "DefaultVendor=0x%04x\n",	0x19d2);
-			fprintf(fp, "DefaultProduct=0x%04x\n",	0x2000);
-			fprintf(fp, "TargetVendor=0x%04x\n",	0x19d2);
-			fprintf(fp, "TargetProduct=0x%04x\n",	0x0108);
-			fprintf(fp, "MessageContent=%s\n",	"5553424312345678000000000000061e000000000000000000000000000000");
-			fprintf(fp, "MessageContent2=%s\n",	"5553424312345679000000000000061b000000020000000000000000000000");
-			fprintf(fp, "NeedResponse=1\n");
-			break;
 		case SN_Huawei_U8110:
 			fprintf(fp, "DefaultVendor=0x%04x\n",	0x12d1);
 			fprintf(fp, "DefaultProduct=0x%04x\n",	0x1031);
@@ -1267,7 +1205,7 @@ int write_3g_conf(FILE *fp, int dno, int aut, const unsigned int vid, const unsi
 			fprintf(fp, "CheckSuccess=%d\n",	20);
 			fprintf(fp, "MessageContent=%s\n",	"55534243123456780000000000000011062000000100000000000000000000");
 			break;
-		case SN_HUAWEI_EC306:
+		case SN_Huawei_EC306:
 			fprintf(fp, "DefaultVendor=0x%04x\n",	0x12d1);
 			fprintf(fp, "DefaultProduct=0x%04x\n",	0x1505);
 			fprintf(fp, "TargetVendor=0x%04x\n",	0x12d1);
@@ -1616,6 +1554,23 @@ int write_3g_conf(FILE *fp, int dno, int aut, const unsigned int vid, const unsi
 			fprintf(fp, "TargetProduct=0x%04x\n",	0x1506);
 			fprintf(fp, "MessageContent=%s\n",	"55534243000000000000000000000011060000000100000000000000000000");
 			break;
+		case SN_Huawei_E3372:
+			fprintf(fp, "DefaultVendor=0x%04x\n",	0x12d1);
+			fprintf(fp, "DefaultProduct=0x%04x\n",	0x157d);
+			fprintf(fp, "TargetVendor=0x%04x\n",	0x12d1);
+			fprintf(fp, "TargetProductList=%s\n",	"14db,14dc");
+			fprintf(fp, "HuaweiNewMode=1\n");
+			break;
+		case SN_Huawei_E303u:
+			fprintf(fp, "DefaultVendor=0x%04x\n",	0x12d1);
+			fprintf(fp, "DefaultProduct=0x%04x\n",	0x15ca);
+			fprintf(fp, "HuaweiNewMode=1\n");
+			break;
+		case SN_Huawei_E3531s:
+			fprintf(fp, "DefaultVendor=0x%04x\n",	0x12d1);
+			fprintf(fp, "DefaultProduct=0x%04x\n",	0x15cd);
+			fprintf(fp, "HuaweiNewMode=1\n");
+			break;
 		case SN_Teracom_LW272:
 			fprintf(fp, "DefaultVendor=0x%04x\n",	0x230d);
 			fprintf(fp, "DefaultProduct=0x%04x\n",	0x0103);
@@ -1907,7 +1862,7 @@ usb_dbg("3G: Auto setting.\n");
 			write_3g_conf(fp, SN_Huawei_K4305, 1, vid, pid);
 		else if(vid == 0x12d1 && pid == 0x156a)
 			write_3g_conf(fp, SN_Huawei_E3276s, 1, vid, pid);
-		else if(vid == 0x19d2 && pid == 0x2000)	// also ZTE622, 628, 626, 6535-Z, K3520-Z, K3565, ONDA-MT503HS, ONDA-MT505UP
+		else if(vid == 0x19d2 && pid == 0x2000)	// also ZTE 620, 622, 628, 6535-Z, K3520-Z, K3565, ONDA-MT503HS, ONDA-MT505UP
 			write_3g_conf(fp, SN_ZTE_MF626, 1, vid, pid);
 		else if(vid == 0x19d2 && pid == 0xfff5)
 			write_3g_conf(fp, SN_ZTE_AC2710, 1, vid, pid);	// 2710
@@ -2175,6 +2130,12 @@ usb_dbg("3G: Auto setting.\n");
 			write_3g_conf(fp, SN_TP_Link_MA260, 1, vid, pid);
 		else if(vid == 0x12d1 && pid == 0x155b)
 			write_3g_conf(fp, SN_Huawei_E3131, 1, vid, pid);
+		else if(vid == 0x12d1 && pid == 0x157d)
+			write_3g_conf(fp, SN_Huawei_E3372, 1, vid, pid);
+		else if(vid == 0x12d1 && pid == 0x15ca)
+			write_3g_conf(fp, SN_Huawei_E303u, 1, vid, pid);
+		else if(vid == 0x12d1 && pid == 0x15cd)
+			write_3g_conf(fp, SN_Huawei_E3531s, 1, vid, pid);
 		else if(vid == 0x12d1)
 			write_3g_conf(fp, UNKNOWNDEV, 1, vid, pid);
 		else{
@@ -2245,30 +2206,14 @@ usb_dbg("3G: manaul setting.\n");
 			fclose(fp);
 			unlink(conf_file);
 			return 0;
-		} else if (strcmp(dongle_name, "ZTE-MF620") == 0){
-			write_3g_conf(fp, SN_ZTE_MF620, 0, vid, pid);
-		} else if (strcmp(dongle_name, "ZTE-MF622") == 0){
-			write_3g_conf(fp, SN_ZTE_MF622, 0, vid, pid);
-		} else if (strcmp(dongle_name, "ZTE-MF628") == 0){
-			write_3g_conf(fp, SN_ZTE_MF628, 0, vid, pid);
 		} else if (strcmp(dongle_name, "ZTE-MF626") == 0){
 			write_3g_conf(fp, SN_ZTE_MF626, 0, vid, pid);
 		} else if (strcmp(dongle_name, "ZTE-AC8710") == 0){
 			write_3g_conf(fp, SN_ZTE_AC8710, 0, vid, pid);
 		} else if (strcmp(dongle_name, "ZTE-AC2710") == 0){
 			write_3g_conf(fp, SN_ZTE_AC2710, 0, vid, pid);
-		} else if (strcmp(dongle_name, "ZTE-6535-Z") == 0){
-			write_3g_conf(fp, SN_ZTE6535_Z, 0, vid, pid);
-		} else if (strcmp(dongle_name, "ZTE-K3520-Z") == 0){
-			write_3g_conf(fp, SN_ZTE_K3520_Z, 0, vid, pid);
 		} else if (strcmp(dongle_name, "ZTE-MF110") == 0){
 			write_3g_conf(fp, SN_ZTE_MF110, 0, vid, pid);
-		} else if (strcmp(dongle_name, "ZTE-K3565") == 0){
-			write_3g_conf(fp, SN_ZTE_K3565, 0, vid, pid);
-		} else if (strcmp(dongle_name, "ONDA-MT503HS") == 0){
-			write_3g_conf(fp, SN_ONDA_MT503HS, 0, vid, pid);
-		} else if (strcmp(dongle_name, "ONDA-MT505UP") == 0){
-			write_3g_conf(fp, SN_ONDA_MT505UP, 0, vid, pid);
 		} else if (strcmp(dongle_name, "Novatel-Wireless-Ovation-MC950D-HSUPA") == 0){
 			write_3g_conf(fp, SN_Novatel_Wireless_Ovation_MC950D, 0, vid, pid);
 		} else if (strcmp(dongle_name, "Novatel-U727") == 0){
@@ -2369,6 +2314,9 @@ int write_3g_ppp_conf(void){
 	int wan_unit;
 	char prefix[] = "wanXXXXXXXXXX_", tmp[100];
 	int retry, lock;
+#ifdef SET_USB_MODEM_MTU_PPP
+	int modem_mtu;
+#endif
 
 	snprintf(modem_node, 16, "%s", nvram_safe_get("usb_modem_act_int"));
 	if(strlen(modem_node) <= 0){
@@ -2469,6 +2417,11 @@ int write_3g_ppp_conf(void){
 	}
 	fprintf(fp, "persist\n");
 	fprintf(fp, "holdoff %s\n", nvram_invmatch(strcat_r(prefix, "pppoe_holdoff", tmp), "")?nvram_safe_get(tmp):"10");
+#ifdef SET_USB_MODEM_MTU_PPP
+	modem_mtu = nvram_get_int("modem_mtu");
+	if (modem_mtu >= 576)
+		fprintf(fp, "mtu %d\n", modem_mtu);
+#endif
 	if(!strcmp(modem_enable, "2")){
 		fprintf(fp, "connect \"/bin/comgt -d /dev/%s -s %s/ppp/3g/EVDO_conn.scr\"\n", modem_node, MODEM_SCRIPTS_DIR);
 		fprintf(fp, "disconnect \"/bin/comgt -d /dev/%s -s %s/ppp/3g/EVDO_disconn.scr\"\n", modem_node, MODEM_SCRIPTS_DIR);
@@ -2542,7 +2495,7 @@ int write_beceem_conf(const char *eth_node){
 		fprintf(fp, "CenterFrequencyMHz                2505 2515 2525 2625\n");
 		fprintf(fp, "EAPMethod                         4\n");
 		fprintf(fp, "ValidateServerCert                Yes\n");
-		fprintf(fp, "CACertFileName                    '/lib/firmware/Server_CA.pem'\n");
+		fprintf(fp, "CACertFileName                    '/tmp/Beceem_firmware/Server_CA.pem'\n");
 		fprintf(fp, "TLSDeviceCertFileName             'DeviceMemSlot3'\n");
 		fprintf(fp, "TLSDevicePrivateKeyFileName       'DeviceMemSlot2'\n");
 		fprintf(fp, "TLSDevicePrivateKeyPassword       'Motorola'\n");
@@ -2894,10 +2847,25 @@ int set_usb_common_nvram(const char *action, const char *device_name, const char
 		else{
 			if(!strcmp(known_type, "storage")){
 				ptr = (char *)device_name+strlen(device_name)-1;
-				if(!isdigit(*ptr)){
+				if(!isdigit(*ptr)){ // disk
 					snprintf(prefix, sizeof(prefix), "usb_path%s", port_path);
 					if(strlen(nvram_safe_get(strcat_r(prefix, "_vid", tmp))) <= 0)
 						nvram_unset(prefix);
+					// for ATE. {
+					// Jerry5Chang added for unmount case. 2012.12.03
+					nvram_unset(strcat_r(prefix, "_removed", tmp));
+					nvram_unset(strcat_r(prefix, "_act", tmp)); // for DM.
+					nvram_unset(strcat_r(prefix, "_fs_path0", tmp));
+#ifdef RTCONFIG_DISK_MONITOR
+					nvram_unset(strcat_r(prefix, "_pool_error", tmp));
+#endif
+					nvram_unset(strcat_r(prefix, "_speed", tmp));
+					// for ATE. }
+				}
+				else if(!strncmp(device_name, "mmcblk", 6)){ // SD card.
+					snprintf(prefix, sizeof(prefix), "usb_path%s", port_path);
+					nvram_unset(prefix);
+					nvram_unset(strcat_r(prefix, "_node", tmp));
 					// for ATE. {
 					// Jerry5Chang added for unmount case. 2012.12.03
 					nvram_unset(strcat_r(prefix, "_removed", tmp));
@@ -2997,43 +2965,132 @@ int set_usb_common_nvram(const char *action, const char *device_name, const char
 	return 0;
 }
 
-#ifdef RTCONFIG_BCMARM
+#ifdef BCM_MMC
 int asus_mmc(const char *device_name, const char *action){
-	
-	int ret = 0;
-	char *type, mnt_dev[128], mountpoint[128];
+#ifdef RTCONFIG_USB
+	char usb_port[32];
+	int isLock;
+	char env_dev[64], env_major[64], env_port[64];
+	char port_path[8];
+	char prefix[] = "usb_pathXXXXXXXXXXXXXXXXX_", tmp[100];
+	char *ptr;
 
-	_dprintf("\n[%s][mmc hotplug:%s dev:[%s]\n", __FUNCTION__, action, device_name);
+	usb_dbg("(%s): action=%s.\n", device_name, action);
 
-	memset(mountpoint, 0, sizeof(mountpoint));
-	sprintf(mountpoint, "%s/%s", "/mnt", device_name);
-
-	if(strcmp(action, "add") == 0)
-	{
-		memset(mnt_dev, 0, sizeof(mnt_dev));
-		sprintf(mnt_dev, "/dev/%s", device_name);
-		if ((type = detect_fs_type(mnt_dev)) == NULL)
-			return 0;
-
-		_dprintf("[%s] get mmc [%s]\n", __FUNCTION__, type);	// tmp test
-
-		ret = mount_r(mnt_dev, mountpoint, type);
-
-		_dprintf("[%s] chk mount:%d\n", __FUNCTION__, ret);	// tmp test
-
-#ifdef RTAC88U
-		stop_samba();
-		setup_passwd();
-		start_samba();
-		eval("cp", "-f", "/rom/smb.conf", "/etc/smb.conf");
-#endif
-	} else {
-		ret = umount2(mountpoint, MNT_DETACH);
-
-		_dprintf("[%s] chk unmount:%d\n", __FUNCTION__, ret);	// tmp test
+	if(!strcmp(nvram_safe_get("stop_mmc"), "1")){
+		usb_dbg("(%s): stop_mmc be set.\n", device_name);
+		return 0;
 	}
 
-	return ret;
+	if(get_device_type_by_device(device_name) != DEVICE_TYPE_DISK){
+		usb_dbg("(%s): The device is not a mmc device.\n", device_name);
+		return 0;
+	}
+
+	// Check Lock.
+	if((isLock = file_lock((char *)device_name)) == -1){
+		usb_dbg("(%s): Can't set the file lock!\n", device_name);
+		return 0;
+	}
+
+	ptr = (char *)device_name+strlen(device_name)-1;
+
+	snprintf(usb_port, 32, "%s", SDCARD_PORT);
+
+	if(!check_hotplug_action(action)){
+		snprintf(prefix, sizeof(prefix), "usb_path_%s", device_name);
+		nvram_unset(strcat_r(prefix, "_label", tmp));
+
+		if(get_path_by_node(usb_port, port_path, 8) == NULL){
+			usb_dbg("(%s): Fail to get usb path.\n", usb_port);
+			file_unlock(isLock);
+			return 0;
+		}
+
+		set_usb_common_nvram(action, device_name, usb_port, "storage");
+
+		usb_dbg("(%s): Remove MMC.\n", device_name);
+
+		putenv("INTERFACE=8/0/0");
+		putenv("ACTION=remove");
+		putenv("PRODUCT=asus_mmc");
+		snprintf(env_dev, 64, "DEVICENAME=%s", device_name);
+		putenv(env_dev);
+		putenv("SUBSYSTEM=block");
+		snprintf(env_major, 64, "MAJOR=%d", USB_DISK_MAJOR);
+		putenv(env_major);
+		putenv("PHYSDEVBUS=scsi");
+
+		eval("hotplug", "block");
+
+		unsetenv("INTERFACE");
+		unsetenv("ACTION");
+		unsetenv("PRODUCT");
+		unsetenv("DEVICENAME");
+		unsetenv("SUBSYSTEM");
+		unsetenv("MAJOR");
+		unsetenv("PHYSDEVBUS");
+
+#ifdef RTCONFIG_MMC_LED
+		led_control(LED_MMC, LED_OFF);
+#endif
+
+		file_unlock(isLock);
+		return 0;
+	}
+
+	// there is a static usb node with the SD card, so don't need to set the usb_node record.
+	if(get_path_by_node(usb_port, port_path, 8) == NULL){
+		usb_dbg("(%s): Fail to get usb path.\n", usb_port);
+		file_unlock(isLock);
+		return 0;
+	}
+
+	snprintf(prefix, sizeof(prefix), "usb_path%s", port_path);
+
+	// There is only a hotplug with the partition of the SD card.
+	//if(!isdigit(*ptr)){ // disk
+		// set USB common nvram.
+		set_usb_common_nvram(action, device_name, usb_port, "storage");
+
+		// for DM.
+		if(!strcmp(nvram_safe_get(prefix), "storage")){
+			nvram_set(strcat_r(prefix, "_act", tmp), device_name);
+		}
+	//}
+
+	putenv("INTERFACE=8/0/0");
+	putenv("ACTION=add");
+	putenv("PRODUCT=asus_mmc");
+	snprintf(env_dev, 64, "DEVICENAME=%s", device_name);
+	putenv(env_dev);
+	putenv("SUBSYSTEM=block");
+	snprintf(env_port, 64, "USBPORT=%s", usb_port);
+	putenv(env_port);
+	snprintf(env_major, 64, "MAJOR=%d", USB_DISK_MAJOR);
+	putenv(env_major);
+	putenv("PHYSDEVBUS=scsi");
+
+	eval("hotplug", "block");
+
+	unsetenv("INTERFACE");
+	unsetenv("ACTION");
+	unsetenv("PRODUCT");
+	unsetenv("DEVICENAME");
+	unsetenv("SUBSYSTEM");
+	unsetenv("USBPORT");
+	unsetenv("MAJOR");
+	unsetenv("PHYSDEVBUS");
+
+#ifdef RTCONFIG_MMC_LED
+	led_control(LED_MMC, LED_ON);
+#endif
+
+	usb_dbg("(%s): Success!\n", device_name);
+	file_unlock(isLock);
+
+#endif
+	return 1;
 }
 #endif
 
@@ -3042,7 +3099,7 @@ int asus_sd(const char *device_name, const char *action){
 	char usb_node[32], usb_port[32];
 	int isLock;
 	char nvram_value[32];
-	char env_dev[64], env_port[64];
+	char env_dev[64], env_major[64], env_port[64];
 	char port_path[8];
 	char buf1[32];
 	char prefix[] = "usb_pathXXXXXXXXXXXXXXXXX_", tmp[100];
@@ -3138,11 +3195,11 @@ int asus_sd(const char *device_name, const char *action){
 		putenv("INTERFACE=8/0/0");
 		putenv("ACTION=remove");
 		putenv("PRODUCT=asus_sd");
-		memset(env_dev, 0, 64);
-		sprintf(env_dev, "DEVICENAME=%s", device_name);
+		snprintf(env_dev, 64, "DEVICENAME=%s", device_name);
 		putenv(env_dev);
 		putenv("SUBSYSTEM=block");
-		putenv("MAJOR=8");
+		snprintf(env_major, 64, "MAJOR=%d", USB_DISK_MAJOR);
+		putenv(env_major);
 		putenv("PHYSDEVBUS=scsi");
 
 		eval("hotplug", "block");
@@ -3165,6 +3222,8 @@ int asus_sd(const char *device_name, const char *action){
 		file_unlock(isLock);
 		return 0;
 	}
+	else
+		usb_dbg("(%s): Got usb node: %s.\n", device_name, usb_node);
 
 	if(get_path_by_node(usb_node, port_path, 8) == NULL){
 		usb_dbg("(%s): Fail to get usb path.\n", usb_node);
@@ -3178,6 +3237,8 @@ int asus_sd(const char *device_name, const char *action){
 		file_unlock(isLock);
 		return 0;
 	}
+	else
+		usb_dbg("(%s): Got usb port: %s.\n", device_name, usb_port);
 
 	memset(buf1, 0, 32);
 	sprintf(buf1, "usb_path_%s", device_name);
@@ -3264,7 +3325,58 @@ after_change_xhcimode:
 		return 0;
 	}
 
-	if(!isdigit(*ptr)){
+	if(!isdigit(*ptr)){ // disk
+#ifdef RTCONFIG_NOTIFICATION_CENTER
+		char buf[MAX_NVRAM_SPACE], str[32];
+		char *name;
+		int plugged_disk = 0;
+		int ntevent_firstdisk = nvram_get_int("ntevent_firstdisk");
+		int ntevent_nodiskuse = nvram_get_int("ntevent_nodiskuse");
+#if defined(RTCONFIG_USB_XHCI) || defined(RTCONFIG_ETRON_XHCI)
+		int ntevent_disableusb3 = nvram_get_int("ntevent_disableusb3");
+		int usb_usb3 = nvram_get_int("usb_usb3");
+#endif
+
+		if(!ntevent_firstdisk){
+			nvram_getall(buf, sizeof(buf));
+			for(name = buf; *name; name += strlen(name)+1){
+				// non usb nvrams
+				if(strncmp(name, "usb_path", 8))
+					continue;
+
+				// non disk utility nvrams
+				if(strstr(name, "_diskmon_"))
+					continue;
+
+				if(!isdigit(*(name+8)))
+					continue;
+
+				plugged_disk = 1;
+				break;
+			}
+
+			if(!plugged_disk){
+				usb_dbg("(%s): Got the first storage on Port %s.\n", device_name, usb_port);
+				snprintf(str, 32, "0x%x", HINT_USB_FIRSTIME_CHECK_EVENT);
+				eval("Notify_Event2NC", str, "");
+				nvram_set("ntevent_firstdisk", "1");
+
+				if(!ntevent_nodiskuse)
+					nvram_set("ntevent_nodiskuse", "1");
+
+#if defined(RTCONFIG_USB_XHCI) || defined(RTCONFIG_ETRON_XHCI)
+				if(!usb_usb3 && !ntevent_disableusb3){
+					snprintf(str, 32, "0x%x", HINT_USB3_WITHOUT_ENHANCE_EVENT);
+					eval("Notify_Event2NC", str, "");
+					nvram_set("ntevent_disableusb3", "1");
+				}
+#endif
+
+				nvram_commit();
+			}
+		}
+#endif
+
 		// set USB common nvram.
 		set_usb_common_nvram(action, device_name, usb_node, "storage");
 
@@ -3286,12 +3398,10 @@ after_change_xhcimode:
 	putenv("INTERFACE=8/0/0");
 	putenv("ACTION=add");
 	putenv("PRODUCT=asus_sd");
-	memset(env_dev, 0, 64);
-	sprintf(env_dev, "DEVICENAME=%s", device_name);
+	snprintf(env_dev, 64, "DEVICENAME=%s", device_name);
 	putenv(env_dev);
 	putenv("SUBSYSTEM=block");
-	memset(env_port, 0, 64);
-	sprintf(env_port, "USBPORT=%s", usb_port);
+	snprintf(env_port, 64, "USBPORT=%s", usb_port);
 	putenv(env_port);
 
 	eval("hotplug", "block");
@@ -3314,10 +3424,9 @@ after_change_xhcimode:
 
 	usb_dbg("(%s): Success!\n", device_name);
 	file_unlock(isLock);
-	return 1;
 
 #endif // RTCONFIG_USB
-	return 0;
+	return 1;
 }
 
 int asus_lp(const char *device_name, const char *action){
@@ -3595,10 +3704,21 @@ int asus_sr(const char *device_name, const char *action){
 		return 0;
 	}
 
-	memset(nvram_name, 0, 32);
-	sprintf(nvram_name, "usb_path%s", port_path);
-	memset(nvram_value, 0, 32);
-	strcpy(nvram_value, nvram_safe_get(nvram_name));
+	snprintf(nvram_name, 32, "usb_path%s", port_path);
+	snprintf(nvram_value, 32, "%s", nvram_safe_get(nvram_name));
+
+	// Storage interface is first up with some composite devices,
+	// so needs to wait that other interfaces wake up.
+	int i;
+	for(i = 0; i < 3; ++i){
+		if(strcmp(nvram_value, "printer") && strcmp(nvram_value, "modem")){
+			usb_dbg("%s: wait for the printer/modem interface...\n", __FUNCTION__);
+			sleep(1);
+			snprintf(nvram_value, 32, "%s", nvram_safe_get(nvram_name));
+		}
+		else
+			break;
+	}
 	if(!strcmp(nvram_value, "printer") || !strcmp(nvram_value, "modem")){
 		usb_dbg("(%s): Already there was a other interface(%s).\n", usb_node, nvram_value);
 		file_unlock(isLock);
@@ -3658,9 +3778,6 @@ int asus_tty(const char *device_name, const char *action){
 	char current_act[16], current_def[16];
 	int cur_val, tmp_val;
 	int retry;
-#ifndef RTCONFIG_USB_MODEM_PIN
-	char cmd[32];
-#endif
 	int wan_unit;
 	char port_path[8];
 	char buf1[32];
@@ -3692,6 +3809,7 @@ int asus_tty(const char *device_name, const char *action){
 		nvram_unset(buf1);
 		snprintf(act_dev, 8, "%s", nvram_safe_get("usb_modem_act_dev"));
 
+		usb_dbg("(%s): usb_modem_act_path=%s.\n", usb_node, current_act);
 		if(!strcmp(current_act, usb_node)){
 			if(get_path_by_node(usb_node, port_path, 8) == NULL){
 				usb_dbg("(%s): Fail to get usb path.\n", usb_node);
@@ -3976,14 +4094,6 @@ usb_dbg("(%s): cur_val=%d, tmp_val=%d.\n", device_name, cur_val, tmp_val);
 				return 0;
 			}
 #endif
-
-#ifndef RTCONFIG_USB_MODEM_PIN
-			// If PIN enable, start_wan() here is too soon to work the modem.
-usb_dbg("(%s): got tty nodes and notify restart wan(%d)...\n", device_name, wan_unit);
-			memset(cmd, 0, 32);
-			sprintf(cmd, "restart_wan_if %d", wan_unit);
-			notify_rc_and_wait(cmd);
-#endif
 		}
 #ifdef RTCONFIG_DUALWAN
 		else
@@ -4117,6 +4227,9 @@ int asus_usb_interface(const char *device_name, const char *action){
 	char conf_file[32];
 	char port_path[8];
 	int port_num;
+	int turn_on_led = 1;
+	char class_path[PATH_MAX], class[10] = "";
+
 	usb_dbg("(%s): action=%s.\n", device_name, action);
 
 	if(!strcmp(nvram_safe_get("stop_ui"), "1")){
@@ -4163,8 +4276,23 @@ int asus_usb_interface(const char *device_name, const char *action){
 	// If remove the device? Handle the remove hotplug of the printer and modem.
 	if(!check_hotplug_action(action)){
 		snprintf(nvram_usb_path, 32, "usb_led%d", port_num);
-		if(!strcmp(nvram_safe_get(nvram_usb_path), "1"))
-			nvram_unset(nvram_usb_path);
+		if (!strcmp(nvram_safe_get(nvram_usb_path), "1")) {
+			int turn_off_led = 1;
+			disk_info_t *disk_list, *disk_info;
+
+			disk_list = read_disk_data();
+			for (disk_info = disk_list; disk_info != NULL && turn_off_led; disk_info = disk_info->next) {
+				if (port_num != atoi(disk_info->port))
+					continue;
+
+				turn_off_led = 0;
+				_dprintf("Another disk exist on USB port %d, don't turn off USB LED\n", port_num);
+			}
+			free_disk_data(&disk_list);
+
+			if (turn_off_led)
+				nvram_unset(nvram_usb_path);
+		}
 
 		strcpy(device_type, nvram_safe_get(prefix));
 
@@ -4195,7 +4323,7 @@ int asus_usb_interface(const char *device_name, const char *action){
 			}
 #endif
 
-#ifndef RT4GAC55U
+#ifndef RTCONFIG_INTERNAL_GOBI
 			// When ACM dongles are removed, there are no removed hotplugs of ttyACM nodes.
 			if(!strncmp(buf, "ttyACM", 6)){
 				// No methods let DUT restore the normal state after removing the ACM dongle.
@@ -4220,13 +4348,19 @@ int asus_usb_interface(const char *device_name, const char *action){
 		return 0;
 	}
 
+	/* Don't turn on USB LED for USB HUB. */
+	snprintf(class_path, sizeof(class_path), "/sys/bus/usb/devices/%s/%s",
+		device_name, strchr(device_name, ':')? "bInterfaceClass" : "bDeviceClass");
+	if (f_read_string(class_path, class, sizeof(class)) > 0 && atoi(class) == 9)
+		turn_on_led = 0;
+
 	snprintf(nvram_usb_path, 32, "usb_led%d", port_num);
-#ifdef RT4GAC55U
+#ifdef RTCONFIG_INTERNAL_GOBI
 	if(nvram_get_int("usb_buildin") == port_num)
 		; //skip this LED
 	else
-#endif	/* RT4GAC55U */
-	if(strcmp(nvram_safe_get(nvram_usb_path), "1"))
+#endif	/* RTCONFIG_INTERNAL_GOBI */
+	if (turn_on_led && strcmp(nvram_safe_get(nvram_usb_path), "1"))
 		nvram_set(nvram_usb_path, "1");
 
 #ifdef RTCONFIG_USB_MODEM
@@ -4295,16 +4429,17 @@ int asus_usb_interface(const char *device_name, const char *action){
 		file_unlock(isLock);
 		return 0;
 	}
-#ifdef RT4GAC55U
+#ifdef RTCONFIG_INTERNAL_GOBI
 	else if((nvram_get_int("usb_gobi") == 1 && strcmp(port_path, "2"))
 			|| (nvram_get_int("usb_gobi") != 1 && !strcmp(port_path, "2"))
 			){
-		if(nvram_get_int("usb_gobi") == 1)
+		if(nvram_get_int("usb_gobi") == 1){
 			usb_dbg("(%s): Just use the built-in Gobi and disable the USB modem.\n", device_name);
+			file_unlock(isLock);
+			return 0;
+		}
 		else
 			usb_dbg("(%s): Just use the USB modem and disable the built-in Gobi.\n", device_name);
-		file_unlock(isLock);
-		return 0;
 	}
 #endif
 
@@ -4316,22 +4451,26 @@ int asus_usb_interface(const char *device_name, const char *action){
 
 		char *isp = nvram_safe_get("modem_isp");
 
-		unlink("/tmp/Beceem_firmware/macxvi.cfg");
+		eval("rm", "-rf", BECEEM_DIR);
+		eval("mkdir", "-p", BECEEM_DIR);
+		eval("ln", "-sf", "/rom/Beceem_firmware/RemoteProxy.cfg", "/tmp/Beceem_firmware/RemoteProxy.cfg");
+
 		if(!strcmp(isp, "Yota")){
-			eval("ln", "-sf", "/tmp/Beceem_firmware/macxvi200.bin.normal", "/tmp/Beceem_firmware/macxvi200.bin");
-			eval("ln", "-sf", "/tmp/Beceem_firmware/macxvi.cfg.yota", "/tmp/Beceem_firmware/macxvi.cfg");
+			eval("ln", "-sf", "/rom/Beceem_firmware/macxvi200.bin.normal", "/tmp/Beceem_firmware/macxvi200.bin");
+			eval("ln", "-sf", "/rom/Beceem_firmware/macxvi.cfg.yota", "/tmp/Beceem_firmware/macxvi.cfg");
+			eval("ln", "-sf", "/rom/Beceem_firmware/Server_CA.pem.yota", "/tmp/Beceem_firmware/Server_CA.pem");
 		}
 		else if(!strcmp(isp, "GMC")){
-			eval("ln", "-sf", "/tmp/Beceem_firmware/macxvi200.bin.normal", "/tmp/Beceem_firmware/macxvi200.bin");
-			eval("ln", "-sf", "/tmp/Beceem_firmware/macxvi.cfg.gmc", "/tmp/Beceem_firmware/macxvi.cfg");
+			eval("ln", "-sf", "/rom/Beceem_firmware/macxvi200.bin.normal", "/tmp/Beceem_firmware/macxvi200.bin");
+			eval("ln", "-sf", "/rom/Beceem_firmware/macxvi.cfg.gmc", "/tmp/Beceem_firmware/macxvi.cfg");
 		}
 		else if(!strcmp(isp, "FreshTel")){
-			eval("ln", "-sf", "/tmp/Beceem_firmware/macxvi200.bin.normal", "/tmp/Beceem_firmware/macxvi200.bin");
-			eval("ln", "-sf", "/tmp/Beceem_firmware/macxvi.cfg.freshtel", "/tmp/Beceem_firmware/macxvi.cfg");
+			eval("ln", "-sf", "/rom/Beceem_firmware/macxvi200.bin.normal", "/tmp/Beceem_firmware/macxvi200.bin");
+			eval("ln", "-sf", "/rom/Beceem_firmware/macxvi.cfg.freshtel", "/tmp/Beceem_firmware/macxvi.cfg");
 		}
 		else if(!strcmp(isp, "Giraffe")){
-			eval("ln", "-sf", "/tmp/Beceem_firmware/macxvi200.bin.giraffe", "/tmp/Beceem_firmware/macxvi200.bin");
-			eval("ln", "-sf", "/tmp/Beceem_firmware/macxvi.cfg.giraffe", "/tmp/Beceem_firmware/macxvi.cfg");
+			eval("ln", "-sf", "/rom/Beceem_firmware/macxvi200.bin.giraffe", "/tmp/Beceem_firmware/macxvi200.bin");
+			eval("ln", "-sf", "/rom/Beceem_firmware/macxvi.cfg.giraffe", "/tmp/Beceem_firmware/macxvi.cfg");
 		}
 		else{
 			usb_dbg("(%s): Didn't assign the ISP or it was not supported.\n", device_name);
@@ -4391,7 +4530,7 @@ int asus_usb_interface(const char *device_name, const char *action){
 	else if(!strcmp(nvram_safe_get("stop_ui_insmod"), "1")){
 		usb_dbg("(%s): Don't insmod the serial modules.\n", device_name);
 	}
-	else if(isSerialInterface(device_name, 1, vid, pid) && vid == 0x05c6 && pid == 0x9026){
+	else if(isSerialInterface(device_name, 1, vid, pid) && vid == 0x05c6 && pid == 0x9026 && nvram_get_int("usb_gobi") == 1){
 		usb_dbg("(%s): Runing Gobi ...\n", device_name);
 	}
 	else if(!(vid == 0x05c6 && pid == 0x9026) &&

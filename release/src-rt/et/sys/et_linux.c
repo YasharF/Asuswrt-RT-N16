@@ -1485,9 +1485,16 @@ et_rxevent(osl_t *osh, et_info_t *et, struct chops *chops, void *ch, int quota)
 	uint processed = 0;
 	void *p = NULL, *h = NULL, *t = NULL;
 	struct sk_buff *skb;
+	uint16 ether_type;
 
 	/* read the buffers first */
 	while ((p = (*chops->rx)(ch))) {
+		ether_type = ((struct ether_header *) PKTDATA(et->osh, p))->ether_type;
+		if (ether_type == HTON16(ETHER_TYPE_BRCM)) {
+			PKTFREE(osh, p, FALSE);
+			continue;
+		}
+
 		PKTSETLINK(p, NULL);
 		if (t == NULL)
 			h = t = p;
@@ -1690,8 +1697,10 @@ static inline int32
 et_ctf_forward(et_info_t *et, struct sk_buff *skb)
 {
 #ifdef CONFIG_IP_NF_DNSMQ
-	if(dnsmq_hit_hook&&dnsmq_hit_hook(skb)) 
-		return (BCME_ERROR);
+	bool dnsmq_hit = FALSE;
+
+	if (dnsmq_hit_hook && dnsmq_hit_hook(skb))
+		dnsmq_hit = TRUE;
 #endif
 
 #ifdef HNDCTF
@@ -1700,7 +1709,11 @@ et_ctf_forward(et_info_t *et, struct sk_buff *skb)
 		return (BCME_ERROR);
 
 	/* try cut thru first */
-	if (ctf_forward(et->cih, skb, skb->dev) != BCME_ERROR)
+	if ((ctf_forward(et->cih, skb, skb->dev) != BCME_ERROR)
+#ifdef CONFIG_IP_NF_DNSMQ
+		&& !dnsmq_hit
+#endif
+	)
 		return (BCME_OK);
 
 	/* clear skipct flag before sending up */

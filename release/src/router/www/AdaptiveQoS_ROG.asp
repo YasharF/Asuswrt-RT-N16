@@ -16,7 +16,7 @@
 <link rel="stylesheet" type="text/css" href="rog.css">
 <script type="text/javascript" src="/state.js"></script>
 <script type="text/javascript" src="/help.js"></script>
-<script type="text/javascript" src="/jquery.js"></script>
+<script type="text/javascript" src="/js/jquery.js"></script>
 <script type="text/javascript" src="/general.js"></script>
 <script type="text/javascript" src="/client_function.js"></script>
 <style>
@@ -34,7 +34,6 @@
 <script>
 // disable auto log out
 AUTOLOGOUT_MAX_MINUTE = 0;
-var $j = jQuery.noConflict();
 var rogClientList = [];
 var ajaxQueries = [];
 var Param = {
@@ -57,19 +56,19 @@ function converPercent(val){
 }
 
 function updateBarPercent(mac){
-	$j('#' + mac.replace(/:/g, "") + "_Traffic").html(
+	$('#' + mac.replace(/:/g, "") + "_Traffic").html(
 		retBarHTML(rogClientList[mac].devinfo.tx, "tx", "weight") +
 		retBarHTML(rogClientList[mac].devinfo.rx, "rx", "weight") 
 	);
 
 	if(isSelected(mac)){
-		$j('#' + mac.replace(/:/g, "") + "_Apps")
+		$('#' + mac.replace(/:/g, "") + "_Apps")
 		.html(retAppsDom(mac))
 		.slideDown("fast", function(){});
 	}
 
-	$j(".barContainer div").each(function(){
-		$j(this).css("width", converPercent($j(this).attr("title")) + "%");
+	$(".barContainer div").each(function(){
+		$(this).css("width", converPercent($(this).attr("title")) + "%");
 	});
 }
 
@@ -127,9 +126,9 @@ function retAppsDom(macAddr){
 	}
 
 	if(appCode == '')
-		appCode = '<div class="appTraffic erHint dots">No Traffic in the list</div>';
+		appCode = '<div class="appTraffic erHint dots"><#Bandwidth_monitor_noList#></div>';
 
-	return $j(appCode);
+	return $(appCode);
 }
 
 function drawClient(){
@@ -142,6 +141,7 @@ function drawClient(){
 	var clientCodeToObj;
 	for(var i=0; i<rogClientList.length; i++){
 		var clientCode = "";
+		var clientObj = clientList[rogClientList[i]];
 
 		// init a ROG Client
 		clientCode += '<div id=' + rogClientList[i] + '><table><tr>';
@@ -149,23 +149,36 @@ function drawClient(){
 		// Icon
 		clientCode += '<td style="width:70px;">';
 		if(usericon_support) {
-			var clientMac = clientList[clientList[i]].mac.replace(/\:/g, "");
+			var clientMac = rogClientList[i].replace(/\:/g, "");
 			userIconBase64 = getUploadIcon(clientMac);
 		}
 		if(userIconBase64 != "NoIcon") {
 			clientCode += '<div id="';
 			clientCode += rogClientList[i].replace(/:/g, "");
-			clientCode += '_Icon" class="userIcons">';
-			clientCode += '<img id="imgUserIcon_'+ i +'" class="imgUserIcon" src="' + userIconBase64 + '">';
+			clientCode += '_Icon" class="userIcons" style="background-image:url('+userIconBase64+');background-size:50px;">';
 			clientCode += '</div>';
 		}
-		else {
+		else if(clientObj.type != "0" || clientObj.vendor == "") {
 			clientCode += '<div id="';
 			clientCode += rogClientList[i].replace(/:/g, "");
-			clientCode += '_Icon" class="trafficIcons type';
-			clientCode += clientList[rogClientList[i]].type;
+			clientCode += '_Icon" class="clientIcon type';
+			clientCode += clientObj.type;
 			clientCode += '"></div>';
 		}
+		else if(clientObj.vendor != "") {
+			var clientListCSS = "";
+			var venderIconClassName = getVenderIconClassName(clientObj.vendor.toLowerCase());
+			if(venderIconClassName != "" && !downsize_4m_support) {
+				clientListCSS = "venderIcon " + venderIconClassName;
+			}
+			else {
+				clientListCSS = "clientIcon type" + clientObj.type;
+			}
+			clientCode += '<div id="';
+			clientCode += rogClientList[i].replace(/:/g, "");
+			clientCode += '_Icon" class="' + clientListCSS + '"></div>';
+		}
+
 		clientCode += '</td>';
 
 		// Name
@@ -181,40 +194,43 @@ function drawClient(){
 		clientCode += rogClientList[i].replace(/:/g, "");
 		clientCode += '_Apps"></div>';
 
-		clientCodeToObj = $j(clientCode).click(function(){
+		clientCodeToObj = $(clientCode).click(function(){
 			if(this.id.indexOf("Apps") != -1) return false;
 
 			// cookie.set("ROG_SEL_ID", this.id, 30);
 			if(!isSelected(this.id)){
 				Param.selectedClient = this.id;
-				$j(".appTraffic").remove();			
+				$(".appTraffic").remove();			
 				updateBarPercent(this.id);
-				$j(".trafficIcons").removeClass("clicked");
-				$j(".userIcons").removeClass("clicked");
-				$j("#" + this.id.replace(/:/g, "") + "_Icon").addClass("clicked");
-				$j("#" + cookie.get("ROG_SEL_ID").replace(/:/g, "") + "_Apps").css("display", "none");
+				$(".clientIcon").removeClass("clicked");
+				$(".userIcons").removeClass("clicked");
+				$(".venderIcon").removeClass("clicked");
+				$("#" + this.id.replace(/:/g, "") + "_Icon").addClass("clicked");
+				$("#" + cookie.get("ROG_SEL_ID").replace(/:/g, "") + "_Apps").css("display", "none");
 				cookie.set("ROG_SEL_ID", this.id, 30);
 			}
 			else{
-				$j("#" + this.id.replace(/:/g, "") + "_Apps").slideUp("fast", function(){
+				$("#" + this.id.replace(/:/g, "") + "_Apps").slideUp("fast", function(){
 					Param.selectedClient = '';
-					$j(".appTraffic").remove();
-					$j(".trafficIcons").removeClass("clicked");
-					$j(".userIcons").removeClass("clicked");
+					$(".appTraffic").remove();
+					$(".clientIcon").removeClass("clicked");
+					$(".userIcons").removeClass("clicked");
+					$(".venderIcon").removeClass("clicked");
 					cookie.set("ROG_SEL_ID", "", 30);
 				});
 			}
 		});
 
-		$j("#appTrafficDiv").append(clientCodeToObj);
-		$j("#appTrafficDiv").append('<div class="splitLine"></div>');
+		$("#appTrafficDiv").append(clientCodeToObj);
+		$("#appTrafficDiv").append('<div class="splitLine"></div>');
 
 		if(rogClientList[i] == cookie.get("ROG_SEL_ID")){
 			Param.selectedClient = rogClientList[i];
-			$j(".appTraffic").remove();
-			$j(".trafficIcons").removeClass("clicked");
-			$j(".userIcons").removeClass("clicked");
-			$j("#" + rogClientList[i].replace(/:/g, "") + "_Icon").addClass("clicked");
+			$(".appTraffic").remove();
+			$(".clientIcon").removeClass("clicked");
+			$(".userIcons").removeClass("clicked");
+			$(".venderIcon").removeClass("clicked");
+			$("#" + rogClientList[i].replace(/:/g, "") + "_Icon").addClass("clicked");
 		}
 
 		updateBarPercent(rogClientList[i]);
@@ -231,7 +247,7 @@ var ajaxQuery = function(){
 }
 
 function updateClientInfo(target, mac){
-	ajaxQueries[mac].query = $j.ajax({ 
+	ajaxQueries[mac].query = $.ajax({ 
 		url: target, 
 		dataType: 'json',
 		timeout: 2000,
@@ -333,7 +349,7 @@ function calOverallTraffic(){
 		}
 
 		rotate = "rotate(" + angle.toFixed(1) + "deg)";
-		$j('#indicator_' + narrow).css({
+		$('#indicator_' + narrow).css({
 			"-webkit-transform": rotate,
 			"-moz-transform": rotate,
 			"-o-transform": rotate,

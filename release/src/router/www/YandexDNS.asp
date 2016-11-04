@@ -9,22 +9,21 @@
 <title><#Web_Title#> - <#YandexDNS#></title>
 <link rel="shortcut icon" href="images/favicon.png">
 <link rel="icon" href="images/favicon.png">
-<link rel="stylesheet" type="text/css" href="ParentalControl.css">
 <link rel="stylesheet" type="text/css" href="index_style.css">
 <link rel="stylesheet" type="text/css" href="form_style.css">
 <link rel="stylesheet" type="text/css" href="usp_style.css">
 <link rel="stylesheet" type="text/css" href="/calendar/fullcalendar.css">
+<link rel="stylesheet" type="text/css" href="device-map/device-map.css">
 <script type="text/javascript" src="/state.js"></script>
 <script type="text/javascript" src="/popup.js"></script>
 <script type="text/javascript" src="/help.js"></script>
 <script type="text/javascript" src="/general.js"></script>
 <script type="text/javascript" src="/client_function.js"></script>
 <script type="text/javascript" src="/validator.js"></script>
-<script type="text/javascript" src="/jquery.js"></script>
+<script type="text/javascript" src="/js/jquery.js"></script>
 <script type="text/javascript" src="/switcherplugin/jquery.iphone-switch.js"></script>
 <script>
 
-var $j = jQuery.noConflict();
 var jData;
 var yadns_rule_list = '<% nvram_get("yadns_rulelist"); %>'.replace(/&#60/g, "<");
 var yadns_rule_list_row = yadns_rule_list.split('<');
@@ -34,13 +33,13 @@ function initial(){
 	show_footer();
 
 	if(!ParentalCtrl2_support){
-		$('FormTitle').style.webkitBorderRadius = "3px";
-		$('FormTitle').style.MozBorderRadius = "3px";
-		$('FormTitle').style.BorderRadius = "3px";
+		document.getElementById('FormTitle').style.webkitBorderRadius = "3px";
+		document.getElementById('FormTitle').style.MozBorderRadius = "3px";
+		document.getElementById('FormTitle').style.BorderRadius = "3px";
 	}
 
 	gen_mainTable();
-	setTimeout("showLANIPList();", 1000);
+	setTimeout("showDropdownClientList('setClientIP', 'name>mac', 'all', 'ClientList_Block_PC', 'pull_arrow', 'all');", 1000);
 
 	showhide("mainTable", document.form.yadns_enable_x.value);
 }
@@ -50,47 +49,23 @@ function setClientIP(devname, macaddr){
 	document.form.rule_devname.value = devname;
 	document.form.rule_mac.value = macaddr;
 	hideClients_Block();
-	over_var = 0;
-}
-
-function showLANIPList(){
-	var htmlCode = "";
-	for(var i=0; i<clientList.length;i++){
-		var clientObj = clientList[clientList[i]];
-
-		if(clientObj.ip == "offline") clientObj.ip = "";
-		if(clientObj.name.length > 30) clientObj.name = clientObj.name.substring(0, 28) + "..";
-
-		htmlCode += '<a><div onmouseover="over_var=1;" onmouseout="over_var=0;" onclick="setClientIP(\'';
-		htmlCode += clientObj.name;
-		htmlCode += '\', \'';
-		htmlCode += clientObj.mac;
-		htmlCode += '\');"><strong>';
-		htmlCode += clientObj.name;
-		htmlCode += "</strong></div></a><!--[if lte IE 6.5]><script>alert(\"<#ALERT_TO_CHANGE_BROWSER#>\");</script><![endif]-->";	
-	}
-
-	$("ClientList_Block_PC").innerHTML = htmlCode;
 }
 
 function pullLANIPList(obj){
+	var element = document.getElementById('ClientList_Block_PC');
+	var isMenuopen = element.offsetWidth > 0 || element.offsetHeight > 0;
 	if(isMenuopen == 0){
 		obj.src = "/images/arrow-top.gif"
-		$("ClientList_Block_PC").style.display = 'block';
+		element.style.display = 'block';
 		document.form.rule_devname.focus();
-		isMenuopen = 1;
 	}
 	else
 		hideClients_Block();
 }
 
-var over_var = 0;
-var isMenuopen = 0;
-
 function hideClients_Block(){
-	$("pull_arrow").src = "/images/arrow-down.gif";
-	$('ClientList_Block_PC').style.display='none';
-	isMenuopen = 0;
+	document.getElementById("pull_arrow").src = "/images/arrow-down.gif";
+	document.getElementById('ClientList_Block_PC').style.display='none';
 	//validator.validIPForm(document.form.rule_devname, 0);
 }
 /*----------} Mouse event of fake LAN IP select menu-----------------*/
@@ -118,12 +93,12 @@ function gen_mainTable(){
 	code +='<th width="10%"><#list_add_delete#></th></tr>';
 
 	code +='<tr><td style="border-bottom:2px solid #000;" title="<#WLANConfig11b_WirelessCtrl_button1name#>/<#btn_disable#>"><input type="checkbox" name="rule_enable" checked></td>';
-	code +='<td style="border-bottom:2px solid #000;"><input type="text" maxlength="32" style="margin-left:10px;float:left;width:255px;" class="input_20_table" name="rule_devname" onKeyPress="" onClick="hideClients_Block();" onblur="if(!over_var){hideClients_Block();}">';
-	code +='<img id="pull_arrow" height="14px;" src="/images/arrow-down.gif" onclick="pullLANIPList(this);" title="<#select_client#>" onmouseover="over_var=1;" onmouseout="over_var=0;">';
-	code +='<div id="ClientList_Block_PC" class="ClientList_Block_PC"></div></td>';
-	code +='<td style="border-bottom:2px solid #000;"><input type="text" maxlength="17" class="input_macaddr_table" name="rule_mac" onKeyPress="return validator.isHWAddr(this,event)"></td>';
+	code +='<td style="border-bottom:2px solid #000;"><input type="text" maxlength="32" style="margin-left:10px;float:left;width:255px;" class="input_20_table" name="rule_devname" onKeyPress="" onClick="hideClients_Block();" autocorrect="off" autocapitalize="off">';
+	code +='<img id="pull_arrow" height="14px;" src="/images/arrow-down.gif" onclick="pullLANIPList(this);" title="<#select_client#>">';
+	code +='<div id="ClientList_Block_PC" class="clientlist_dropdown" style="margin-top:25px;margin-left:10px;"></div></td>';
+	code +='<td style="border-bottom:2px solid #000;"><input type="text" maxlength="17" class="input_macaddr_table" name="rule_mac" onKeyPress="return validator.isHWAddr(this,event)" autocorrect="off" autocapitalize="off"></td>';
 	code +='<td style="border-bottom:2px solid #000;">'+gen_modeselect("rule_mode", "-1", "", false)+'</td>';
-	code +='<td style="border-bottom:2px solid #000;"><input class="url_btn" type="button" onClick="addRow_main(16)" value=""></td></tr>';
+	code +='<td style="border-bottom:2px solid #000;"><input class="add_btn" type="button" onClick="addRow_main(16)" value=""></td></tr>';
 
 	code +='<tr>';
 	code +='<td></td>'
@@ -151,10 +126,10 @@ function gen_mainTable(){
 
 	code +='</tr></table>';
 
-	$("mainTable").style.display = "";
-	$("mainTable").innerHTML = code;
-	$j("#mainTable").fadeIn();
-	showLANIPList();
+	document.getElementById("mainTable").style.display = "";
+	document.getElementById("mainTable").innerHTML = code;
+	$("#mainTable").fadeIn();
+	showDropdownClientList('setClientIP', 'name>mac', 'all', 'ClientList_Block_PC', 'pull_arrow', 'all');
 }
 
 function genChecked(_flag){
@@ -183,26 +158,26 @@ function check_macaddr(obj,flag){ //control hint of input mac address
 		childsel.setAttribute("id","check_mac");
 		childsel.style.color="#FFCC00";
 		obj.parentNode.appendChild(childsel);
-		$("check_mac").innerHTML="<#LANHostConfig_ManualDHCPMacaddr_itemdesc#>";
-		$("check_mac").style.display = "";
+		document.getElementById("check_mac").innerHTML="<#LANHostConfig_ManualDHCPMacaddr_itemdesc#>";
+		document.getElementById("check_mac").style.display = "";
 		return false;
 	}else if(flag == 2){
 		var childsel=document.createElement("div");
 		childsel.setAttribute("id","check_mac");
 		childsel.style.color="#FFCC00";
 		obj.parentNode.appendChild(childsel);
-		$("check_mac").innerHTML="<#IPConnection_x_illegal_mac#>";
-		$("check_mac").style.display = "";
+		document.getElementById("check_mac").innerHTML="<#IPConnection_x_illegal_mac#>";
+		document.getElementById("check_mac").style.display = "";
 		return false;
 	}else{
-		$("check_mac") ? $("check_mac").style.display="none" : true;
+		document.getElementById("check_mac") ? document.getElementById("check_mac").style.display="none" : true;
 		return true;
 	}
 }
 
 function addRow_main(upper){
-	var rule_num = $('mainTable_table').rows.length - 3; //ingore tbody occupied row
-	var item_num = $('mainTable_table').rows[0].cells.length;
+	var rule_num = document.getElementById('mainTable_table').rows.length - 3; //ingore tbody occupied row
+	var item_num = document.getElementById('mainTable_table').rows[0].cells.length;
 
 	if(rule_num >= upper){
 		alert("<#JS_itemlimit1#> " + upper + " <#JS_itemlimit2#>");
@@ -250,7 +225,7 @@ function addRow_main(upper){
 
 function deleteRow_main(r){
 	var j=r.parentNode.parentNode.rowIndex;
-	$(r.parentNode.parentNode.parentNode.parentNode.id).deleteRow(j);
+	document.getElementById(r.parentNode.parentNode.parentNode.parentNode.id).deleteRow(j);
 
 	var yadns_enable = "";
 	var yadns_devname = "";
@@ -258,11 +233,11 @@ function deleteRow_main(r){
 	var yadns_mode = "";
 	var yadns_rulelist_tmp = "";
 
-	for(i=4; i<$('mainTable_table').rows.length; i++){
-		yadns_enable = $('mainTable_table').rows[i].cells[0].childNodes[0].checked ? "1" : "0";
-		yadns_devname = $('mainTable_table').rows[i].cells[1].title;
-		yadns_mac = $('mainTable_table').rows[i].cells[2].title;
-		yadns_mode = $('mainTable_table').rows[i].cells[3].childNodes[0].value;
+	for(i=4; i<document.getElementById('mainTable_table').rows.length; i++){
+		yadns_enable = document.getElementById('mainTable_table').rows[i].cells[0].childNodes[0].checked ? "1" : "0";
+		yadns_devname = document.getElementById('mainTable_table').rows[i].cells[1].title;
+		yadns_mac = document.getElementById('mainTable_table').rows[i].cells[2].title;
+		yadns_mode = document.getElementById('mainTable_table').rows[i].cells[3].childNodes[0].value;
 
 		yadns_rulelist_tmp += "<";
 		yadns_rulelist_tmp += yadns_devname + "&#62";
@@ -285,13 +260,13 @@ function changeRow_main(r){
 	var yadns_rulelist_tmp = "";
 
 	if (r.type == "checkbox")
-		$("select_all").checked = false;
+		document.getElementById("select_all").checked = false;
 
-	for(i=4; i<$('mainTable_table').rows.length; i++){
-		yadns_enable = $('mainTable_table').rows[i].cells[0].childNodes[0].checked ? "1" : "0";
-		yadns_devname = $('mainTable_table').rows[i].cells[1].title;
-		yadns_mac = $('mainTable_table').rows[i].cells[2].title;
-		yadns_mode = $('mainTable_table').rows[i].cells[3].childNodes[0].value;
+	for(i=4; i<document.getElementById('mainTable_table').rows.length; i++){
+		yadns_enable = document.getElementById('mainTable_table').rows[i].cells[0].childNodes[0].checked ? "1" : "0";
+		yadns_devname = document.getElementById('mainTable_table').rows[i].cells[1].title;
+		yadns_mac = document.getElementById('mainTable_table').rows[i].cells[2].title;
+		yadns_mode = document.getElementById('mainTable_table').rows[i].cells[3].childNodes[0].value;
 
 		yadns_rulelist_tmp += "<";
 		yadns_rulelist_tmp += yadns_devname + "&#62";
@@ -313,15 +288,15 @@ function selectRows_main(r){
 	var yadns_mode = "";
 	var yadns_rulelist_tmp = "";
 
-	var obj = $("select_all");
+	var obj = document.getElementById("select_all");
 
-	for(i=4; i<$('mainTable_table').rows.length; i++){
-		$('mainTable_table').rows[i].cells[0].childNodes[0].checked = obj.checked;
+	for(i=4; i<document.getElementById('mainTable_table').rows.length; i++){
+		document.getElementById('mainTable_table').rows[i].cells[0].childNodes[0].checked = obj.checked;
 
 		yadns_enable =  obj.checked ? "1" : "0";
-		yadns_devname = $('mainTable_table').rows[i].cells[1].title;
-		yadns_mac = $('mainTable_table').rows[i].cells[2].title;
-		yadns_mode = $('mainTable_table').rows[i].cells[3].childNodes[0].value;
+		yadns_devname = document.getElementById('mainTable_table').rows[i].cells[1].title;
+		yadns_mac = document.getElementById('mainTable_table').rows[i].cells[2].title;
+		yadns_mode = document.getElementById('mainTable_table').rows[i].cells[3].childNodes[0].value;
 
 		yadns_rulelist_tmp += "<";
 		yadns_rulelist_tmp += yadns_devname + "&#62";
@@ -400,7 +375,7 @@ function selectRows_main(r){
 						<div align="center" class="left" style="width:94px; float:left; cursor:pointer;" id="radio_yadns_enable"></div>
 						<div class="iphone_switch_container" style="height:32px; width:74px; position: relative; overflow: hidden">
 							<script type="text/javascript">
-								$j('#radio_yadns_enable').iphoneSwitch(document.form.yadns_enable_x.value,
+								$('#radio_yadns_enable').iphoneSwitch(document.form.yadns_enable_x.value,
 									function(){
 										document.form.yadns_enable_x.value = 1;
 										showhide("mainTable",1);

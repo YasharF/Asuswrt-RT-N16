@@ -269,7 +269,7 @@ typedef struct _WLANCONFIG_LIST {
 	unsigned int rssi;
 	unsigned int idle;
 	unsigned int txseq;
-	unsigned int rcseq;
+	unsigned int rxseq;
 	char caps[12];
 	char acaps[10];
 	char erp[7];
@@ -279,6 +279,12 @@ typedef struct _WLANCONFIG_LIST {
 	char rsn[4];
 	char wme[4];
 	char mode[31];
+	char ie[32];
+	char htcaps[10];
+	unsigned int u_acaps;
+	unsigned int u_erp;
+	unsigned int u_state_maxrate;
+	unsigned int u_psmode;
 } WLANCONFIG_LIST;
 
 #define MAX_STA_NUM 256
@@ -292,9 +298,9 @@ static int getSTAInfo(int unit, WIFI_STA_TABLE *sta_info)
 {
 	#define STA_INFO_PATH "/tmp/wlanconfig_athX_list"
 	FILE *fp;
-	int ret = 0;
+	int ret = 0, r1, r2, r3, l2_offset;
 	char *unit_name;
-	char *p, *ifname;
+	char *p, *ifname, *l2, *l3;
 	char *wl_ifnames;
 	char line_buf[300]; // max 14x
 
@@ -317,48 +323,46 @@ static int getSTAInfo(int unit, WIFI_STA_TABLE *sta_info)
 		doSystem("wlanconfig %s list > %s", ifname, STA_INFO_PATH);
 		fp = fopen(STA_INFO_PATH, "r");
 		if (fp) {
+/* wlanconfig ath1 list
+ADDR               AID CHAN TXRATE RXRATE RSSI IDLE  TXSEQ  RXSEQ  CAPS        ACAPS     ERP    STATE MAXRATE(DOT11) HTCAPS ASSOCTIME    IEs   MODE PSMODE
+00:10:18:55:cc:08    1  149  55M   1299M   63    0      0   65535               0        807              0              Q 00:10:33 IEEE80211_MODE_11A  0
+08:60:6e:8f:1e:e6    2  149 159M    866M   44    0      0   65535     E         0          b              0           WPSM 00:13:32 WME IEEE80211_MODE_11AC_VHT80  0
+08:60:6e:8f:1e:e8    1  157 526M    526M   51 4320      0   65535    EP         0          b              0          AWPSM 00:00:10 RSN WME IEEE80211_MODE_11AC_VHT80 0
+*/
 			//fseek(fp, 131, SEEK_SET);	// ignore header
 			fgets(line_buf, sizeof(line_buf), fp); // ignore header
+			l2 = strstr(line_buf, "ACAPS");
+			if (l2 != NULL)
+				l2_offset = (int)(l2 - line_buf);
+			else {
+				l2_offset = 79;
+				l2 = line_buf + l2_offset;
+			}
 			while ( fgets(line_buf, sizeof(line_buf), fp) ) {
-				WLANCONFIG_LIST *result = &sta_info->Entry[sta_info->Num++];
-				memset(result, 0, sizeof(*result));
-				sscanf(line_buf, "%s%u%u%s%s%u%u%u%u%s%s%s%s%s%s%s%s%s", 
-							result->addr, 
-							&result->aid, 
-							&result->chan, 
-							result->txrate, 
-							result->rxrate, 
-							&result->rssi, 
-							&result->idle, 
-							&result->txseq, 
-							&result->rcseq, 
-							result->caps, 
-							result->acaps, 
-							result->erp, 
-							result->state_maxrate, 
-							result->wps, 
-							result->conn_time, 
-							result->rsn, 
-							result->wme,
-							result->mode);
+				WLANCONFIG_LIST *r = &sta_info->Entry[sta_info->Num++];
+				memset(r, 0, sizeof(*r));
+
+				/* IEs may be empty string, find IEEE80211_MODE_ before parsing mode and psmode. */
+				r1 = 0;
+				l3 = strstr(line_buf, "IEEE80211_MODE_");
+				if (l3) {
+					*(l3 - 1) = '\0';
+					r1 = sscanf(l3, "IEEE80211_MODE_%s %d", r->mode, &r->u_psmode);
+				}
+				*(l2 - 1) = '\0';
+				r2 = sscanf(line_buf, "%s%u%u%s%s%u%u%u%u%[^\n]",
+					r->addr, &r->aid, &r->chan, r->txrate,
+					r->rxrate, &r->rssi, &r->idle, &r->txseq,
+					&r->rxseq, r->caps);
+				r3 = sscanf(l2, "%u%x%u%s%s%[^\n]",
+					&r->u_acaps, &r->u_erp, &r->u_state_maxrate, r->htcaps, r->conn_time, r->ie);
 #if 0
-				dbg("[%s][%u][%u][%s][%s][%u][%u][%u][%u][%s][%s][%s][%s][%s][%s][%s]\n", 
-					result->addr, 
-					result->aid, 
-					result->chan, 
-					result->txrate, 
-					result->rxrate, 
-					result->rssi, 
-					result->idle, 
-					result->txseq, 
-					result->rcseq, 
-					result->caps, 
-					result->acaps, 
-					result->erp, 
-					result->state_maxrate, 
-					result->wps, 
-					result->rsn, 
-					result->wme);
+				dbg("r %d,%d,%d - [%s][%u][%u][%s][%s][%u][%u][%u][%u][%s]"
+					"[%u][%u][%x][%s][%s][%s][%d]\n",
+					r1, r2, r3, r->addr, r->aid, r->chan, r->txrate, r->rxrate,
+					r->rssi, r->idle, r->txseq, r->rxseq, r->caps,
+					r->u_acaps, r->u_erp, r->u_state_maxrate, r->htcaps, r->ie,
+					r->mode, r->u_psmode);
 #endif
 			}
 
@@ -515,69 +519,77 @@ ej_wl_status_2g(int eid, webs_t wp, int argc, char_t **argv)
 }
 
 static int
-wl_status(int eid, webs_t wp, int argc, char_t **argv, int unit)
+show_wliface_info(webs_t wp, int unit, char *ifname, char *op_mode, char *ssid)
 {
 	int ret = 0;
-	WIFI_STA_TABLE *sta_info;
+	FILE *fp;
 	unsigned char mac_addr[ETHER_ADDR_LEN];
 	char tmpstr[1024], cmd[] = "iwconfig staXYYYYYY";
-	char tmp[128], prefix[] = "wlXXXXXXXXXX_", *ifname;
-	int wl_mode_x;
-	int i;
-	FILE *fp;
 	char *p, ap_bssid[] = "00:00:00:00:00:00XXX";
 
-	switch (nvram_get_int("sw_mode")) {
-#if defined(RTCONFIG_WIRELESSREPEATER)
-	case SW_MODE_REPEATER:
-#if defined(RTCONFIG_PROXYSTA)
+	if (unit < 0 || !ifname || !op_mode || !ssid)
+		return 0;
+
+	memset(&mac_addr, 0, sizeof(mac_addr));
+	get_iface_hwaddr(ifname, mac_addr);
+	ret += websWrite(wp, "=======================================================================================\n"); // separator
+	ret += websWrite(wp, "OP Mode		: %s\n", op_mode);
+	ret += websWrite(wp, "SSID		: %s\n", ssid);
+	sprintf(cmd, "iwconfig %s", ifname);
+	if ((fp = popen(cmd, "r")) != NULL && fread(tmpstr, 1, sizeof(tmpstr), fp) > 1) {
+		pclose(fp);
+		*(tmpstr + sizeof(tmpstr) - 1) = '\0';
+		*ap_bssid = '\0';
+		if ((p = strstr(tmpstr, "Access Point: ")) != NULL) {
+			strncpy(ap_bssid, p + 14, 17);
+			ap_bssid[17] = '\0';
+		}
+		ret += websWrite(wp, "BSSID		: %s\n", ap_bssid);
+	}
+	ret += websWrite(wp, "MAC address	: %02X:%02X:%02X:%02X:%02X:%02X\n",
+		mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
+	*tmpstr = '\0';
+	strcpy(tmpstr, getAPPhyMode(unit));
+	ret += websWrite(wp, "Phy Mode	: %s\n", tmpstr);
+	ret += websWrite(wp, "Channel		: %u\n", getAPChannel(unit));
+
+	return ret;
+}
+
+static int
+wl_status(int eid, webs_t wp, int argc, char_t **argv, int unit)
+{
+	int ret = 0, wl_mode_x, i;
+	WIFI_STA_TABLE *sta_info;
+	char tmp[128], prefix[] = "wlXXXXXXXXXX_", *ifname, *op_mode;
+
+#if defined(RTCONFIG_WIRELESSREPEATER) && defined(RTCONFIG_PROXYSTA)
+	if (mediabridge_mode()) {
+		/* Media bridge mode */
 		snprintf(prefix, sizeof(prefix), "wl%d.1_", unit);
 		ifname = nvram_safe_get(strcat_r(prefix, "ifname", tmp));
-		if (nvram_get_int("wlc_psta") == 1) {
-			/* Media bridge mode */
-			if (unit != nvram_get_int("wlc_band")) {
-				snprintf(prefix, sizeof(prefix), "wl%d_", unit);
-				ret += websWrite(wp, "%s radio is disabled\n",
-					nvram_match(strcat_r(prefix, "nband", tmp), "1") ? "5 GHz" : "2.4 GHz");
-				return ret;
-			}
-			memset(&mac_addr, 0, sizeof(mac_addr));
-			get_iface_hwaddr(ifname, mac_addr);
-			ret += websWrite(wp, "=======================================================================================\n"); // separator
-			ret += websWrite(wp, "OP Mode		: Media Bridge\n");
-			ret += websWrite(wp, "SSID		: %s\n", nvram_safe_get("wlc_ssid"));
-			sprintf(cmd, "iwconfig %s", ifname);
-			if ((fp = popen(cmd, "r")) != NULL && fread(tmpstr, 1, sizeof(tmpstr), fp) > 1) {
-				pclose(fp);
-				*(tmpstr + sizeof(tmpstr) - 1) = '\0';
-				*ap_bssid = '\0';
-				if ((p = strstr(tmpstr, "Access Point: ")) != NULL) {
-					strncpy(ap_bssid, p + 14, 17);
-					ap_bssid[17] = '\0';
-				}
-				ret += websWrite(wp, "BSSID		: %s\n", ap_bssid);
-			}
-			ret += websWrite(wp, "MAC address	: %02X:%02X:%02X:%02X:%02X:%02X\n",
-				mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
-			*tmpstr = '\0';
-			strcpy(tmpstr, getAPPhyMode(unit));
-			ret += websWrite(wp, "Phy Mode	: %s\n", tmpstr);
-			ret += websWrite(wp, "Channel		: %u\n", getAPChannel(unit));
-		} else
-#endif
-		{
-			/* Repeater mode */
-			/* FIXME */
+		if (unit != nvram_get_int("wlc_band")) {
+			snprintf(prefix, sizeof(prefix), "wl%d_", unit);
+			ret += websWrite(wp, "%s radio is disabled\n",
+				nvram_match(strcat_r(prefix, "nband", tmp), "1") ? "5 GHz" : "2.4 GHz");
+			return ret;
 		}
-		break;
+		ret += show_wliface_info(wp, unit, ifname, "Media Bridge", nvram_safe_get("wlc_ssid"));
+	} else {
 #endif
-	default:
-		/* Router mode, AP mode */
+		/* Router mode, Repeater and AP mode */
+#if defined(RTCONFIG_WIRELESSREPEATER)
+		if (!unit && repeater_mode()) {
+			/* Show P-AP information first, if we are about to show 2.4G information in repeater mode. */
+			snprintf(prefix, sizeof(prefix), "wl%d.1_", nvram_get_int("wlc_band"));
+			ifname = nvram_safe_get(strcat_r(prefix, "ifname", tmp));
+			ret += show_wliface_info(wp, unit, ifname, "Repeater", nvram_safe_get("wlc_ssid"));
+			ret += websWrite(wp, "\n");
+		}
+#endif
 		snprintf(prefix, sizeof(prefix), "wl%d_", unit);
 		ifname = nvram_safe_get(strcat_r(prefix, "ifname", tmp));
-
-		if (!get_radio_status(ifname))
-		{
+		if (!get_radio_status(ifname)) {
 #if defined(BAND_2G_ONLY)
 			ret += websWrite(wp, "2.4 GHz radio is disabled\n");
 #else
@@ -587,42 +599,29 @@ wl_status(int eid, webs_t wp, int argc, char_t **argv, int unit)
 			return ret;
 		}
 
-		memset(&mac_addr, 0, sizeof(mac_addr));
-		get_iface_hwaddr(ifname, mac_addr);
-		ret += websWrite(wp, "=======================================================================================\n"); // separator
 		wl_mode_x = nvram_get_int(strcat_r(prefix, "mode_x", tmp));
-		if      (wl_mode_x == 1)
-			ret += websWrite(wp, "OP Mode		: WDS Only\n");
+		op_mode = "AP";
+		if (wl_mode_x == 1)
+			op_mode = "WDS Only";
 		else if (wl_mode_x == 2)
-			ret += websWrite(wp, "OP Mode		: Hybrid\n");
-		else
-			ret += websWrite(wp, "OP Mode		: AP\n");
-
-		ret += websWrite(wp, "MAC address	: %02X:%02X:%02X:%02X:%02X:%02X\n",
-			mac_addr[0], mac_addr[1], mac_addr[2],
-			mac_addr[3], mac_addr[4], mac_addr[5]);
-
-		memset(tmpstr, 0, sizeof(tmpstr));
-		strcpy(tmpstr, getAPPhyMode(unit));
-		ret += websWrite(wp, "Phy Mode	: %s\n", tmpstr);
-
-		ret += websWrite(wp, "Channel		: %u\n", getAPChannel(unit));
-
+			op_mode = "Hybrid";
+		ret += show_wliface_info(wp, unit, ifname, op_mode, nvram_safe_get(strcat_r(prefix, "ssid", tmp)));
 		ret += websWrite(wp, "\nStations List			   \n");
 		ret += websWrite(wp, "----------------------------------------\n");
 #if 0 //barton++
 		ret += websWrite(wp, "%-18s%-4s%-8s%-4s%-4s%-4s%-5s%-5s%-12s\n",
 				   "MAC", "PSM", "PhyMode", "BW", "MCS", "SGI", "STBC", "Rate", "Connect Time");
 #else
-		ret += websWrite(wp, "%-18s%-7s%-7s%-12s\n",
-				   "MAC", "TXRATE", "RXRATE", "Connect Time");
+		ret += websWrite(wp, "%-17s %-15s %-6s %-6s %-11s\n",
+				   "MAC", "PhyMode", "TXRATE", "RXRATE", "Connect Time");
 #endif
 
 		if ((sta_info = malloc(sizeof(*sta_info))) != NULL) {
 			getSTAInfo(unit, sta_info);
 			for(i = 0; i < sta_info->Num; i++) {
-				ret += websWrite(wp, "%s %6s %6s %8s\n",
+				ret += websWrite(wp, "%-17s %-15s %6s %6s %11s\n",
 					sta_info->Entry[i].addr,
+					sta_info->Entry[i].mode,
 					sta_info->Entry[i].txrate,
 					sta_info->Entry[i].rxrate,
 					sta_info->Entry[i].conn_time
@@ -630,8 +629,9 @@ wl_status(int eid, webs_t wp, int argc, char_t **argv, int unit)
 			}
 			free(sta_info);
 		}
-		break;
+#if defined(RTCONFIG_WIRELESSREPEATER) && defined(RTCONFIG_PROXYSTA)
 	}
+#endif
 
 	return ret;
 }
@@ -642,6 +642,9 @@ static int ej_wl_sta_list(int unit, webs_t wp)
 	char *value;
 	int firstRow = 1;
 	int i;
+	int from_app = 0;
+
+	from_app = check_user_agent(user_agent);
 
 	if ((sta_info = malloc(sizeof(*sta_info))) != NULL)
 	{
@@ -653,19 +656,40 @@ static int ej_wl_sta_list(int unit, webs_t wp)
 			else
 				websWrite(wp, ", ");
 
-			websWrite(wp, "[");
+			if (from_app == 0)
+				websWrite(wp, "[");
 
 			websWrite(wp, "\"%s\"", sta_info->Entry[i].addr);
 
+			if (from_app != 0) {
+				websWrite(wp, ":{");
+				websWrite(wp, "\"isWL\":");
+			}
+
 			value = "Yes";
-			websWrite(wp, ", \"%s\"", value);
+			if (from_app == 0)
+				websWrite(wp, ", \"%s\"", value);
+			else
+				websWrite(wp, "\"%s\"", value);
 
 			value = "";
-			websWrite(wp, ", \"%s\"", value);
 
-			websWrite(wp, ", \"%d\"", sta_info->Entry[i].rssi);
+			if (from_app == 0)
+				websWrite(wp, ", \"%s\"", value);
+	
+			if (from_app != 0) {
+				websWrite(wp, ",\"rssi\":");
+			}
 
-			websWrite(wp, "]");
+			if (from_app == 0)
+				websWrite(wp, ", \"%d\"", sta_info->Entry[i].rssi);
+			else
+				websWrite(wp, "\"%d\"", sta_info->Entry[i].rssi);
+
+			if (from_app == 0)
+				websWrite(wp, "]");
+			else
+				websWrite(wp, "}");
 		}
 		free(sta_info);
 	}
@@ -913,7 +937,7 @@ int ej_wl_auth_list(int eid, webs_t wp, int argc, char_t **argv)
 							&result->rssi, 
 							&result->idle, 
 							&result->txseq, 
-							&result->rcseq, 
+							&result->rxseq,
 							result->caps, 
 							result->acaps, 
 							result->erp, 

@@ -245,7 +245,8 @@ int main(int argc, char *argv[])
 	}
 	// share mode
 	else if (nvram_match("st_samba_mode", "1") || nvram_match("st_samba_mode", "3")) {
-#if defined(RTCONFIG_TFAT) || defined(RTCONFIG_TUXERA_NTFS) || defined(RTCONFIG_TUXERA_HFS)
+#if 0
+//#if defined(RTCONFIG_TFAT) || defined(RTCONFIG_TUXERA_NTFS) || defined(RTCONFIG_TUXERA_HFS)
 		if(nvram_get_int("enable_samba_tuxera") == 1){
 			fprintf(fp, "auth methods = guest\n");
 			fprintf(fp, "guest account = admin\n");
@@ -278,9 +279,15 @@ int main(int argc, char *argv[])
 		fprintf(fp, "max connections = %s\n", nvram_safe_get("st_max_user"));
 
 	/* remove socket options due to NIC compatible issue */
-#ifndef RTCONFIG_BCMARM
-	fprintf(fp, "socket options = TCP_NODELAY SO_KEEPALIVE SO_RCVBUF=65536 SO_SNDBUF=65536\n");
+	if(!nvram_get_int("stop_samba_speedup")){
+#ifdef RTCONFIG_BCMARM
+#ifdef RTCONFIG_BCM_7114
+		fprintf(fp, "socket options = IPTOS_LOWDELAY TCP_NODELAY SO_RCVBUF=131072 SO_SNDBUF=131072\n");
 #endif
+#else
+		fprintf(fp, "socket options = TCP_NODELAY SO_KEEPALIVE SO_RCVBUF=65536 SO_SNDBUF=65536\n");
+#endif
+	}
 	fprintf(fp, "obey pam restrictions = no\n");
 	fprintf(fp, "use spnego = no\n");		// ASUS add
 	fprintf(fp, "client use spnego = no\n");	// ASUS add
@@ -300,6 +307,10 @@ int main(int argc, char *argv[])
 	fprintf(fp, "use sendfile = no\n");
 #else
 	fprintf(fp, "use sendfile = yes\n");
+#endif
+#ifdef RTCONFIG_RECVFILE
+	if(!nvram_get_int("stop_samba_recv"))
+		fprintf(fp, "use recvfile = yes\n");
 #endif
 
 	fprintf(fp, "map archive = no\n");
@@ -340,7 +351,7 @@ int main(int argc, char *argv[])
 
 				fprintf(fp, "[%s]\n", mount_folder);
 				fprintf(fp, "comment = %s's %s\n", follow_disk->tag, mount_folder);
-				fprintf(fp, "veto files = /.__*.txt*/asus_lighttpdpasswd/\n");
+				fprintf(fp, "veto files = /.__*.txt*/asusware*/asus_lighttpdpasswd/\n");
 				fprintf(fp, "path = %s\n", follow_partition->mount_point);
 				fprintf(fp, "writeable = yes\n");
 

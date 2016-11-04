@@ -41,26 +41,28 @@
 #include <arpa/inet.h>
 #include <net/if_arp.h>
 
-static int
-handle_special_char_for_pppd(char *buf, size_t buf_size, char *src)
+char *ppp_escape(char *src, char *buf, size_t size)
 {
-	const char special_chars[] = "'\\";
-	char *p, *q;
-	size_t len;
+	const char special_chars[] = "'\"\\";
+	char *dst = buf;
+	char *end = buf + size - 1;
 
-	if (!buf || !src || buf_size <= 1)
-		return -1;
+	if (src == NULL || dst == NULL || size == 0)
+		return NULL;
 
-	for (p = src, q = buf, len = buf_size; *p != '\0' && len > 1; ++p, --len) {
-		if (strchr(special_chars, *p))
-			*q++ = '\\';
-
-		*q++ = *p;
+	while (*src && dst < end) {
+		if (strchr(special_chars, *src) != NULL)
+			*dst++ = '\\';
+		*dst++ = *src++;
 	}
+	*dst++ = '\0';
 
-	*q++ = '\0';
+	return buf;
+}
 
-	return 0;
+char *ppp_safe_escape(char *src, char *buf, size_t size)
+{
+	return ppp_escape(src, buf, size) ? : "";
 }
 
 int
@@ -74,7 +76,16 @@ start_pppd(int unit)
 	mode_t mask;
 	int ret = 0;
 
-_dprintf("%s: unit=%d.\n", __FUNCTION__, unit);
+	_dprintf("%s: unit=%d.\n", __FUNCTION__, unit);
+
+#ifdef RTCONFIG_DUALWAN
+	if (!strstr(nvram_safe_get("wans_dualwan"), "none")
+		&& (!strcmp(nvram_safe_get("wans_mode"), "fo") || !strcmp(nvram_safe_get("wans_mode"), "fb"))
+		&& (wan_primary_ifunit() != unit)) {
+		_dprintf("%s: skip non-primary unit %d\n", __FUNCTION__, unit);
+		return -1;
+	}
+#endif
 
 	snprintf(prefix, sizeof(prefix), "wan%d_", unit);
 	sprintf(options, "/tmp/ppp/options.wan%d", unit);
@@ -93,10 +104,10 @@ _dprintf("%s: unit=%d.\n", __FUNCTION__, unit);
 	/* do not authenticate peer and do not use eap */
 	fprintf(fp, "noauth\n");
 	fprintf(fp, "refuse-eap\n");
-	handle_special_char_for_pppd(buf, sizeof(buf), nvram_safe_get(strcat_r(prefix, "pppoe_username", tmp)));
-	fprintf(fp, "user '%s'\n", buf);
-	handle_special_char_for_pppd(buf, sizeof(buf), nvram_safe_get(strcat_r(prefix, "pppoe_passwd", tmp)));
-	fprintf(fp, "password '%s'\n", buf);
+	fprintf(fp, "user '%s'\n",
+		ppp_safe_escape(nvram_safe_get(strcat_r(prefix, "pppoe_username", tmp)), buf, sizeof(buf)));
+	fprintf(fp, "password '%s'\n",
+		ppp_safe_escape(nvram_safe_get(strcat_r(prefix, "pppoe_passwd", tmp)), buf, sizeof(buf)));
 
 	if (nvram_match(strcat_r(prefix, "proto", tmp), "pptp")) {
 		fprintf(fp, "plugin pptp.so\n");
@@ -208,8 +219,11 @@ _dprintf("%s: unit=%d.\n", __FUNCTION__, unit);
 	fprintf(fp, "novj nobsdcomp nodeflate\n");
 
 	/* echo failures */
-	fprintf(fp, "lcp-echo-interval 6\n");
-	fprintf(fp, "lcp-echo-failure 10\n");
+	if (!(nvram_match(strcat_r(prefix, "proto", tmp), "pppoe") && dualwan_unit__nonusbif(unit)) ||
+	    nvram_get_int(strcat_r(prefix, "ppp_echo", tmp))) {
+		fprintf(fp, "lcp-echo-interval %d\n", nvram_get_int(strcat_r(prefix, "lcp_intv", tmp)) ? : 6);
+		fprintf(fp, "lcp-echo-failure %d\n", nvram_get_int(strcat_r(prefix, "lcp_fail", tmp)) ? : 10);
+	}
 
 	/* pptp has Echo Request/Reply, l2tp has Hello packets */
 	if (nvram_match(strcat_r(prefix, "proto", tmp), "pptp") ||
@@ -220,13 +234,20 @@ _dprintf("%s: unit=%d.\n", __FUNCTION__, unit);
 	fprintf(fp, "linkname wan%d\n", unit);
 
 #ifdef RTCONFIG_IPV6
-	switch (get_ipv6_service()) {
+	switch (get_ipv6_service_by_unit(unit)) {
 	case IPV6_NATIVE_DHCP:
 	case IPV6_MANUAL:
-		if (nvram_match("ipv6_ifdev", "ppp"))
+		if (nvram_match(ipv6_nvname_by_unit("ipv6_ifdev", unit), "ppp")
+#ifdef RTCONFIG_DUALWAN
+			&& !(!strstr(nvram_safe_get("wans_dualwan"), "none") &&
+			     !strcmp(nvram_safe_get("wans_mode"), "lb") &&
+			     unit != wan_primary_ifunit())
+#endif
+		)
 			fprintf(fp, "+ipv6\n");
+
 		break;
-        }
+	}
 #endif
 
 	/* user specific options */
@@ -263,9 +284,9 @@ _dprintf("%s: unit=%d.\n", __FUNCTION__, unit);
 			"hide-avps no\n"
 			"section cmd\n\n",
 			options,
-                        nvram_invmatch(strcat_r(prefix, "heartbeat_x", tmp), "") ?
-                                nvram_safe_get(strcat_r(prefix, "heartbeat_x", tmp)) :
-                                nvram_safe_get(strcat_r(prefix, "gateway_x", tmp)),
+			nvram_invmatch(strcat_r(prefix, "heartbeat_x", tmp), "") ?
+				nvram_safe_get(strcat_r(prefix, "heartbeat_x", tmp)) :
+				nvram_safe_get(strcat_r(prefix, "gateway_x", tmp)),
 			nvram_invmatch(strcat_r(prefix, "hostname", tmp), "") ?
 				nvram_safe_get(strcat_r(prefix, "hostname", tmp)) : "localhost",
 			nvram_get_int(strcat_r(prefix, "pppoe_maxfail", tmp))  ? : 32767,

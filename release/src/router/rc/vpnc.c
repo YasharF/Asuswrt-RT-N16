@@ -47,28 +47,6 @@
 
 int vpnc_unit = 5;
 
-static int
-handle_special_char_for_vpnclient(char *buf, size_t buf_size, char *src)
-{
-	const char special_chars[] = "'\\";
-	char *p, *q;
-	size_t len;
-
-	if (!buf || !src || buf_size <= 1)
-		return -1;
-
-	for (p = src, q = buf, len = buf_size; *p != '\0' && len > 1; ++p, --len) {
-		if (strchr(special_chars, *p))
-			*q++ = '\\';
-
-		*q++ = *p;
-	}
-
-	*q++ = '\0';
-
-	return 0;
-}
-
 int vpnc_pppstatus(void)
 {
 	FILE *fp;
@@ -143,10 +121,10 @@ start_vpnc(void)
 	/* do not authenticate peer and do not use eap */
 	fprintf(fp, "noauth\n");
 	fprintf(fp, "refuse-eap\n");
-	handle_special_char_for_vpnclient(buf, sizeof(buf), nvram_safe_get(strcat_r(prefix, "pppoe_username", tmp)));
-	fprintf(fp, "user '%s'\n", buf);
-	handle_special_char_for_vpnclient(buf, sizeof(buf), nvram_safe_get(strcat_r(prefix, "pppoe_passwd", tmp)));
-	fprintf(fp, "password '%s'\n", buf);
+	fprintf(fp, "user '%s'\n",
+		ppp_safe_escape(nvram_safe_get(strcat_r(prefix, "pppoe_username", tmp)), buf, sizeof(buf)));
+	fprintf(fp, "password '%s'\n",
+		ppp_safe_escape(nvram_safe_get(strcat_r(prefix, "pppoe_passwd", tmp)), buf, sizeof(buf)));
 
 	if (nvram_match(strcat_r(prefix, "proto", tmp), "pptp")) {
 		fprintf(fp, "plugin pptp.so\n");
@@ -165,9 +143,7 @@ start_vpnc(void)
 			fprintf(fp, "nomppe nomppc\n");
 		} else
 		if (nvram_match(strcat_r(prefix, "pptp_options_x", tmp), "+mppe-40")) {
-			fprintf(fp, "nomppe-56\n"
-                                    "nomppe-128\n"
-				    "require-mppe\n"
+			fprintf(fp, "require-mppe\n"
 				    "require-mppe-40\n");
 		} else
 		if (nvram_match(strcat_r(prefix, "pptp_options_x", tmp), "+mppe-56")) {
@@ -397,13 +373,13 @@ int vpnc_update_resolvconf(void)
 #ifdef RTCONFIG_IPV6
 	/* Handle IPv6 DNS before IPv4 ones */
 	if (ipv6_enabled()) {
-		if ((get_ipv6_service() == IPV6_NATIVE_DHCP) && nvram_get_int("ipv6_dnsenable")) {
-			foreach(word, nvram_safe_get("ipv6_get_dns"), next)
+		if ((get_ipv6_service() == IPV6_NATIVE_DHCP) && nvram_get_int(ipv6_nvname("ipv6_dnsenable"))) {
+			foreach(word, nvram_safe_get(ipv6_nvname("ipv6_get_dns")), next)
 				fprintf(fp, "nameserver %s\n", word);
 		} else
 		for (unit = 1; unit <= 3; unit++) {
 			sprintf(tmp, "ipv6_dns%d", unit);
-			next = nvram_safe_get(tmp);
+			next = nvram_safe_get(ipv6_nvname(tmp));
 			if (*next && strcmp(next, "0.0.0.0") != 0)
 				fprintf(fp, "nameserver %s\n", next);
 		}
@@ -533,7 +509,7 @@ vpnc_ipup_main(int argc, char **argv)
 	if ((value = getenv("IPLOCAL"))) {
 		if (nvram_invmatch(strcat_r(prefix, "ipaddr", tmp), value))
 			ifconfig(vpnc_ifname, IFUP, "0.0.0.0", NULL);
-		_ifconfig(vpnc_ifname, IFUP, value, "255.255.255.255", getenv("IPREMOTE"));
+		_ifconfig(vpnc_ifname, IFUP, value, "255.255.255.255", getenv("IPREMOTE"), 0);
 		nvram_set(strcat_r(prefix, "ipaddr", tmp), value);
 		nvram_set(strcat_r(prefix, "netmask", tmp), "255.255.255.255");
 	}

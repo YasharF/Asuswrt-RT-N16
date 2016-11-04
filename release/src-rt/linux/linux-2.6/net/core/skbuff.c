@@ -468,9 +468,6 @@ static void BCMFASTPATH_HOST __copy_skb_header(struct sk_buff *new, const struct
 #endif
 
 	skb_copy_secmark(new, old);
-#if defined(CONFIG_NF_CONNTRACK) || defined(CONFIG_NF_CONNTRACK_MODULE)
-	new->nfcache		= old->nfcache;
-#endif
 }
 #else
 static void __copy_skb_header(struct sk_buff *new, const struct sk_buff *old)
@@ -506,9 +503,6 @@ static void __copy_skb_header(struct sk_buff *new, const struct sk_buff *old)
 #endif
 #endif
 	skb_copy_secmark(new, old);
-#if defined(CONFIG_NF_CONNTRACK) || defined(CONFIG_NF_CONNTRACK_MODULE)
-	new->nfcache		= old->nfcache;
-#endif
 }
 #endif /* CONFIG_INET_GRO */
 

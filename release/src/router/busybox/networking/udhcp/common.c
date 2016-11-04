@@ -58,18 +58,17 @@ const struct dhcp_optflag dhcp_optflags[] = {
 	{ OPTION_SIP_SERVERS                      , 0x78 }, /* DHCP_SIP_SERVERS   */
 #endif
 	{ OPTION_STATIC_ROUTES | OPTION_LIST      , 0x79 }, /* DHCP_STATIC_ROUTES */
-	{ OPTION_STATIC_ROUTES | OPTION_LIST      , 0xf9 }, /* DHCP_MS_STATIC_ROUTES */
 #if ENABLE_FEATURE_UDHCP_8021Q
 	{ OPTION_U16                              , 0x84 }, /* DHCP_VLAN_ID       */
 	{ OPTION_U8                               , 0x85 }, /* DHCP_VLAN_PRIORITY */
 #endif
-#if ENABLE_FEATURE_UDHCP_VIVSO
-	{ OPTION_VIVSO               | OPTION_REQ, 0x7d }, /* DHCP_VIVSO          */
-#endif
-#if ENABLE_FEATURE_UDHCP_RFC5969
-	{ OPTION_6RD                              , 0x96 }, /* DHCP_COMCAST_6RD   */
+	{ OPTION_STRING                           , 0xd1 }, /* DHCP_PXE_CONF_FILE */
+	{ OPTION_STRING                           , 0xd2 }, /* DHCP_PXE_PATH_PREFIX */
+#if ENABLE_FEATURE_IPV6
 	{ OPTION_6RD                              , 0xd4 }, /* DHCP_6RD           */
+	{ OPTION_6RD                              , 0x96 }, /* DHCP_COMCAST_6RD   */
 #endif
+	{ OPTION_STATIC_ROUTES | OPTION_LIST      , 0xf9 }, /* DHCP_MS_STATIC_ROUTES */
 	{ OPTION_STRING                           , 0xfc }, /* DHCP_WPAD          */
 
 	/* Options below have no match in dhcp_option_strings[],
@@ -130,18 +129,17 @@ const char dhcp_option_strings[] ALIGN1 =
 	"sipsrv" "\0"      /* DHCP_SIP_SERVERS    */
 #endif
 	"staticroutes" "\0"/* DHCP_STATIC_ROUTES  */
-	"msstaticroutes""\0"/* DHCP_MS_STATIC_ROUTES */
 #if ENABLE_FEATURE_UDHCP_8021Q
 	"vlanid" "\0"      /* DHCP_VLAN_ID        */
 	"vlanpriority" "\0"/* DHCP_VLAN_PRIORITY  */
 #endif
-#if ENABLE_FEATURE_UDHCP_VIVSO
-	"vivso" "\0"       /* DHCP_VIVSO            */
-#endif
-#if ENABLE_FEATURE_UDHCP_RFC5969
+	"pxeconffile" "\0" /* DHCP_PXE_CONF_FILE  */
+	"pxepathprefix" "\0" /* DHCP_PXE_PATH_PREFIX  */
+#if ENABLE_FEATURE_IPV6
 	"ip6rd" "\0"       /* DHCP_6RD            */
 	"ip6rd" "\0"       /* DHCP_COMCAST_6RD    */
 #endif
+	"msstaticroutes""\0"/* DHCP_MS_STATIC_ROUTES */
 	"wpad" "\0"        /* DHCP_WPAD           */
 	;
 
@@ -170,9 +168,8 @@ const uint8_t dhcp_option_lengths[] ALIGN1 = {
 	[OPTION_S32] =     4,
 	/* Just like OPTION_STRING, we use minimum length here */
 	[OPTION_STATIC_ROUTES] = 5,
+#if ENABLE_FEATURE_IPV6
 	[OPTION_6RD] =    22,  /* ignored by udhcp_str2optset */
-#if ENABLE_FEATURE_UDHCP_VIVSO
-	[OPTION_VIVSO] =     1,  /* ignored by udhcp_str2optset */
 #endif
 };
 
