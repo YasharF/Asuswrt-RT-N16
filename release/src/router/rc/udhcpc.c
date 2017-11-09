@@ -270,7 +270,7 @@ deconfig(int zcip)
 	expires(wan_ifname, 0);
 	wan_down(wan_ifname);
 
-#if (defined(RTCONFIG_JFFS2) || defined(RTCONFIG_BRCM_NAND_JFFS2) || defined(RTCONFIG_UBIFS))
+#if defined(RTCONFIG_JFFS2) || defined(RTCONFIG_BRCM_NAND_JFFS2) || defined(RTCONFIG_UBIFS)
 	if(nvram_get_int(strcat_r(prefix, "sbstate_t", tmp)) == WAN_STOPPED_REASON_DATALIMIT)
 		end_wan_sbstate = WAN_STOPPED_REASON_DATALIMIT;
 #endif
@@ -1057,7 +1057,7 @@ deconfig6(char *wan_ifname)
 	}
 
 	if (get_ipv6_service() == IPV6_NATIVE_DHCP &&
-		nvram_get_int(ipv6_nvname("ipv6_dhcp_pd"))) {
+	    nvram_get_int(ipv6_nvname("ipv6_dhcp_pd"))) {
 		if (nvram_invmatch(ipv6_nvname("ipv6_prefix"), "") ||
 		    nvram_get_int(ipv6_nvname("ipv6_prefix_length")) != 0) {
 			eval("ip", "-6", "addr", "flush", "scope", "global", "dev", lan_ifname);
@@ -1118,7 +1118,7 @@ bound6(char *wan_ifname, int bound)
 
 	prefix_changed = 0;
 	if (get_ipv6_service() == IPV6_NATIVE_DHCP &&
-		nvram_get_int(ipv6_nvname("ipv6_dhcp_pd"))) {
+	    nvram_get_int(ipv6_nvname("ipv6_dhcp_pd"))) {
 		value = safe_getenv("PREFIXES");
 		if (*value) {
 			foreach(tmp, value, next) {
@@ -1245,11 +1245,7 @@ start_dhcp6c(void)
 {
 	char *wan_ifname = (char *) get_wan6face();
 	char *dhcp6c_argv[] = { "odhcp6c",
-#ifndef RTCONFIG_BCMARM
-		"-f",
-#else
 		"-df",
-#endif
 		"-R",
 		"-s", "/tmp/dhcp6c",
 		"-N", "try",
@@ -1264,23 +1260,19 @@ start_dhcp6c(void)
 	struct duid duid;
 	char duid_arg[sizeof(duid)*2+1];
 	char prefix_arg[sizeof("128:xxxxxxxx")];
-	int i;
-#ifndef RTCONFIG_BCMARM
-	pid_t pid;
-#endif
+	int service;
 
 	/* Check if enabled */
-	if (get_ipv6_service() != IPV6_NATIVE_DHCP
+	service = get_ipv6_service();
+	if (
 #ifdef RTCONFIG_6RELAYD
-		&& get_ipv6_service() != IPV6_PASSTHROUGH
+	    service != IPV6_PASSTHROUGH &&
 #endif
-	)
+	    service != IPV6_NATIVE_DHCP)
 		return 0;
 
 	if (!wan_ifname || *wan_ifname == '\0')
 		return -1;
-
-	stop_ipv6_monitor();
 
 	stop_dhcp6c();
 
@@ -1290,26 +1282,19 @@ start_dhcp6c(void)
 		dhcp6c_argv[index++] = duid_arg;
 	}
 
-	if (get_ipv6_service() == IPV6_NATIVE_DHCP &&
-		nvram_get_int(ipv6_nvname("ipv6_dhcp_pd"))) {
+	if (service == IPV6_NATIVE_DHCP &&
+	    nvram_get_int(ipv6_nvname("ipv6_dhcp_pd"))) {
 		/* Generate IA_PD IAID from the last 7 digits of WAN MAC */
 		unsigned long iaid = ether_atoe(nvram_safe_get("wan0_hwaddr"), duid.ea) ?
 			((unsigned long)(duid.ea[3] & 0x0f) << 16) |
 			((unsigned long)(duid.ea[4]) << 8) |
 			((unsigned long)(duid.ea[5])) : 1;
-		i = 64 - (nvram_get_int(ipv6_nvname("ipv6_prefix_length")) ? : 64);
-		if (i < 0)
-			i = 0;
-		snprintf(prefix_arg, sizeof(prefix_arg), "%d:%lx", i, iaid);
+		snprintf(prefix_arg, sizeof(prefix_arg), "%d:%lx", 0, iaid);
 		dhcp6c_argv[index++] = "-FP";
 		dhcp6c_argv[index++] = prefix_arg;
 	}
 
-	if (nvram_get_int(ipv6_nvname("ipv6_dnsenable"))
-#ifdef RTCONFIG_6RELAYD
-		|| get_ipv6_service() == IPV6_PASSTHROUGH
-#endif
-		) {
+	if (nvram_get_int(ipv6_nvname("ipv6_dnsenable"))) {
 		dhcp6c_argv[index++] = "-r23";	/* dns */
 		dhcp6c_argv[index++] = "-r24";	/* domain */
 	}
@@ -1321,15 +1306,50 @@ start_dhcp6c(void)
 
 	dhcp6c_argv[index++] = wan_ifname;
 
-#ifndef RTCONFIG_BCMARM
-	return _eval(dhcp6c_argv, NULL, 0, &pid);
-#else
 	return _eval(dhcp6c_argv, NULL, 0, NULL);
-#endif
 }
 
 void stop_dhcp6c(void)
 {
 	killall_tk("odhcp6c");
 }
+
+#ifdef RTCONFIG_6RELAYD
+int start_6relayd(void)
+{
+	char *lan_ifname = nvram_safe_get("lan_ifname");
+	char *wan_ifname = (char *) get_wan6face();
+	char *relayd_argv[] = { "6relayd",
+		"-drs",
+		"-Rrelay", "-Dserver", "-N",
+		"-n",
+		NULL,		/* -v */
+		NULL,		/* master ifname */
+		NULL,		/* internal ifname */
+		NULL };
+	int index = 6;
+
+	if (get_ipv6_service() != IPV6_PASSTHROUGH)
+		return 0;
+
+	if (!wan_ifname || *wan_ifname == '\0')
+		return -1;
+
+	stop_6relayd();
+
+	if (nvram_get_int("ipv6_debug"))
+		relayd_argv[index++] = "-v";
+
+	relayd_argv[index++] = wan_ifname;
+	relayd_argv[index++] = lan_ifname;
+
+	return _eval(relayd_argv, NULL, 0, NULL);
+}
+
+void stop_6relayd(void)
+{
+	killall_tk("6relayd");
+}
+#endif // RTCONFIG_6RELAYD
+
 #endif // RTCONFIG_IPV6

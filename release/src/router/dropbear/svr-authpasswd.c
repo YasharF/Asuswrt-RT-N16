@@ -30,8 +30,10 @@
 #include "dbutil.h"
 #include "auth.h"
 #include "runopts.h"
-
-#ifdef ENABLE_SVR_PASSWORD_AUTH
+#ifdef RTCONFIG_PROTECTION_SERVER
+#include <libptcsrv.h>
+#endif
+#if DROPBEAR_SVR_PASSWORD_AUTH
 
 /* not constant time when strings are differing lengths. 
  string content isn't leaked, and crypt hashes are predictable length. */
@@ -103,6 +105,15 @@ void svr_auth_password() {
 				svr_ses.addrstring);
 		send_msg_userauth_success();
 	} else {
+
+#ifdef RTCONFIG_PROTECTION_SERVER
+		char ip[64];
+		char *addr;
+		strncpy(ip, svr_ses.addrstring, sizeof(ip));
+		addr = strrchr(ip, ':');
+		*addr = '\0';
+		SEND_PTCSRV_EVENT(PROTECTION_SERVICE_SSH, ip, "From dropbear , LOGIN FAIL");
+#endif
 		dropbear_log(LOG_WARNING,
 				"Bad password attempt for '%s' from %s",
 				ses.authstate.pw_name,

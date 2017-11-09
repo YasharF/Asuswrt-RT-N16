@@ -107,11 +107,15 @@ function initial(){
 
 	if(smart_connect_support){
 		var smart_connect_x = '<% nvram_get("smart_connect_x"); %>';
-		if(based_modelid == "RT-AC5300" || based_modelid == "RT-AC3200" || based_modelid == "RT-AC88U"){
+		if(based_modelid == "RT-AC5300" ||
+			based_modelid == "RT-AC5300R" || 
+			based_modelid == "RT-AC3200" || 
+			based_modelid == "RT-AC88U" ||
+			based_modelid == "RT-AC3100"){
 			var value = new Array();
 			var desc = new Array();
 				
-			if(based_modelid == "RT-AC5300"){
+			if(based_modelid == "RT-AC5300" || based_modelid == "RT-AC5300R"){
 				desc = ["none", "Tri-Band Smart Connect", "5GHz Smart Connect"];
 				value = ["0", "1", "2"];
 				add_options_x2(document.form.smart_connect_t, desc, value, smart_connect_x);
@@ -121,7 +125,7 @@ function initial(){
 				value = ["0", "1"];
 				add_options_x2(document.form.smart_connect_t, desc, value, smart_connect_x);						
 			}
-			else if(based_modelid == "RT-AC88U"){
+			else if(based_modelid == "RT-AC88U" || based_modelid == "RT-AC3100"){
 				desc = ["none", "Dual-Band Smart Connect"];
 				value = ["0", "1"];
 				add_options_x2(document.form.smart_connect_t, desc, value, smart_connect_x);						
@@ -202,6 +206,9 @@ function tabclickhandler(wl_unit){
 			document.form.wl_subunit.value = 1;
 		}
 		else if((parent.sw_mode == 2 || parent.sw_mode == 4) && '<% nvram_get("wlc_band"); %>' == wl_unit){
+			document.form.wl_subunit.value = 1;
+		}
+		else if (parent.sw_mode == 2 && parent.concurrep_support){
 			document.form.wl_subunit.value = 1;
 		}
 		else{
@@ -304,6 +311,11 @@ function change_wep_type(mode){
 		value_array = new Array("1", "2");
 		show_wep_x = 1;
 	}
+	else if(based_modelid == "RP-AC66"){
+		wep_type_array = new Array("None");
+		value_array = new Array("0");
+		cur_wep = "0";
+	}
 	else if(mode == "open" && (document.form.wl_nmode_x.value == 2 || sw_mode == 2)){
 		wep_type_array = new Array("None", "WEP-64bits", "WEP-128bits");
 		value_array = new Array("0", "1", "2");
@@ -374,7 +386,7 @@ function show_LAN_info(v){
 	else	
 		showtext(document.getElementById("LANIP"), '<% nvram_get("lan_ipaddr"); %>');
 
-	if(yadns_support){
+	if(yadns_support && parent.sw_mode == 1){
 		var mode = (yadns_enable != 0) ? yadns_mode : -1;
 		showtext(document.getElementById("yadns_mode"), get_yadns_modedesc(mode));
 		for(var i = 0; i < 3; i++){
@@ -476,7 +488,7 @@ function submitForm(){
 		//confirm common string combination	#JS_common_passwd#
 		var is_common_string = check_common_string(document.form.wl_wpa_psk.value, "wpa_key");
 		if(is_common_string){
-			if(confirm("<#JS_common_passwd#>")){
+			if(!confirm("<#JS_common_passwd#>")){
 				document.form.wl_wpa_psk.focus();
 				document.form.wl_wpa_psk.select();
 				return false;	
@@ -562,9 +574,9 @@ function tab_reset(v){
 			document.getElementById("t2").style.display = "none";
 		}
 	}else if(v == 1){	//Smart Connect
-		if(based_modelid == "RT-AC5300" || based_modelid == "RT-AC3200")
+		if(based_modelid == "RT-AC5300" || based_modelid == "RT-AC3200" || based_modelid == "RT-AC5300R")
 			document.getElementById("span0").innerHTML = "2.4GHz, 5GHz-1 and 5GHz-2";
-		else if(based_modelid == "RT-AC88U")
+		else if(based_modelid == "RT-AC88U" || based_modelid == "RT-AC3100")
 			document.getElementById("span0").innerHTML = "2.4GHz and 5GHz";
 		
 		document.getElementById("t1").style.display = "none";
@@ -633,7 +645,7 @@ function change_smart_connect(v){
 <input type="hidden" name="wl_key3_org" value="<% nvram_char_to_ascii("WLANConfig11b", "wl_key3"); %>">
 <input type="hidden" name="wl_key4_org" value="<% nvram_char_to_ascii("WLANConfig11b", "wl_key4"); %>">
 <input type="hidden" name="wl_nmode_x" value="<% nvram_get("wl_nmode_x"); %>"><!--Lock Add 20091210 for n only-->
-<input type="hidden" name="wps_band" value="<% nvram_get("wps_band"); %>">
+<input type="hidden" name="wps_band" value="<% nvram_get("wps_band_x"); %>">
 <input type="hidden" name="wl_unit" value="<% nvram_get("wl_unit"); %>">
 <input type="hidden" name="wl_subunit" value="-1">
 <input type="hidden" name="wl_radio" value="<% nvram_get("wl_radio"); %>">

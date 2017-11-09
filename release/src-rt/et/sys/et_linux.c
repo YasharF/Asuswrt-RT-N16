@@ -1485,17 +1485,21 @@ et_rxevent(osl_t *osh, et_info_t *et, struct chops *chops, void *ch, int quota)
 	uint processed = 0;
 	void *p = NULL, *h = NULL, *t = NULL;
 	struct sk_buff *skb;
+	struct ethervlan_header *evh;
 	uint16 ether_type;
 
 	/* read the buffers first */
 	while ((p = (*chops->rx)(ch))) {
-		ether_type = ((struct ether_header *) PKTDATA(et->osh, p))->ether_type;
+		PKTSETLINK(p, NULL);
+
+		evh = (struct ethervlan_header *)(PKTDATA(et->osh, p) + HWRXOFF);
+		ether_type = ((evh->vlan_type == HTON16(ETHER_TYPE_8021Q)) ?
+			      evh->ether_type : evh->vlan_type);
 		if (ether_type == HTON16(ETHER_TYPE_BRCM)) {
 			PKTFREE(osh, p, FALSE);
 			continue;
 		}
 
-		PKTSETLINK(p, NULL);
 		if (t == NULL)
 			h = t = p;
 		else {

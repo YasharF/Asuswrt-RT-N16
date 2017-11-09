@@ -15,11 +15,8 @@
 <script type="text/javascript" src="/state.js"></script>
 <script type="text/javascript" src="/popup.js"></script>
 <script type="text/javascript" src="/help.js"></script>
-<script type="text/javascript" src="/disk_functions.js"></script>
 <script type="text/javascript" src="/js/jquery.js"></script>
 <script>
-
-
 function initial(){
 	show_menu();
 	if(adBlock_support)
@@ -55,8 +52,7 @@ function initial(){
 				<div id="subMenu"></div>
 			</td>	
 			<td valign="top">
-				<div id="tabMenu" style="*margin-top: -160px;"></div>
-				<br>
+				<div id="tabMenu" class="submenuBlock"></div>
 		<!--=====Beginning of Main Content=====-->
 				<div class="app_table" id="applist_table">
 					<table>

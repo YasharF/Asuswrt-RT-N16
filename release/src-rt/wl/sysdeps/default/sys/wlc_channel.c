@@ -5285,7 +5285,7 @@ static const struct {
 	{"SE",	LOCALES(b,  3,  bn,  3n)},	/* Sweden */
 	{"CH",	LOCALES(b,  3,  bn,  3n)},	/* Switzerland */
 	{"SY",	LOCALES(f, 12,  fn, 15n)},	/* Syrian Arab Republic */
-	{"TW",	LOCALES(a,  8, an1_t1,  8n)},	/* Taiwan, Province Of China */
+	{"TW",	LOCALES(a,  8, an1_t1,  8n)},	/* Taiwan, Republic Of China */
 	{"TJ",	LOCALES(b, 15,  fn, 15n)},	/* Tajikistan */
 	{"TZ",	LOCALES(b, 12,  fn, 15n)},	/* Tanzania, United Republic Of */
 	{"TH",	LOCALES(b,  6,  bn,  6n)},	/* Thailand */
@@ -5517,10 +5517,10 @@ const struct {
 	{"CH",  1, LOCALES(b, 3c,  bn, 3cn)},	/* Switzerland */
 	{"CH",  2, LOCALES(b, 3l_1,  bn1_1, 3ln_1)},	/* Switzerland */
 	{"CH",  9, LOCALES(b_1, 15,  bn_1, 15n)},	/* Switzerland */
-	{"TW",  2, LOCALES(a, 8a, an1_t1, 8an)},	/* Taiwan, Province Of China */
-	{"TW",  3, LOCALES(a, 8a, an1_t1, 8bn)},	/* Taiwan, Province Of China */
-	{"TW",  4, LOCALES(a3_1, 8b, an1_t5, 8cn)},	/* Taiwan, Province Of China */
-	{"TW",  5, LOCALES(a_6, 8a_1, an6_6, 8an_1)},	/* Taiwan, Province Of China */
+	{"TW",  2, LOCALES(a, 8a, an1_t1, 8an)},	/* Taiwan, Republic Of China */
+	{"TW",  3, LOCALES(a, 8a, an1_t1, 8bn)},	/* Taiwan, Republic Of China */
+	{"TW",  4, LOCALES(a3_1, 8b, an1_t5, 8cn)},	/* Taiwan, Republic Of China */
+	{"TW",  5, LOCALES(a_6, 8a_1, an6_6, 8an_1)},	/* Taiwan, Republic Of China */
 	{"TH",	2, LOCALES(b,  6a,  bn1_1,  6an)},	/* Thailand */
 	{"TR",	3, LOCALES(b, 13_1,  bn1_1, 13n_1)},	/* Turkey */
 	{"TR",  4, LOCALES(b, 3, bn7, 3tn)},	/* Turkey (For Airties) */

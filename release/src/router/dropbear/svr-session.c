@@ -40,6 +40,9 @@
 #include "auth.h"
 #include "runopts.h"
 #include "crypto_desc.h"
+#ifdef RTCONFIG_PROTECTION_SERVER
+#include <libptcsrv.h>
+#endif
 
 static void svr_remoteclosed(void);
 
@@ -62,7 +65,7 @@ static const packettype svr_packettypes[] = {
 	{SSH_MSG_CHANNEL_FAILURE, ignore_recv_response},
 	{SSH_MSG_REQUEST_FAILURE, ignore_recv_response}, /* for keepalive */
 	{SSH_MSG_REQUEST_SUCCESS, ignore_recv_response}, /* client */
-#ifdef USING_LISTENERS
+#if DROPBEAR_LISTENERS
 	{SSH_MSG_CHANNEL_OPEN_CONFIRMATION, recv_msg_channel_open_confirmation},
 	{SSH_MSG_CHANNEL_OPEN_FAILURE, recv_msg_channel_open_failure},
 #endif
@@ -71,7 +74,7 @@ static const packettype svr_packettypes[] = {
 
 static const struct ChanType *svr_chantypes[] = {
 	&svrchansess,
-#ifdef ENABLE_SVR_LOCALTCPFWD
+#if DROPBEAR_SVR_LOCALTCPFWD
 	&svr_chan_tcpdirect,
 #endif
 	NULL /* Null termination is mandatory. */
@@ -96,7 +99,7 @@ void svr_session(int sock, int childpipe) {
 
 	/* Initialise server specific parts of the session */
 	svr_ses.childpipe = childpipe;
-#ifdef USE_VFORK
+#if DROPBEAR_VFORK
 	svr_ses.server_pid = getpid();
 #endif
 	svr_authinitialise();
@@ -144,33 +147,44 @@ void svr_session(int sock, int childpipe) {
 
 /* failure exit - format must be <= 100 chars */
 void svr_dropbear_exit(int exitcode, const char* format, va_list param) {
-
-	char fmtbuf[300];
+	char exitmsg[150];
+	char fullmsg[300];
 	int i;
 
+	/* Render the formatted exit message */
+	vsnprintf(exitmsg, sizeof(exitmsg), format, param);
+
+	/* Add the prefix depending on session/auth state */
 	if (!sessinitdone) {
 		/* before session init */
-		snprintf(fmtbuf, sizeof(fmtbuf), 
-				"Early exit: %s", format);
+		snprintf(fullmsg, sizeof(fullmsg), "Early exit: %s", exitmsg);
 	} else if (ses.authstate.authdone) {
 		/* user has authenticated */
-		snprintf(fmtbuf, sizeof(fmtbuf),
+		snprintf(fullmsg, sizeof(fullmsg),
 				"Exit (%s): %s", 
-				ses.authstate.pw_name, format);
+				ses.authstate.pw_name, exitmsg);
 	} else if (ses.authstate.pw_name) {
 		/* we have a potential user */
-		snprintf(fmtbuf, sizeof(fmtbuf), 
+		snprintf(fullmsg, sizeof(fullmsg), 
 				"Exit before auth (user '%s', %u fails): %s",
-				ses.authstate.pw_name, ses.authstate.failcount, format);
+				ses.authstate.pw_name, ses.authstate.failcount, exitmsg);
 	} else {
 		/* before userauth */
-		snprintf(fmtbuf, sizeof(fmtbuf), 
-				"Exit before auth: %s", format);
+		snprintf(fullmsg, sizeof(fullmsg), "Exit before auth: %s", exitmsg);
 	}
 
-	_dropbear_log(LOG_INFO, fmtbuf, param);
+#ifdef RTCONFIG_PROTECTION_SERVER
+		char ip[64];
+		char *addr;
+		strncpy(ip, svr_ses.addrstring, sizeof(ip));
+		addr = strrchr(ip, ':');
+		*addr = '\0';
+		SEND_PTCSRV_EVENT(PROTECTION_SERVICE_SSH, ip, "From dropbear , LOGIN FAIL");
+#endif
 
-#ifdef USE_VFORK
+	dropbear_log(LOG_INFO, "%s", fullmsg);
+
+#if DROPBEAR_VFORK
 	/* For uclinux only the main server process should cleanup - we don't want
 	 * forked children doing that */
 	if (svr_ses.server_pid == getpid())
@@ -211,7 +225,7 @@ void svr_dropbear_log(int priority, const char* format, va_list param) {
 
 	/* if we are using DEBUG_TRACE, we want to print to stderr even if
 	 * syslog is used, so it is included in error reports */
-#ifdef DEBUG_TRACE
+#if DEBUG_TRACE
 	havetrace = debug_trace;
 #endif
 

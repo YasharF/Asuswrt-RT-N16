@@ -89,12 +89,14 @@ void hm_traffic_limiter_save()
 	eval("traffic_limiter", "-w");
 }
 
+#if 0
 static void hm_networkmap_rescan()
 {
 	nvram_set("client_info_tmp", "");
 	nvram_set("refresh_networkmap", "1");
 	eval("killall", "-SIGUSR1", "networkmap");
 }
+#endif
 
 int hour_monitor_function_check()
 {
@@ -111,9 +113,12 @@ int hour_monitor_function_check()
 	if(nvram_get_int("bwdpi_db_enable"))
 		value |= TRAFFIC_ANALYZER;
 
+#if 0
+	//disable for preventing wake up sleep device
 	// networkmap
 	if(pidof("networkmap") != -1)
 		value |= NETWORKMAP;
+#endif
 	
 	if(debug)
 	{
@@ -136,9 +141,11 @@ static void hour_monitor_call_fucntion()
 	if((value & TRAFFIC_ANALYZER) != 0)
 		hm_traffic_analyzer_save();
 
+#if 0
 	//disable for preventing wake up sleep device
-	//if((value & NETWORKMAP) != 0)
-	//	hm_networkmap_rescan();
+	if((value & NETWORKMAP) != 0)
+		hm_networkmap_rescan();
+#endif
 }
 
 static void hour_monitor_save_database()

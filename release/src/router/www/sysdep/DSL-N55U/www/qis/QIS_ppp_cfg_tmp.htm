@@ -187,7 +187,7 @@ function DE_ISP_detect(){
 		&& (ispname_str == "1&1" || 
 				ispname_str == "Congstar" || /*Both in ATM/PTM*/
 				ispname_str == "Deutsche Telekom" || ispname_str == "Deutsche Telekom (ohne Entertain)" || ispname_str == "Deutsche Telekom (mit Entertain)" || /*1st is ATM, else PTM*/
-				ispname_str == "GMX (ber 1&1)" || /*Both in ATM/PTM. And decoded from GMX (über 1&1)*/
+				ispname_str.search("GMX") >= 0 ||	/*Both in ATM/PTM*/
 				ispname_str == "KielNET" || ispname_str == "KielNET DSL" || /*1st is ATM, 2nd is PTM*/
 				ispname_str == "NetAachen" ||	ispname_str == "NetAachen (VLAN ID 10)" || 	/*1st is ATM, 2nd is PTM*/
 				ispname_str == "NetCologne" || ispname_str == "NetCologne (VLAN ID 10)" || 	/*1st is ATM, 2nd is PTM*/
@@ -215,7 +215,7 @@ function DE_ISP_detect(){
 			document.getElementById("tr_DE_Deutsche_AN").style.display="";
 			document.getElementById("tr_DE_Deutsche_Co").style.display="";
 		}		
-		if(ispname_str == "GMX (ber 1&1)"){
+		if(ispname_str.search("GMX") >= 0){
 			document.getElementById("tr_DE_username").style.display="";
 			document.getElementById("ATM_PTM_GMX").style.display="";
 		}
@@ -285,11 +285,14 @@ function submitForm(){
 					}	
 					
 					if(ispname_str == "Deutsche Telekom" || ispname_str == "Deutsche Telekom (ohne Entertain)" || ispname_str == "Deutsche Telekom (mit Entertain)"){	/*1st is ATM, else PTM*/
-							document.form.dsltmp_qis_pppoe_username.value = document.form.pppoe_id_Deutsche.value + document.form.pppoe_AN_Deutsche.value +"#"+ document.form.pppoe_Co_Deutsche.value +"@t-online.de";							
+						if(document.form.pppoe_AN_Deutsche.value.length < 12)	//length < 12, add '#' symbol
+							document.form.dsltmp_qis_pppoe_username.value = document.form.pppoe_id_Deutsche.value + document.form.pppoe_AN_Deutsche.value +"#"+ document.form.pppoe_Co_Deutsche.value +"@t-online.de";
+						else
+							document.form.dsltmp_qis_pppoe_username.value = document.form.pppoe_id_Deutsche.value + document.form.pppoe_AN_Deutsche.value + document.form.pppoe_Co_Deutsche.value +"@t-online.de";
 							document.form.dsltmp_qis_pppoe_passwd.value = document.form.pppoe_password_DE.value;
 					}
 					
-					if(ispname_str == "GMX (ber 1&1)"){	//Both in ATM/PTM
+					if(ispname_str.search("GMX") >= 0){	//Both in ATM/PTM
 							document.form.dsltmp_qis_pppoe_username.value = "GMX/"+ document.form.pppoe_username_GMX.value +"@online.de";
 							document.form.dsltmp_qis_pppoe_passwd.value = document.form.pppoe_password_DE.value;
 					}
@@ -466,21 +469,21 @@ function showMAC(){
   </tr>
   
   <tr id="tr_DE_Deutsche_id" style="display:none;">
-  	<th>ID Connection</th>
+  	<th><#ppp_ID_Connection#></th>
   	<td>
-	  	<input type="text" name="pppoe_id_Deutsche" class="input_22_table" value="" maxlength="64" autocomplete="off" autocorrect="off" autocapitalize="off" autocapitalize="off">
+	  	<input type="text" name="pppoe_id_Deutsche" class="input_18_table" value="" maxlength="12" autocomplete="off" autocorrect="off" autocapitalize="off" autocapitalize="off">
   	</td>
   </tr>	
   <tr id="tr_DE_Deutsche_AN" style="display:none;">
-  	<th>Access Number</th>
+  	<th><#ppp_Access_Number#></th>
   	<td>
-	  	<input type="text" name="pppoe_AN_Deutsche" class="input_22_table" value="" maxlength="64" autocomplete="off" autocorrect="off" autocapitalize="off" autocapitalize="off">
+	  	<input type="text" name="pppoe_AN_Deutsche" class="input_18_table" value="" maxlength="12" autocomplete="off" autocorrect="off" autocapitalize="off" autocapitalize="off">
   	</td>
   </tr>
   <tr id="tr_DE_Deutsche_Co" style="display:none;">
-  	<th>Co-user Number</th>
+  	<th><#ppp_CoUser_Number#></th>
   	<td>
-	  	<input type="text" name="pppoe_Co_Deutsche" class="input_22_table" value="" maxlength="64" autocomplete="off" autocorrect="off" autocapitalize="off" autocapitalize="off">
+	  	<input type="text" name="pppoe_Co_Deutsche" class="input_6_table" value="" maxlength="4" autocomplete="off" autocorrect="off" autocapitalize="off" autocapitalize="off">
   	</td>
   </tr>
   

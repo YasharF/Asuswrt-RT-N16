@@ -78,13 +78,16 @@ start_pppd(int unit)
 
 	_dprintf("%s: unit=%d.\n", __FUNCTION__, unit);
 
+#if 0
 #ifdef RTCONFIG_DUALWAN
 	if (!strstr(nvram_safe_get("wans_dualwan"), "none")
-		&& (!strcmp(nvram_safe_get("wans_mode"), "fo") || !strcmp(nvram_safe_get("wans_mode"), "fb"))
+		//&& (!strcmp(nvram_safe_get("wans_mode"), "fo") || !strcmp(nvram_safe_get("wans_mode"), "fb"))
+		&& !strcmp(nvram_safe_get("wans_mode"), "fo")
 		&& (wan_primary_ifunit() != unit)) {
 		_dprintf("%s: skip non-primary unit %d\n", __FUNCTION__, unit);
 		return -1;
 	}
+#endif
 #endif
 
 	snprintf(prefix, sizeof(prefix), "wan%d_", unit);
@@ -164,7 +167,7 @@ start_pppd(int unit)
 			fprintf(fp, "-pap\n");
 		}
 
-		if (nvram_match("dsl0_proto", "pppoa")) {
+		if (nvram_match("dslx_transmode", "atm") && nvram_match("dsl0_proto", "pppoa")) {
 			FILE *fp_dsl_mac;
 			char *dsl_mac = NULL;
 			int timeout = 10; /* wait up to 10 seconds */
@@ -219,16 +222,15 @@ start_pppd(int unit)
 	fprintf(fp, "novj nobsdcomp nodeflate\n");
 
 	/* echo failures */
-	if (!(nvram_match(strcat_r(prefix, "proto", tmp), "pppoe") && dualwan_unit__nonusbif(unit)) ||
-	    nvram_get_int(strcat_r(prefix, "ppp_echo", tmp))) {
-		fprintf(fp, "lcp-echo-interval %d\n", nvram_get_int(strcat_r(prefix, "lcp_intv", tmp)) ? : 6);
-		fprintf(fp, "lcp-echo-failure %d\n", nvram_get_int(strcat_r(prefix, "lcp_fail", tmp)) ? : 10);
-	}
-
-	/* pptp has Echo Request/Reply, l2tp has Hello packets */
-	if (nvram_match(strcat_r(prefix, "proto", tmp), "pptp") ||
-	    nvram_match(strcat_r(prefix, "proto", tmp), "l2tp"))
+	if (dualwan_unit__usbif(unit)) {
+		fprintf(fp, "lcp-echo-interval %d\n", 6);
+		fprintf(fp, "lcp-echo-failure %d\n", 10);
+	} else
+	if (nvram_get_int(strcat_r(prefix, "ppp_echo", tmp)) == 1) {
+		fprintf(fp, "lcp-echo-interval %d\n", nvram_get_int(strcat_r(prefix, "ppp_echo_interval", tmp)));
+		fprintf(fp, "lcp-echo-failure %d\n", nvram_get_int(strcat_r(prefix, "ppp_echo_failure", tmp)));
 		fprintf(fp, "lcp-echo-adaptive\n");
+	}
 
 	fprintf(fp, "unit %d\n", unit);
 	fprintf(fp, "linkname wan%d\n", unit);
@@ -237,15 +239,15 @@ start_pppd(int unit)
 	switch (get_ipv6_service_by_unit(unit)) {
 	case IPV6_NATIVE_DHCP:
 	case IPV6_MANUAL:
+#ifdef RTCONFIG_6RELAYD
+	case IPV6_PASSTHROUGH:
+#endif
 		if (nvram_match(ipv6_nvname_by_unit("ipv6_ifdev", unit), "ppp")
 #ifdef RTCONFIG_DUALWAN
-			&& !(!strstr(nvram_safe_get("wans_dualwan"), "none") &&
-			     !strcmp(nvram_safe_get("wans_mode"), "lb") &&
-			     unit != wan_primary_ifunit())
+			&& (unit == wan_primary_ifunit_ipv6())
 #endif
 		)
 			fprintf(fp, "+ipv6\n");
-
 		break;
 	}
 #endif

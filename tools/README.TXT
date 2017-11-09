@@ -20,8 +20,10 @@ Mediatek/Ralink SoC models
 	    - extract mips-2012.03.tar.bz2 directory to /opt
 	    - add /opt/mips-2012.03/bin to your uboot path
 
-Qualcomm SoC models
-===================
+Qualcomm QCA9557 MIPS SoC models
+================================
+
+	For example, RT-AC55U, 4G-AC55U.
 
 	To install the tools:
 	    - extract openwrt-gcc463.mips.tar.bz2 directory to /opt
@@ -30,4 +32,18 @@ Qualcomm SoC models
 	      add STAGING_DIR environment variable as below:
 
 	      export STAGING_DIR=/opt/openwrt-gcc463.mips
+
+
+Qualcomm IPQ806x/IPQ40xx ARM SoC models
+===============================
+
+	For example, RT-AC89U.
+
+	To install the tools:
+	    - extract openwrt-gcc463.arm.tar.bz2 directory to /opt
+	    - add /opt/openwrt-gcc463.arm/bin to your path
+	    - If you want to build small utilities out of asuswrt box,
+	      add STAGING_DIR environment variable as below:
+
+	      export STAGING_DIR=/opt/openwrt-gcc463.arm
 

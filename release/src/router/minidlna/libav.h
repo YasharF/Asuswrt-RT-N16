@@ -125,8 +125,6 @@ lav_open(AVFormatContext **ctx, const char *filename)
 		avformat_find_stream_info(*ctx, NULL);
 #else
 	ret = av_open_input_file(ctx, filename, NULL, 0, NULL);
-	if (ret == 0)
-		av_find_stream_info(*ctx);
 #endif
 	return ret;
 }

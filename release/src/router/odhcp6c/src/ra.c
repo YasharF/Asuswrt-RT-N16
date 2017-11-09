@@ -47,6 +47,7 @@
 #include "odhcp6c.h"
 #include "ra.h"
 
+
 static bool nocarrier = false;
 
 static int sock = -1, rtnl = -1;
@@ -65,7 +66,6 @@ struct {
 
 
 static void ra_send_rs(int signal __attribute__((unused)));
-static void stop_send_rs(int signal __attribute__((unused)));
 
 int ra_init(const char *ifname, const struct in6_addr *ifid)
 {
@@ -145,7 +145,6 @@ int ra_init(const char *ifname, const struct in6_addr *ifid)
 
 	// Send RS
 	signal(SIGALRM, ra_send_rs);
-	signal(SIGTSTP, stop_send_rs);
 	ra_send_rs(SIGALRM);
 
 	return 0;
@@ -169,11 +168,6 @@ static void ra_send_rs(int signal __attribute__((unused)))
 		alarm(4);
 }
 
-static void stop_send_rs(int signal __attribute__((unused)))
-{
-	alarm(0);
-	rs_attempt = 0;
-}
 
 static int16_t pref_to_priority(uint8_t flags)
 {
@@ -339,17 +333,17 @@ bool ra_process(void)
 		if (!ra_icmpv6_valid(&from, hlim, buf, len))
 			continue;
 
-		// Stop sending solicits
-		if (rs_attempt > 0) {
-			alarm(0);
-			rs_attempt = 0;
-		}
-
 		if (!found) {
 			odhcp6c_expire();
 			found = true;
 		}
 		uint32_t router_valid = ntohs(adv->nd_ra_router_lifetime);
+
+		// Stop sending solicits
+		if (rs_attempt > 0 && router_valid) {
+			alarm(0);
+			rs_attempt = 0;
+		}
 
 		// Parse default route
 		entry->target = any;
